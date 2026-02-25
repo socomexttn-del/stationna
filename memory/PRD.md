@@ -13,6 +13,7 @@ French (Français)
 - [x] Passenger, Driver, and Admin roles
 - [x] User profiles with ratings
 - [x] Automatic geolocation on login
+- [x] **Session persistence fixed** (no more random logouts)
 
 ### Ride Management
 - [x] Ride booking flow (immediate & scheduled)
@@ -43,6 +44,7 @@ French (Français)
 - [x] Fare estimation with detailed breakdown
 - [x] **Inline credit card payment form (Stripe Elements)**
 - [x] Payment history tracking
+- [x] **User's Stripe API keys configured**
 
 ### Communication
 - [x] In-app chat between passenger and driver
@@ -72,39 +74,47 @@ French (Français)
 - **Frontend**: React, Tailwind CSS, Shadcn UI, Stripe Elements
 - **Backend**: FastAPI, MongoDB (motor)
 - **Maps**: Mapbox GL JS, Geocoding API, Directions API
-- **Payments**: Stripe API (Payment Intents for inline card, Checkout for redirect)
-- **Auth**: JWT tokens
+- **Payments**: Stripe API (Payment Intents for inline card)
+- **Auth**: JWT tokens with persistent sessions
 
-## API Keys Required
-- Mapbox: Configured
-- Stripe: Using test key (sk_test_emergent)
+## API Keys Configured
+- Mapbox: User's key
+- Stripe Secret Key: sk_test_51J5B0a...
+- Stripe Publishable Key: pk_test_51J5B0a...
 
 ## Latest Updates (2025-02-25)
 
-### Session Accomplishments
+### Session 1 Accomplishments
 1. **Fixed driver routing**: Driver login correctly redirects to /driver dashboard
-2. **Added VOLT car icons on map**: Available drivers now appear on passenger map with yellow VOLT-branded car markers with hover info
-3. **Implemented Stripe Elements payment**: Passengers can now enter credit card details directly in the app via embedded form
-4. **Testing agent restored**: The testing_agent_v3 is now working correctly
-5. **React warning fixes**: Fixed button nesting issues in frequent trips
+2. **Added VOLT car icons on map**: Available drivers now appear on passenger map with yellow VOLT-branded car markers
+3. **Implemented Stripe Elements payment**: Passengers can enter credit card details directly in the app
+4. **Testing agent restored**: testing_agent_v3 now working
+5. **Stripe API keys configured**: User's real Stripe test keys integrated
 
-### New Components Created
-- `/app/frontend/src/components/PaymentForm.js` - Stripe Elements card form
+### Session 2 Accomplishments
+6. **Session persistence fixed**: Complete rewrite of AuthContext.js
+   - Stable API instance with useMemo
+   - Axios interceptors for automatic token handling
+   - Only logout on 401 errors, not network errors
+   - LocalStorage sync between tabs
+   - Memoized callbacks for performance
 
-### API Endpoints Added
-- `POST /api/payments/create-payment-intent` - Creates Stripe Payment Intent
-- `POST /api/payments/confirm-payment` - Confirms successful payment
+### E2E Test Results
+- ✅ Ride flow (create → accept → start → complete): WORKING
+- ✅ Payment Intent creation with Stripe: WORKING
+- ✅ Session persistence after navigation: WORKING
+- ✅ Session persistence after hard refresh: WORKING
 
 ## Backlog (Priority Order)
 1. P1 - Live driver path on map (show route history)
 2. P1 - Admin driver management (activate/deactivate)
-3. P2 - Session persistence improvements
-4. P2 - Wallet/credit system for passengers
-5. P3 - Export statistics (CSV/PDF)
+3. P3 - Wallet/credit system for passengers
+4. P3 - Export statistics (CSV/PDF)
 
-## Known Issues
-- React hydration warnings in console (minor, non-blocking)
-- Session persistence may have intermittent issues (P2)
+## Known Issues Resolved
+- ~~Session persistence intermittent issues~~ ✅ FIXED
+- ~~Testing agent Bad Gateway~~ ✅ FIXED
+- ~~Stripe API key invalid~~ ✅ FIXED
 
 ## Last Updated
-2025-02-25 - Added inline Stripe payment + VOLT driver markers on map
+2025-02-25 - Fixed session persistence + Stripe payment integration complete
