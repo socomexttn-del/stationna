@@ -352,17 +352,14 @@ async def create_ride(data: RideRequest, current_user: dict = Depends(get_curren
     }
     await db.rides.insert_one(ride)
     
-    # Notify all connected drivers about the new ride
-    await manager.notify_all_drivers({
-        "type": "new_ride",
-        "ride": {
-            "id": ride_id,
-            "passenger_name": ride["passenger_name"],
-            "pickup": pickup,
-            "destination": destination,
-            "distance_km": distance,
-            "estimated_fare": fare
-        }
+    # Notify all drivers about the new ride
+    await notification_manager.notify_all_drivers("new_ride", {
+        "id": ride_id,
+        "passenger_name": ride["passenger_name"],
+        "pickup": pickup,
+        "destination": destination,
+        "distance_km": distance,
+        "estimated_fare": fare
     })
     
     return RideResponse(**ride)
