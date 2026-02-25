@@ -1722,6 +1722,7 @@ async def get_admin_driver_stats(admin_user: dict = Depends(get_admin_user)):
             "email": driver["email"],
             "phone": driver["phone"],
             "is_available": driver.get("is_available", False),
+            "is_active": driver.get("is_active", True),  # Default to True for backwards compatibility
             "vehicle": driver.get("vehicle_info"),
             "stats": {
                 "total_rides": len(rides),
