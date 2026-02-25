@@ -406,11 +406,46 @@ def main():
             accept_success, _ = tester.test_accept_ride(tester.test_ride_id, tester.driver_token)
             
             if accept_success:
+                print(f"\n💬 Testing chat during accepted ride status...")
+                
+                # Test chat during accepted phase
+                passenger_msg_success, _ = tester.test_send_chat_message(
+                    tester.test_ride_id, 
+                    "Bonjour, je suis en route vers le point de rendez-vous", 
+                    tester.passenger_token
+                )
+                
+                driver_msg_success, _ = tester.test_send_chat_message(
+                    tester.test_ride_id,
+                    "Parfait, je vous attends. Voiture blanche Toyota Prius",
+                    tester.driver_token
+                )
+                
+                # Test getting messages
+                if passenger_msg_success:
+                    tester.test_get_chat_messages(tester.test_ride_id, tester.passenger_token)
+                    tester.test_get_chat_messages(tester.test_ride_id, tester.driver_token)
+                
                 # Start the ride
                 time.sleep(1)
                 start_success, _ = tester.test_start_ride(tester.test_ride_id, tester.driver_token)
                 
                 if start_success:
+                    print(f"\n💬 Testing chat during in_progress ride status...")
+                    
+                    # Test more chat during in_progress phase
+                    tester.test_send_chat_message(
+                        tester.test_ride_id,
+                        "Course démarrée, nous arrivons bientôt!",
+                        tester.driver_token
+                    )
+                    
+                    tester.test_send_chat_message(
+                        tester.test_ride_id,
+                        "Merci, j'ai hâte d'arriver",
+                        tester.passenger_token
+                    )
+                    
                     # Complete the ride
                     time.sleep(1)
                     tester.test_complete_ride(tester.test_ride_id, tester.driver_token)
