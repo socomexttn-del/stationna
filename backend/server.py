@@ -227,6 +227,24 @@ class FavoriteAddressResponse(BaseModel):
     location: Dict
     created_at: str
 
+class FrequentTripCreate(BaseModel):
+    name: str  # "Maison → Travail", "Domicile → CDG", etc.
+    pickup: LocationModel
+    destination: LocationModel
+    vehicle_type: str = "standard"
+    passenger_count: int = 1
+
+class FrequentTripResponse(BaseModel):
+    id: str
+    user_id: str
+    name: str
+    pickup: Dict
+    destination: Dict
+    vehicle_type: str
+    passenger_count: int
+    use_count: int
+    created_at: str
+
 class PromoCodeCreate(BaseModel):
     code: str
     discount_percent: int = Field(..., ge=1, le=100)
