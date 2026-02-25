@@ -435,9 +435,26 @@ const DriverDashboard = () => {
                     <p className="text-sm text-muted-foreground">Passager</p>
                   </div>
                 </div>
-                <Button variant="outline" size="icon" className="rounded-full" data-testid="call-passenger-btn">
-                  <Phone className="w-5 h-5" />
-                </Button>
+                <div className="flex items-center gap-2">
+                  {/* Chat Button */}
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="rounded-full relative" 
+                    data-testid="driver-chat-btn"
+                    onClick={() => { setChatOpen(true); setUnreadMessages(0); }}
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                    {unreadMessages > 0 && (
+                      <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
+                        {unreadMessages}
+                      </span>
+                    )}
+                  </Button>
+                  <Button variant="outline" size="icon" className="rounded-full" data-testid="call-passenger-btn">
+                    <Phone className="w-5 h-5" />
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-2 py-2">
