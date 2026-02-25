@@ -33,11 +33,18 @@ const PassengerDashboard = () => {
   const [frequentTrips, setFrequentTrips] = useState([]);
   const [showSaveTrip, setShowSaveTrip] = useState(false);
   const [tripName, setTripName] = useState('');
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [completedRideForRating, setCompletedRideForRating] = useState(null);
   
   const [pickup, setPickup] = useState({ lat: 48.8566, lng: 2.3522, address: '' });
   const [destination, setDestination] = useState({ lat: 48.8738, lng: 2.2950, address: '' });
   const [passengers, setPassengers] = useState(1);
   const [vehicleType, setVehicleType] = useState('standard');
+
+  // Submit rating
+  const submitRating = async (ratingData) => {
+    await api.post('/ratings', ratingData);
+  };
 
   // Fetch frequent trips
   const fetchFrequentTrips = useCallback(async () => {
