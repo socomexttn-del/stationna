@@ -290,9 +290,19 @@ const PassengerDashboard = () => {
                     <User className="w-5 h-5 mr-3" /> Mon profil
                   </Button>
                 </Link>
+                <Link to="/scheduled" onClick={() => setMenuOpen(false)}>
+                  <Button variant="ghost" className="w-full justify-start h-12" data-testid="nav-scheduled">
+                    <Calendar className="w-5 h-5 mr-3" /> Courses planifiées
+                  </Button>
+                </Link>
                 <Link to="/history" onClick={() => setMenuOpen(false)}>
                   <Button variant="ghost" className="w-full justify-start h-12" data-testid="nav-history">
                     <History className="w-5 h-5 mr-3" /> Historique
+                  </Button>
+                </Link>
+                <Link to="/payments" onClick={() => setMenuOpen(false)}>
+                  <Button variant="ghost" className="w-full justify-start h-12" data-testid="nav-payments">
+                    <Gift className="w-5 h-5 mr-3" /> Paiements & Promos
                   </Button>
                 </Link>
                 <Button 
