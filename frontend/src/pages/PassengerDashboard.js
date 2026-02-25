@@ -412,6 +412,81 @@ const PassengerDashboard = () => {
                 dataTestId="input-destination"
               />
             </div>
+
+            {/* Vehicle Type & Passengers Selection */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Vehicle Type */}
+              <div className="space-y-2">
+                <label className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Car className="w-4 h-4" /> Type de véhicule
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setVehicleType('standard');
+                      if (passengers > 4) setPassengers(4);
+                    }}
+                    data-testid="vehicle-standard"
+                    className={`flex-1 py-3 px-3 rounded-xl border transition-all flex flex-col items-center gap-1 ${
+                      vehicleType === 'standard' 
+                        ? 'border-primary bg-primary/10 text-primary' 
+                        : 'border-white/10 bg-muted/50 hover:border-white/20'
+                    }`}
+                  >
+                    <Car className="w-5 h-5" />
+                    <span className="text-xs font-medium">Standard</span>
+                    <span className="text-[10px] text-muted-foreground">1-4 places</span>
+                  </button>
+                  <button
+                    onClick={() => setVehicleType('van')}
+                    data-testid="vehicle-van"
+                    className={`flex-1 py-3 px-3 rounded-xl border transition-all flex flex-col items-center gap-1 ${
+                      vehicleType === 'van' 
+                        ? 'border-primary bg-primary/10 text-primary' 
+                        : 'border-white/10 bg-muted/50 hover:border-white/20'
+                    }`}
+                  >
+                    <Truck className="w-5 h-5" />
+                    <span className="text-xs font-medium">Van</span>
+                    <span className="text-[10px] text-muted-foreground">1-7 places</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Passengers Count */}
+              <div className="space-y-2">
+                <label className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Users className="w-4 h-4" /> Passagers
+                </label>
+                <div className="flex items-center justify-center gap-3 h-[76px] bg-muted/50 rounded-xl border border-white/10">
+                  <button
+                    onClick={() => setPassengers(Math.max(1, passengers - 1))}
+                    data-testid="passengers-minus"
+                    disabled={passengers <= 1}
+                    className="w-10 h-10 rounded-full bg-background border border-white/10 flex items-center justify-center text-xl font-bold disabled:opacity-30 hover:border-primary transition-colors"
+                  >
+                    -
+                  </button>
+                  <span className="text-2xl font-bold w-8 text-center" data-testid="passengers-count">{passengers}</span>
+                  <button
+                    onClick={() => setPassengers(Math.min(vehicleType === 'van' ? 7 : 4, passengers + 1))}
+                    data-testid="passengers-plus"
+                    disabled={passengers >= (vehicleType === 'van' ? 7 : 4)}
+                    className="w-10 h-10 rounded-full bg-background border border-white/10 flex items-center justify-center text-xl font-bold disabled:opacity-30 hover:border-primary transition-colors"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Info about extra passenger fee */}
+            {passengers > 4 && (
+              <div className="text-xs text-yellow-500 bg-yellow-500/10 rounded-lg px-3 py-2 flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                <span>Supplément de 4€ par passager au-delà de 4</span>
+              </div>
+            )}
             
             <Button 
               onClick={getEstimate}
