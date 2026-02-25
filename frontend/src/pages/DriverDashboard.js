@@ -510,8 +510,23 @@ const DriverDashboard = () => {
                   <Clock className="w-4 h-4" />
                   <span className="text-sm">{activeRide.distance_km} km</span>
                 </div>
-                <p className="text-xl font-bold text-primary">{activeRide.estimated_fare}€</p>
+                <div className="text-right">
+                  <p className="text-xl font-bold text-primary">{activeRide.estimated_fare}€</p>
+                  <p className="text-xs text-green-500">
+                    Vos gains: {activeRide.driver_earnings || (activeRide.estimated_fare * 0.82).toFixed(2)}€
+                  </p>
+                </div>
               </div>
+
+              {/* Booking Receipt Button */}
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => setShowReceipt(true)}
+                data-testid="view-receipt-btn"
+              >
+                <Receipt className="w-4 h-4 mr-2" /> Voir le bon de réservation
+              </Button>
 
               <div className="flex gap-3">
                 {activeRide.status === 'accepted' && (
@@ -546,6 +561,13 @@ const DriverDashboard = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Booking Receipt Modal */}
+        <BookingReceipt
+          ride={activeRide}
+          isOpen={showReceipt}
+          onClose={() => setShowReceipt(false)}
+        />
 
         {/* Available Rides */}
         {!activeRide && isAvailable && (
