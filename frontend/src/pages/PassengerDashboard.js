@@ -36,6 +36,7 @@ const PassengerDashboard = () => {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [completedRideForRating, setCompletedRideForRating] = useState(null);
   const [isLocating, setIsLocating] = useState(true);
+  const [availableDrivers, setAvailableDrivers] = useState([]);
   
   const [pickup, setPickup] = useState({ lat: 48.8566, lng: 2.3522, address: '' });
   const [destination, setDestination] = useState({ lat: 48.8738, lng: 2.2950, address: '' });
