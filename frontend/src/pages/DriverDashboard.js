@@ -13,13 +13,86 @@ import {
 import { toast } from 'sonner';
 
 const DriverDashboard = () => {
-  const { user, logout, api, updateUser } = useAuth();
+  const { user, logout, api, updateUser, token } = useAuth();
   
   const [isAvailable, setIsAvailable] = useState(user?.is_available || false);
   const [availableRides, setAvailableRides] = useState([]);
   const [activeRide, setActiveRide] = useState(null);
   const [stats, setStats] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // WebSocket message handler
+  const handleWebSocketMessage = useCallback((data) => {
+    console.log('WebSocket message received:', data);
+    
+    switch (data.type) {
+      case 'new_ride':
+        // Show notification for new ride
+        toast.success(
+          <div className="flex flex-col gap-1">
+            <span className="font-semibold">Nouvelle course!</span>
+            <span className="text-sm">{data.ride.pickup.address} → {data.ride.destination.address}</span>
+            <span className="text-primary font-bold">{data.ride.estimated_fare}€</span>
+          </div>,
+          { duration: 10000 }
+        );
+        // Add to available rides
+        setAvailableRides(prev => {
+          const exists = prev.some(r => r.id === data.ride.id);
+          if (!exists) {
+            return [{
+              id: data.ride.id,
+              passenger_name: data.ride.passenger_name,
+              pickup: data.ride.pickup,
+              destination: data.ride.destination,
+              distance_km: data.ride.distance_km,
+              estimated_fare: data.ride.estimated_fare
+            }, ...prev];
+          }
+          return prev;
+        });
+        // Play notification sound
+        playNotificationSound();
+        break;
+        
+      case 'ride_taken':
+        // Remove ride from available list
+        setAvailableRides(prev => prev.filter(r => r.id !== data.ride_id));
+        break;
+        
+      default:
+        break;
+    }
+  }, []);
+
+  // Connect to WebSocket
+  const { isConnected } = useWebSocket(token, 'driver', handleWebSocketMessage);
+
+  // Play notification sound
+  const playNotificationSound = () => {
+    try {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 880;
+      oscillator.type = 'sine';
+      gainNode.gain.value = 0.3;
+      
+      oscillator.start();
+      setTimeout(() => {
+        oscillator.frequency.value = 1100;
+      }, 150);
+      setTimeout(() => {
+        oscillator.stop();
+      }, 300);
+    } catch (e) {
+      console.log('Audio not supported');
+    }
+  };
 
   useEffect(() => {
     fetchStats();
