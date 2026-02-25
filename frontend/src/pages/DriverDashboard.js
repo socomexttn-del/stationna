@@ -8,9 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Switch } from '../components/ui/switch';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../components/ui/sheet';
 import ChatComponent from '../components/ChatComponent';
+import BookingReceipt from '../components/BookingReceipt';
 import { 
   Car, MapPin, Navigation, Star, Clock, DollarSign,
-  Menu, User, History, LogOut, Check, X, Play, Phone, Bell, Wifi, WifiOff, MessageCircle, FileText
+  Menu, User, History, LogOut, Check, X, Play, Phone, Bell, Wifi, WifiOff, MessageCircle, FileText, Receipt
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -23,6 +24,7 @@ const DriverDashboard = () => {
   const [activeRide, setActiveRide] = useState(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
+  const [showReceipt, setShowReceipt] = useState(false);
   const [stats, setStats] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
