@@ -512,11 +512,13 @@ const PassengerDashboard = () => {
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
-                      <Car className="w-5 h-5 text-primary" />
+                      {vehicleType === 'van' ? <Truck className="w-5 h-5 text-primary" /> : <Car className="w-5 h-5 text-primary" />}
                     </div>
                     <div>
-                      <p className="font-semibold">Volt Taxi</p>
-                      <p className="text-sm text-muted-foreground">{routeInfo?.distance || estimate.distance_km} km • {estimate.duration_minutes || routeInfo?.duration} min</p>
+                      <p className="font-semibold">Volt {vehicleType === 'van' ? 'Van' : 'Taxi'}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {routeInfo?.distance || estimate.distance_km} km • {estimate.duration_minutes || routeInfo?.duration} min • {passengers} passager{passengers > 1 ? 's' : ''}
+                      </p>
                     </div>
                   </div>
                   <p className="text-2xl font-bold text-primary">{estimate.estimated_fare}€</p>
@@ -530,15 +532,15 @@ const PassengerDashboard = () => {
                       <span>{estimate.fare_details.prise_en_charge}€</span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
-                      <span>Distance ({estimate.distance_km} km × 1,30€)</span>
+                      <span>Distance ({estimate.distance_km} km)</span>
                       <span>{estimate.fare_details.distance_cost}€</span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
-                      <span>Temps ({estimate.duration_minutes} min × 0,70€)</span>
+                      <span>Temps ({estimate.duration_minutes} min)</span>
                       <span>{estimate.fare_details.time_cost}€</span>
                     </div>
                     {estimate.fare_details.supplement_details?.map((sup, idx) => (
-                      <div key={idx} className="flex justify-between text-muted-foreground">
+                      <div key={idx} className="flex justify-between text-yellow-500">
                         <span>{sup.name}</span>
                         <span>+{sup.amount}€</span>
                       </div>
