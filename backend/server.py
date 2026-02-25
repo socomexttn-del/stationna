@@ -1348,6 +1348,169 @@ async def get_payment_summary(current_user: dict = Depends(get_current_user)):
         "currency": "EUR"
     }
 
+# ======================== ADMIN DASHBOARD ========================
+
+@api_router.get("/admin/stats/overview")
+async def get_admin_overview(admin_user: dict = Depends(get_admin_user)):
+    """Get overall platform statistics (admin only)"""
+    # Get date ranges
+    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    week_ago = today - timedelta(days=7)
+    month_ago = today - timedelta(days=30)
+    
+    # Total users
+    total_passengers = await db.users.count_documents({"role": "passenger"})
+    total_drivers = await db.users.count_documents({"role": "driver"})
+    
+    # Rides stats
+    total_rides = await db.rides.count_documents({})
+    completed_rides = await db.rides.count_documents({"status": "completed"})
+    rides_today = await db.rides.count_documents({
+        "created_at": {"$gte": today.isoformat()}
+    })
+    
+    # Revenue
+    all_completed = await db.rides.find(
+        {"status": "completed", "final_fare": {"$ne": None}},
+        {"_id": 0, "final_fare": 1, "created_at": 1}
+    ).to_list(10000)
+    
+    total_revenue = sum(r.get("final_fare", 0) for r in all_completed)
+    revenue_today = sum(
+        r.get("final_fare", 0) for r in all_completed 
+        if r.get("created_at", "") >= today.isoformat()
+    )
+    revenue_week = sum(
+        r.get("final_fare", 0) for r in all_completed 
+        if r.get("created_at", "") >= week_ago.isoformat()
+    )
+    
+    return {
+        "users": {
+            "total_passengers": total_passengers,
+            "total_drivers": total_drivers
+        },
+        "rides": {
+            "total": total_rides,
+            "completed": completed_rides,
+            "today": rides_today,
+            "completion_rate": round(completed_rides / total_rides * 100, 1) if total_rides > 0 else 0
+        },
+        "revenue": {
+            "total": round(total_revenue, 2),
+            "today": round(revenue_today, 2),
+            "week": round(revenue_week, 2),
+            "currency": "EUR"
+        }
+    }
+
+@api_router.get("/admin/stats/drivers")
+async def get_admin_driver_stats(admin_user: dict = Depends(get_admin_user)):
+    """Get detailed driver statistics (admin only)"""
+    drivers = await db.users.find(
+        {"role": "driver"},
+        {"_id": 0, "password_hash": 0}
+    ).to_list(100)
+    
+    driver_stats = []
+    for driver in drivers:
+        # Get driver's completed rides
+        rides = await db.rides.find(
+            {"driver_id": driver["id"], "status": "completed"},
+            {"_id": 0, "final_fare": 1, "created_at": 1, "distance_km": 1}
+        ).to_list(1000)
+        
+        total_revenue = sum(r.get("final_fare", 0) for r in rides)
+        total_distance = sum(r.get("distance_km", 0) for r in rides)
+        
+        # Get ratings
+        ratings = await db.ratings.find(
+            {"rated_user_id": driver["id"]},
+            {"_id": 0, "rating": 1}
+        ).to_list(1000)
+        avg_rating = sum(r["rating"] for r in ratings) / len(ratings) if ratings else 5.0
+        
+        # Today's stats
+        today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        rides_today = [r for r in rides if r.get("created_at", "") >= today.isoformat()]
+        revenue_today = sum(r.get("final_fare", 0) for r in rides_today)
+        
+        driver_stats.append({
+            "id": driver["id"],
+            "name": f"{driver['first_name']} {driver['last_name']}",
+            "email": driver["email"],
+            "phone": driver["phone"],
+            "is_available": driver.get("is_available", False),
+            "vehicle": driver.get("vehicle_info"),
+            "stats": {
+                "total_rides": len(rides),
+                "total_revenue": round(total_revenue, 2),
+                "total_distance_km": round(total_distance, 1),
+                "avg_rating": round(avg_rating, 2),
+                "total_ratings": len(ratings),
+                "rides_today": len(rides_today),
+                "revenue_today": round(revenue_today, 2)
+            },
+            "created_at": driver.get("created_at")
+        })
+    
+    # Sort by total revenue
+    driver_stats.sort(key=lambda x: x["stats"]["total_revenue"], reverse=True)
+    
+    return {"drivers": driver_stats}
+
+@api_router.get("/admin/stats/rides")
+async def get_admin_ride_stats(
+    days: int = 7,
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Get ride statistics over time (admin only)"""
+    start_date = datetime.now(timezone.utc) - timedelta(days=days)
+    
+    rides = await db.rides.find(
+        {"created_at": {"$gte": start_date.isoformat()}},
+        {"_id": 0, "status": 1, "final_fare": 1, "estimated_fare": 1, "created_at": 1, "distance_km": 1}
+    ).to_list(10000)
+    
+    # Group by day
+    daily_stats = {}
+    for ride in rides:
+        day = ride["created_at"][:10]  # YYYY-MM-DD
+        if day not in daily_stats:
+            daily_stats[day] = {"rides": 0, "completed": 0, "revenue": 0, "distance": 0}
+        daily_stats[day]["rides"] += 1
+        if ride["status"] == "completed":
+            daily_stats[day]["completed"] += 1
+            daily_stats[day]["revenue"] += ride.get("final_fare", 0)
+        daily_stats[day]["distance"] += ride.get("distance_km", 0)
+    
+    # Convert to list and sort
+    daily_list = [
+        {
+            "date": day,
+            "rides": stats["rides"],
+            "completed": stats["completed"],
+            "revenue": round(stats["revenue"], 2),
+            "distance": round(stats["distance"], 1)
+        }
+        for day, stats in sorted(daily_stats.items())
+    ]
+    
+    return {"daily_stats": daily_list, "days": days}
+
+@api_router.get("/admin/recent-rides")
+async def get_admin_recent_rides(
+    limit: int = 20,
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Get recent rides for admin dashboard"""
+    rides = await db.rides.find(
+        {},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(limit)
+    
+    return {"rides": rides}
+
 # ======================== NOTIFICATION ROUTES ========================
 
 @api_router.get("/notifications")
