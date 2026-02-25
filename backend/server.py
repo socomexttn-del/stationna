@@ -700,6 +700,79 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ======================== WEBSOCKET ENDPOINTS ========================
+
+@app.websocket("/ws/driver/{token}")
+async def websocket_driver(websocket: WebSocket, token: str):
+    """WebSocket endpoint for drivers to receive real-time notifications"""
+    try:
+        # Decode token to get driver info
+        payload = decode_token(token)
+        driver_id = payload["user_id"]
+        
+        # Verify user is a driver
+        user = await db.users.find_one({"id": driver_id, "role": "driver"}, {"_id": 0})
+        if not user:
+            await websocket.close(code=4003)
+            return
+        
+        await manager.connect_driver(websocket, driver_id)
+        
+        try:
+            while True:
+                # Keep connection alive and handle incoming messages
+                data = await websocket.receive_text()
+                message = json.loads(data)
+                
+                # Handle ping/pong for connection keepalive
+                if message.get("type") == "ping":
+                    await websocket.send_json({"type": "pong"})
+                
+                # Handle location updates from driver
+                elif message.get("type") == "location_update":
+                    location = message.get("location")
+                    if location:
+                        await db.users.update_one(
+                            {"id": driver_id},
+                            {"$set": {"location": location}}
+                        )
+                        
+        except WebSocketDisconnect:
+            manager.disconnect_driver(driver_id)
+    except Exception as e:
+        logger.error(f"WebSocket driver error: {e}")
+        manager.disconnect_driver(driver_id) if 'driver_id' in locals() else None
+
+@app.websocket("/ws/passenger/{token}")
+async def websocket_passenger(websocket: WebSocket, token: str):
+    """WebSocket endpoint for passengers to receive ride updates"""
+    try:
+        # Decode token to get passenger info
+        payload = decode_token(token)
+        passenger_id = payload["user_id"]
+        
+        # Verify user is a passenger
+        user = await db.users.find_one({"id": passenger_id, "role": "passenger"}, {"_id": 0})
+        if not user:
+            await websocket.close(code=4003)
+            return
+        
+        await manager.connect_passenger(websocket, passenger_id)
+        
+        try:
+            while True:
+                data = await websocket.receive_text()
+                message = json.loads(data)
+                
+                if message.get("type") == "ping":
+                    await websocket.send_json({"type": "pong"})
+                    
+        except WebSocketDisconnect:
+            manager.disconnect_passenger(passenger_id)
+    except Exception as e:
+        logger.error(f"WebSocket passenger error: {e}")
+        manager.disconnect_passenger(passenger_id) if 'passenger_id' in locals() else None
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
