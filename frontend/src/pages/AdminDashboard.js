@@ -279,16 +279,22 @@ const AdminDashboard = () => {
                     <th className="pb-3 font-medium text-center">Note</th>
                     <th className="pb-3 font-medium text-right">Revenus</th>
                     <th className="pb-3 font-medium text-center">Statut</th>
+                    <th className="pb-3 font-medium text-center">Compte</th>
                     <th className="pb-3 font-medium text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {driverStats.map((driver) => (
-                    <tr key={driver.id} className="border-b border-white/5 hover:bg-muted/30">
+                    <tr key={driver.id} className={`border-b border-white/5 hover:bg-muted/30 ${!driver.is_active ? 'opacity-50' : ''}`}>
                       <td className="py-3">
-                        <div>
-                          <p className="font-medium">{driver.name}</p>
-                          <p className="text-xs text-muted-foreground">{driver.email}</p>
+                        <div className="flex items-center gap-2">
+                          {!driver.is_active && (
+                            <UserX className="w-4 h-4 text-red-500" />
+                          )}
+                          <div>
+                            <p className="font-medium">{driver.name}</p>
+                            <p className="text-xs text-muted-foreground">{driver.email}</p>
+                          </div>
                         </div>
                       </td>
                       <td className="py-3">
@@ -319,6 +325,27 @@ const AdminDashboard = () => {
                         }`}>
                           {driver.is_available ? 'En ligne' : 'Hors ligne'}
                         </span>
+                      </td>
+                      <td className="py-3 text-center">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => toggleDriverStatus(driver)}
+                          className={`text-xs ${driver.is_active ? 'text-red-500 hover:text-red-400 hover:bg-red-500/10' : 'text-green-500 hover:text-green-400 hover:bg-green-500/10'}`}
+                          data-testid={`toggle-driver-${driver.id}`}
+                        >
+                          {driver.is_active ? (
+                            <>
+                              <UserX className="w-3 h-3 mr-1" />
+                              Désactiver
+                            </>
+                          ) : (
+                            <>
+                              <UserCheck className="w-3 h-3 mr-1" />
+                              Activer
+                            </>
+                          )}
+                        </Button>
                       </td>
                       <td className="py-3 text-center">
                         <Button
