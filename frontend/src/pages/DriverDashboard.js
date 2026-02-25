@@ -11,7 +11,7 @@ import ChatComponent from '../components/ChatComponent';
 import BookingReceipt from '../components/BookingReceipt';
 import { 
   Car, MapPin, Navigation, Star, Clock, DollarSign,
-  Menu, User, History, LogOut, Check, X, Play, Phone, Bell, Wifi, WifiOff, MessageCircle, FileText, Receipt
+  Menu, User, History, LogOut, Check, X, Play, Phone, Bell, Wifi, WifiOff, MessageCircle, FileText, Receipt, Crosshair, Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 
