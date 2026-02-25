@@ -488,11 +488,20 @@ async def get_driver_location(ride_id: str, current_user: dict = Depends(get_cur
 async def estimate_fare(data: FareEstimateRequest):
     distance = calculate_distance(data.pickup.model_dump(), data.destination.model_dump())
     duration = estimate_duration_minutes(distance)
-    fare_details = calculate_fare(distance, duration, is_scheduled=False, is_immediate=True)
+    fare_details = calculate_fare(
+        distance, 
+        duration, 
+        is_scheduled=False, 
+        is_immediate=True,
+        vehicle_type=data.vehicle_type,
+        passenger_count=data.passenger_count
+    )
     
     return {
         "distance_km": distance,
         "duration_minutes": duration,
+        "vehicle_type": data.vehicle_type,
+        "passenger_count": data.passenger_count,
         "fare_details": fare_details,
         "estimated_fare": fare_details["total"],
         "currency": "EUR"
@@ -507,7 +516,14 @@ async def create_ride(data: RideRequest, current_user: dict = Depends(get_curren
     destination = data.destination.model_dump()
     distance = calculate_distance(pickup, destination)
     duration = estimate_duration_minutes(distance)
-    fare_details = calculate_fare(distance, duration, is_scheduled=False, is_immediate=True)
+    fare_details = calculate_fare(
+        distance, 
+        duration, 
+        is_scheduled=False, 
+        is_immediate=True,
+        vehicle_type=data.vehicle_type,
+        passenger_count=data.passenger_count
+    )
     fare = fare_details["total"]
     
     # Check for available promo code
