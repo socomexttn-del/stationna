@@ -344,6 +344,159 @@ class TaxiAPITester:
         )
         return success, response
 
+    # ======================== NEW FEATURES TESTS ========================
+
+    def test_schedule_ride(self, token):
+        """Test scheduling a ride for future time"""
+        # Schedule a ride for 2 hours from now
+        future_time = datetime.utcnow() + timedelta(hours=2)
+        success, response = self.run_test(
+            "Schedule ride",
+            "POST",
+            "rides/schedule",
+            200,
+            data={
+                "pickup": {"lat": 48.8566, "lng": 2.3522, "address": "Paris Centre"},
+                "destination": {"lat": 48.8738, "lng": 2.2950, "address": "Arc de Triomphe"},
+                "scheduled_time": future_time.isoformat() + "Z"
+            },
+            token=token
+        )
+        return success, response
+
+    def test_get_scheduled_rides(self, token):
+        """Test getting scheduled rides"""
+        success, response = self.run_test(
+            "Get scheduled rides",
+            "GET",
+            "rides/scheduled",
+            200,
+            token=token
+        )
+        return success, response
+
+    def test_activate_scheduled_ride(self, ride_id, token):
+        """Test activating a scheduled ride"""
+        success, response = self.run_test(
+            "Activate scheduled ride",
+            "POST",
+            f"rides/{ride_id}/activate",
+            200,
+            token=token
+        )
+        return success, response
+
+    def test_add_favorite_address(self, token, name="Maison"):
+        """Test adding a favorite address"""
+        success, response = self.run_test(
+            "Add favorite address",
+            "POST",
+            "favorites",
+            200,
+            data={
+                "name": name,
+                "location": {"lat": 48.8566, "lng": 2.3522, "address": "123 Rue de la Paix, Paris"}
+            },
+            token=token
+        )
+        return success, response
+
+    def test_get_favorite_addresses(self, token):
+        """Test getting favorite addresses"""
+        success, response = self.run_test(
+            "Get favorite addresses",
+            "GET",
+            "favorites",
+            200,
+            token=token
+        )
+        return success, response
+
+    def test_delete_favorite_address(self, favorite_id, token):
+        """Test deleting a favorite address"""
+        success, response = self.run_test(
+            "Delete favorite address",
+            "POST",  # Note: actually DELETE method but using POST for consistency
+            f"favorites/{favorite_id}",
+            200,
+            token=token
+        )
+        return success, response
+
+    def test_create_promo_code(self, token, code="TEST10"):
+        """Test creating a promo code"""
+        future_date = datetime.utcnow() + timedelta(days=30)
+        success, response = self.run_test(
+            "Create promo code",
+            "POST",
+            "promo/create",
+            200,
+            data={
+                "code": code,
+                "discount_percent": 10,
+                "max_uses": 100,
+                "valid_until": future_date.isoformat() + "Z"
+            },
+            token=token
+        )
+        return success, response
+
+    def test_apply_promo_code(self, token, code="TEST10"):
+        """Test applying a promo code"""
+        success, response = self.run_test(
+            "Apply promo code",
+            "POST",
+            "promo/apply",
+            200,
+            data={"code": code},
+            token=token
+        )
+        return success, response
+
+    def test_get_my_promo_codes(self, token):
+        """Test getting user's promo codes"""
+        success, response = self.run_test(
+            "Get my promo codes",
+            "GET",
+            "promo/my-codes",
+            200,
+            token=token
+        )
+        return success, response
+
+    def test_get_referral_code(self, token):
+        """Test getting user's referral code"""
+        success, response = self.run_test(
+            "Get referral code",
+            "GET",
+            "promo/referral",
+            200,
+            token=token
+        )
+        return success, response
+
+    def test_payment_history(self, token):
+        """Test getting payment history"""
+        success, response = self.run_test(
+            "Get payment history",
+            "GET",
+            "payments/history",
+            200,
+            token=token
+        )
+        return success, response
+
+    def test_payment_summary(self, token):
+        """Test getting payment summary"""
+        success, response = self.run_test(
+            "Get payment summary",
+            "GET",
+            "payments/summary",
+            200,
+            token=token
+        )
+        return success, response
+
 def main():
     print("🚕 Starting Volt Taxi API Tests...")
     tester = TaxiAPITester()
