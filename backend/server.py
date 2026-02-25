@@ -201,6 +201,42 @@ class ChatMessageResponse(BaseModel):
     message: str
     created_at: str
 
+# Models for new features
+class ScheduledRideRequest(BaseModel):
+    pickup: LocationModel
+    destination: LocationModel
+    scheduled_time: str  # ISO format datetime
+
+class FavoriteAddressCreate(BaseModel):
+    name: str  # "Maison", "Travail", etc.
+    location: LocationModel
+
+class FavoriteAddressResponse(BaseModel):
+    id: str
+    user_id: str
+    name: str
+    location: Dict
+    created_at: str
+
+class PromoCodeCreate(BaseModel):
+    code: str
+    discount_percent: int = Field(..., ge=1, le=100)
+    max_uses: int = 100
+    valid_until: str  # ISO format datetime
+
+class PromoCodeApply(BaseModel):
+    code: str
+
+class PaymentHistoryResponse(BaseModel):
+    id: str
+    ride_id: str
+    amount: float
+    currency: str
+    status: str
+    created_at: str
+    ride_pickup: str
+    ride_destination: str
+
 # ======================== HELPERS ========================
 
 def hash_password(password: str) -> str:
