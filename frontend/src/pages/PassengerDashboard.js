@@ -159,8 +159,23 @@ const PassengerDashboard = () => {
       return;
     }
     
+    // Validate passengers for vehicle type
+    if (vehicleType === 'standard' && passengers > 4) {
+      toast.error('Maximum 4 passagers pour un véhicule standard. Choisissez un Van.');
+      return;
+    }
+    if (vehicleType === 'van' && passengers > 7) {
+      toast.error('Maximum 7 passagers pour un Van.');
+      return;
+    }
+    
     try {
-      const response = await api.post('/rides/estimate', { pickup, destination });
+      const response = await api.post('/rides/estimate', { 
+        pickup, 
+        destination,
+        vehicle_type: vehicleType,
+        passenger_count: passengers
+      });
       setEstimate(response.data);
       setStep('booking');
     } catch (error) {
