@@ -138,11 +138,26 @@ const PassengerDashboard = () => {
         toast.success(
           <div className="flex flex-col gap-1">
             <span className="font-semibold">Chauffeur trouvé!</span>
-            <span className="text-sm">{data.driver_name} arrive</span>
+            <span className="text-sm">{data.driver_name} arrive dans {data.eta_minutes || '~5'} min</span>
           </div>,
           { duration: 5000 }
         );
+        // Push notification
+        notifyDriverAccepted(data.driver_name, data.eta_minutes || 5);
         setStep('ride_active');
+        fetchActiveRide();
+        break;
+      
+      case 'driver_arrived':
+        toast.success(
+          <div className="flex flex-col gap-1">
+            <span className="font-semibold">Votre chauffeur est arrivé!</span>
+            <span className="text-sm">{data.driver_name} vous attend</span>
+          </div>,
+          { duration: 8000 }
+        );
+        // Push notification
+        notifyDriverArrived(data.driver_name);
         fetchActiveRide();
         break;
         
@@ -159,6 +174,8 @@ const PassengerDashboard = () => {
           </div>,
           { duration: 5000 }
         );
+        // Push notification
+        notifyRideCompleted(data.final_fare);
         fetchActiveRide();
         setDriverLocation(null);
         break;
@@ -181,13 +198,15 @@ const PassengerDashboard = () => {
             </div>,
             { duration: 4000 }
           );
+          // Push notification
+          notifyNewMessage(data.sender_name, data.message);
         }
         break;
         
       default:
         break;
     }
-  }, []);
+  }, [notifyDriverAccepted, notifyDriverArrived, notifyRideCompleted, notifyNewMessage, chatOpen]);
 
   // Connect to notification polling
   useNotifications(api, 'passenger', handleNotification);
