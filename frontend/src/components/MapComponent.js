@@ -246,7 +246,7 @@ const MapComponent = ({
     }
   }, [destinationLocation, pickupLocation, mapLoaded, fetchRoute]);
 
-  // Update driver marker
+  // Update driver marker (for active ride - assigned driver)
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 
@@ -286,6 +286,85 @@ const MapComponent = ({
       }
     }
   }, [driverLocation, mapLoaded]);
+
+  // Update available drivers markers (yellow Volt cars)
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return;
+
+    // Remove existing driver markers
+    driverMarkers.current.forEach(marker => marker.remove());
+    driverMarkers.current = [];
+
+    // Add new markers for available drivers
+    availableDrivers.forEach((driver) => {
+      if (driver.location?.lat && driver.location?.lng) {
+        const el = document.createElement('div');
+        el.className = 'available-driver-marker';
+        el.innerHTML = `
+          <div style="
+            position: relative;
+            cursor: pointer;
+          ">
+            <div style="
+              width: 36px;
+              height: 36px;
+              background: linear-gradient(135deg, #facc15 0%, #eab308 100%);
+              border-radius: 8px;
+              border: 2px solid white;
+              box-shadow: 0 2px 8px rgba(250, 204, 21, 0.4);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              transform: rotate(-15deg);
+            ">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="#1a1a1a" style="transform: rotate(15deg);">
+                <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+              </svg>
+            </div>
+            <div style="
+              position: absolute;
+              bottom: -18px;
+              left: 50%;
+              transform: translateX(-50%);
+              background: rgba(26, 26, 26, 0.9);
+              color: #facc15;
+              font-size: 10px;
+              font-weight: bold;
+              padding: 2px 6px;
+              border-radius: 4px;
+              white-space: nowrap;
+              font-family: 'Space Grotesk', sans-serif;
+            ">VOLT</div>
+          </div>
+        `;
+        
+        const marker = new mapboxgl.Marker(el)
+          .setLngLat([driver.location.lng, driver.location.lat])
+          .addTo(map.current);
+        
+        // Add popup with driver info
+        const popup = new mapboxgl.Popup({ offset: 25, closeButton: false })
+          .setHTML(`
+            <div style="padding: 8px; font-family: 'Space Grotesk', sans-serif;">
+              <div style="font-weight: bold; color: #1a1a1a;">${driver.first_name} ${driver.last_name?.charAt(0) || ''}.</div>
+              <div style="display: flex; align-items: center; gap: 4px; margin-top: 4px;">
+                <span style="color: #facc15;">★</span>
+                <span style="color: #666; font-size: 12px;">${driver.rating?.toFixed(1) || '5.0'}</span>
+              </div>
+            </div>
+          `);
+        
+        el.addEventListener('mouseenter', () => popup.addTo(map.current).setLngLat([driver.location.lng, driver.location.lat]));
+        el.addEventListener('mouseleave', () => popup.remove());
+        
+        driverMarkers.current.push(marker);
+      }
+    });
+
+    return () => {
+      driverMarkers.current.forEach(marker => marker.remove());
+    };
+  }, [availableDrivers, mapLoaded]);
 
   return (
     <div 
