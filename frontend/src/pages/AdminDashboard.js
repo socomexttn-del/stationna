@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button';
 import { 
   Users, Car, DollarSign, TrendingUp, MapPin, Clock, Star,
-  ArrowLeft, RefreshCw, Calendar, Route
+  ArrowLeft, RefreshCw, Calendar, Route, FileText, Check, X, Eye
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -18,6 +18,8 @@ const AdminDashboard = () => {
   const [rideStats, setRideStats] = useState([]);
   const [recentRides, setRecentRides] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDriver, setSelectedDriver] = useState(null);
+  const [driverDocuments, setDriverDocuments] = useState(null);
 
   useEffect(() => {
     if (user?.role !== 'admin') {
