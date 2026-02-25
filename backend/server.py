@@ -509,6 +509,77 @@ async def update_vehicle(data: VehicleUpdate, current_user: dict = Depends(get_c
     updated = await db.users.find_one({"id": current_user["id"]}, {"_id": 0})
     return UserResponse(**{k: v for k, v in updated.items() if k != "password_hash"})
 
+@api_router.put("/drivers/documents")
+async def update_driver_document(data: DriverDocumentsUpdate, current_user: dict = Depends(get_current_user)):
+    """Update a specific driver document"""
+    if current_user["role"] != "driver":
+        raise HTTPException(status_code=403, detail="Only drivers can update documents")
+    
+    valid_types = ["carte_grise", "assurance", "controle_technique", "permis_conduire", "carte_vtc"]
+    if data.document_type not in valid_types:
+        raise HTTPException(status_code=400, detail=f"Invalid document type. Must be one of: {valid_types}")
+    
+    doc_data = {
+        "url": data.document_url,
+        "uploaded_at": datetime.now(timezone.utc).isoformat(),
+        "expiry_date": data.expiry_date,
+        "status": "pending"  # pending, approved, rejected
+    }
+    
+    await db.users.update_one(
+        {"id": current_user["id"]},
+        {"$set": {f"documents.{data.document_type}": doc_data}}
+    )
+    
+    return {"status": "ok", "document_type": data.document_type}
+
+@api_router.get("/drivers/documents")
+async def get_driver_documents(current_user: dict = Depends(get_current_user)):
+    """Get all documents for current driver"""
+    if current_user["role"] != "driver":
+        raise HTTPException(status_code=403, detail="Only drivers can view their documents")
+    
+    user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0, "documents": 1, "vehicle_info": 1})
+    return {
+        "documents": user.get("documents", {}),
+        "vehicle_info": user.get("vehicle_info")
+    }
+
+@api_router.get("/admin/drivers/{driver_id}/documents")
+async def get_driver_documents_admin(driver_id: str, admin_user: dict = Depends(get_admin_user)):
+    """Get all documents for a specific driver (admin only)"""
+    driver = await db.users.find_one({"id": driver_id, "role": "driver"}, {"_id": 0})
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+    
+    return {
+        "driver_id": driver_id,
+        "name": f"{driver['first_name']} {driver['last_name']}",
+        "documents": driver.get("documents", {}),
+        "vehicle_info": driver.get("vehicle_info")
+    }
+
+@api_router.put("/admin/drivers/{driver_id}/documents/{doc_type}/status")
+async def update_document_status(
+    driver_id: str, 
+    doc_type: str, 
+    status: str,
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Approve or reject a driver document (admin only)"""
+    if status not in ["approved", "rejected", "pending"]:
+        raise HTTPException(status_code=400, detail="Status must be: approved, rejected, or pending")
+    
+    result = await db.users.update_one(
+        {"id": driver_id, "role": "driver"},
+        {"$set": {f"documents.{doc_type}.status": status}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Driver not found")
+    
+    return {"status": "ok", "document_status": status}
+
 @api_router.get("/drivers/available", response_model=List[UserResponse])
 async def get_available_drivers(current_user: dict = Depends(get_current_user)):
     drivers = await db.users.find({"role": "driver", "is_available": True}, {"_id": 0, "password_hash": 0}).to_list(100)
