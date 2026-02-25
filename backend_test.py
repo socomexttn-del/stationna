@@ -229,6 +229,44 @@ class TaxiAPITester:
         )
         return success, response
 
+    def test_driver_location_update(self, token):
+        """Test driver GPS location update"""
+        success, response = self.run_test(
+            "Driver location update",
+            "PUT",
+            "drivers/location",
+            200,
+            data={
+                "lat": 48.8566,
+                "lng": 2.3522,
+                "address": "Paris Centre - GPS Location"
+            },
+            token=token
+        )
+        return success, response
+
+    def test_get_driver_location_for_ride(self, ride_id, token):
+        """Test getting driver location for a specific ride"""
+        success, response = self.run_test(
+            "Get driver location for ride",
+            "GET",
+            f"rides/{ride_id}/driver-location",
+            200,
+            token=token
+        )
+        return success, response
+
+    def test_notifications(self, token, role_type):
+        """Test getting notifications"""
+        success, response = self.run_test(
+            f"Get {role_type} notifications",
+            "GET",
+            "notifications",
+            200,
+            token=token
+        )
+        return success, response
+
 def main():
     print("🚕 Starting Volt Taxi API Tests...")
     tester = TaxiAPITester()
