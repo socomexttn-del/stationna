@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../hooks/useNotifications';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../components/ui/sheet';
@@ -11,13 +12,14 @@ import ChatComponent from '../components/ChatComponent';
 import { 
   Car, MapPin, Navigation, Star, Clock, CreditCard, 
   Menu, User, History, LogOut, Phone, X, Route, MessageCircle,
-  Calendar, Gift, Users, Truck, Bookmark, Plus, Trash2, Zap
+  Calendar, Gift, Users, Truck, Bookmark, Plus, Trash2, Zap, Bell
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const PassengerDashboard = () => {
   const { user, logout, api } = useAuth();
   const navigate = useNavigate();
+  const { permission, requestPermission, notifyDriverAccepted, notifyDriverArrived, notifyRideCompleted, notifyNewMessage } = usePushNotifications();
   
   const [step, setStep] = useState('idle'); // idle, booking, searching, ride_active
   const [chatOpen, setChatOpen] = useState(false);
