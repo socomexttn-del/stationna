@@ -165,6 +165,10 @@ class RideResponse(BaseModel):
     created_at: str
     accepted_at: Optional[str] = None
     completed_at: Optional[str] = None
+    vehicle_type: str = "standard"
+    passenger_count: int = 1
+    driver_eta_minutes: Optional[int] = None
+    driver_distance_km: Optional[float] = None
 
 class RatingCreate(BaseModel):
     ride_id: str
