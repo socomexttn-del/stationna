@@ -456,7 +456,6 @@ const PassengerDashboard = () => {
 
   const handlePaymentError = (errorMsg) => {
     toast.error(errorMsg || 'Erreur de paiement');
-    }
   };
 
   const rateDriver = async (rating) => {
