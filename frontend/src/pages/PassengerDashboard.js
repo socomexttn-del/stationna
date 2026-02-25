@@ -575,7 +575,7 @@ const PassengerDashboard = () => {
                   {frequentTrips.slice(0, 4).map((trip) => (
                     <button
                       key={trip.id}
-                      onClick={() => useFrequentTrip(trip)}
+                      onClick={() => loadFrequentTrip(trip)}
                       className="flex-shrink-0 bg-muted/50 hover:bg-muted border border-white/10 hover:border-primary/50 rounded-xl px-3 py-2 text-left transition-all group relative"
                     >
                       <button
