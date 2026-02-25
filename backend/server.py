@@ -306,8 +306,6 @@ async def get_admin_user(current_user: dict = Depends(get_current_user)):
     if current_user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     return current_user
-        raise HTTPException(status_code=404, detail="User not found")
-    return user
 
 def calculate_distance(pickup: Dict, destination: Dict) -> float:
     """Calculate distance between two points using Haversine formula"""
