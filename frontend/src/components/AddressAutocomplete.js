@@ -82,6 +82,24 @@ const AddressAutocomplete = ({
 
     setIsLoading(true);
     try {
+      // First, search in popular locations
+      const queryLower = query.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const localMatches = POPULAR_LOCATIONS.filter(loc => {
+        const textLower = loc.text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const addressLower = loc.address.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        return textLower.includes(queryLower) || addressLower.includes(queryLower) || queryLower.includes(textLower.split(' ')[0]);
+      }).map(loc => ({
+        id: loc.id,
+        address: loc.address,
+        shortAddress: loc.text,
+        city: 'Paris',
+        postcode: '',
+        lat: loc.lat,
+        lng: loc.lng,
+        type: loc.type,
+        isLocal: true
+      }));
+
       // Build proximity parameter for better local results
       const proximityParam = userLocation 
         ? `&proximity=${userLocation.lng},${userLocation.lat}` 
@@ -100,8 +118,9 @@ const AddressAutocomplete = ({
       );
       const data = await response.json();
       
+      let mapboxResults = [];
       if (data.features) {
-        setSuggestions(data.features.map(feature => {
+        mapboxResults = data.features.map(feature => {
           // Extract context for better display
           const context = feature.context || [];
           const city = context.find(c => c.id.startsWith('place'))?.text || '';
@@ -115,11 +134,19 @@ const AddressAutocomplete = ({
             postcode,
             lat: feature.center[1],
             lng: feature.center[0],
-            type: feature.place_type?.[0] || 'address'
+            type: feature.place_type?.[0] || 'address',
+            isLocal: false
           };
-        }));
-        setShowSuggestions(true);
+        });
       }
+
+      // Combine local matches first, then Mapbox results (avoiding duplicates)
+      const seenAddresses = new Set(localMatches.map(m => m.shortAddress.toLowerCase()));
+      const filteredMapbox = mapboxResults.filter(r => !seenAddresses.has(r.shortAddress.toLowerCase()));
+      
+      const combined = [...localMatches, ...filteredMapbox].slice(0, 7);
+      setSuggestions(combined);
+      setShowSuggestions(true);
     } catch (error) {
       console.error('Geocoding error:', error);
       setSuggestions([]);
