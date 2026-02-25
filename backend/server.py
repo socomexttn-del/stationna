@@ -150,17 +150,27 @@ class LocationModel(BaseModel):
 class RideResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
+    reservation_number: Optional[str] = None  # Numéro de réservation court
     passenger_id: str
     passenger_name: str
+    passenger_phone: Optional[str] = None
     driver_id: Optional[str] = None
     driver_name: Optional[str] = None
+    driver_company: Optional[str] = None
+    driver_phone: Optional[str] = None
+    driver_license_plate: Optional[str] = None
+    driver_identification: Optional[str] = None
     pickup: Dict
     destination: Dict
     distance_km: float
     estimated_fare: float
+    commission_rate: float = 0.18  # 18% commission
+    commission_amount: Optional[float] = None
+    driver_earnings: Optional[float] = None  # Montant après commission
     final_fare: Optional[float] = None
     status: str
     payment_status: str = "pending"
+    payment_method: Optional[str] = None  # card, cash
     scheduled_time: Optional[str] = None
     created_at: str
     accepted_at: Optional[str] = None
