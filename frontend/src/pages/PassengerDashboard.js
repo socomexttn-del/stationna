@@ -9,7 +9,7 @@ import MapComponent from '../components/MapComponent';
 import AddressAutocomplete from '../components/AddressAutocomplete';
 import { 
   Car, MapPin, Navigation, Star, Clock, CreditCard, 
-  Menu, User, History, LogOut, Phone, X
+  Menu, User, History, LogOut, Phone, X, Route
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -21,9 +21,15 @@ const PassengerDashboard = () => {
   const [activeRide, setActiveRide] = useState(null);
   const [estimate, setEstimate] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [routeInfo, setRouteInfo] = useState(null);
   
   const [pickup, setPickup] = useState({ lat: 48.8566, lng: 2.3522, address: '' });
   const [destination, setDestination] = useState({ lat: 48.8738, lng: 2.2950, address: '' });
+
+  // Handle route calculation callback
+  const handleRouteCalculated = useCallback((info) => {
+    setRouteInfo(info);
+  }, []);
 
   // Notification handler for real-time updates
   const handleNotification = useCallback((data) => {
