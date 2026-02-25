@@ -630,7 +630,12 @@ async def update_driver_status(
 
 @api_router.get("/drivers/available", response_model=List[UserResponse])
 async def get_available_drivers(current_user: dict = Depends(get_current_user)):
-    drivers = await db.users.find({"role": "driver", "is_available": True}, {"_id": 0, "password_hash": 0}).to_list(100)
+    # Only return drivers who are available AND active (not deactivated by admin)
+    drivers = await db.users.find({
+        "role": "driver", 
+        "is_available": True,
+        "$or": [{"is_active": True}, {"is_active": {"$exists": False}}]  # Include drivers without is_active field (backwards compatible)
+    }, {"_id": 0, "password_hash": 0}).to_list(100)
     return [UserResponse(**d) for d in drivers]
 
 @api_router.put("/drivers/location")
