@@ -433,6 +433,48 @@ def main():
     if driver_login_success:
         tester.test_notifications(tester.driver_token, "driver")
         
+    print("\n=== CHAT FUNCTIONALITY TESTS ===")
+    
+    # Test chat functionality during active ride
+    if driver_login_success and tester.test_ride_id:
+        print(f"\n💬 Testing chat functionality with ride ID: {tester.test_ride_id}")
+        
+        # Test chat during accepted ride status
+        print("\n📨 Testing chat during accepted ride...")
+        
+        # Passenger sends message
+        passenger_msg_success, _ = tester.test_send_chat_message(
+            tester.test_ride_id, 
+            "Bonjour, je suis en route vers le point de rendez-vous", 
+            tester.passenger_token
+        )
+        
+        # Driver sends reply  
+        driver_msg_success, _ = tester.test_send_chat_message(
+            tester.test_ride_id,
+            "Parfait, je vous attends. Voiture blanche Toyota Prius",
+            tester.driver_token
+        )
+        
+        # Test getting messages for both users
+        if passenger_msg_success:
+            tester.test_get_chat_messages(tester.test_ride_id, tester.passenger_token)
+            tester.test_get_chat_messages(tester.test_ride_id, tester.driver_token)
+        
+        # Test unread message count
+        tester.test_get_unread_message_count(tester.test_ride_id, tester.passenger_token)
+        tester.test_get_unread_message_count(tester.test_ride_id, tester.driver_token)
+        
+        # Test marking messages as read
+        tester.test_mark_messages_read(tester.test_ride_id, tester.passenger_token)
+        tester.test_mark_messages_read(tester.test_ride_id, tester.driver_token)
+    
+    # Test unauthorized chat access
+    print("\n🔒 Testing chat access control...")
+    if passenger_login_success and tester.test_ride_id:
+        # Test chat on inactive ride (should fail)
+        tester.test_chat_inactive_ride(tester.passenger_token)
+
     print("\n=== ADDITIONAL FEATURE TESTS ===")
     
     # Test ride history for both users
