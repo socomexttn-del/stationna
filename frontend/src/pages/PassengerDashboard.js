@@ -1,0 +1,399 @@
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../components/ui/sheet';
+import { 
+  Car, MapPin, Navigation, Star, Clock, CreditCard, 
+  Menu, User, History, LogOut, Phone, X, Check
+} from 'lucide-react';
+import { toast } from 'sonner';
+
+const PassengerDashboard = () => {
+  const { user, logout, api } = useAuth();
+  const navigate = useNavigate();
+  
+  const [step, setStep] = useState('idle'); // idle, booking, searching, ride_active
+  const [activeRide, setActiveRide] = useState(null);
+  const [estimate, setEstimate] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  
+  const [pickup, setPickup] = useState({ lat: 48.8566, lng: 2.3522, address: '' });
+  const [destination, setDestination] = useState({ lat: 48.8738, lng: 2.2950, address: '' });
+
+  useEffect(() => {
+    fetchActiveRide();
+    const interval = setInterval(fetchActiveRide, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchActiveRide = async () => {
+    try {
+      const response = await api.get('/rides/active');
+      if (response.data) {
+        setActiveRide(response.data);
+        setStep('ride_active');
+      } else {
+        setActiveRide(null);
+        if (step === 'ride_active') setStep('idle');
+      }
+    } catch (error) {
+      console.error('Error fetching active ride:', error);
+    }
+  };
+
+  const getEstimate = async () => {
+    if (!pickup.address || !destination.address) {
+      toast.error('Veuillez remplir les adresses');
+      return;
+    }
+    
+    try {
+      const response = await api.post('/rides/estimate', { pickup, destination });
+      setEstimate(response.data);
+      setStep('booking');
+    } catch (error) {
+      toast.error('Erreur lors de l\'estimation');
+    }
+  };
+
+  const createRide = async () => {
+    try {
+      const response = await api.post('/rides', { pickup, destination });
+      setActiveRide(response.data);
+      setStep('searching');
+      toast.success('Recherche d\'un chauffeur...');
+      
+      // Start polling for driver acceptance
+      const checkInterval = setInterval(async () => {
+        const check = await api.get(`/rides/${response.data.id}`);
+        if (check.data.status === 'accepted') {
+          clearInterval(checkInterval);
+          setActiveRide(check.data);
+          setStep('ride_active');
+          toast.success('Chauffeur trouvé!');
+        }
+      }, 3000);
+      
+      // Clear after 2 minutes if no driver found
+      setTimeout(() => clearInterval(checkInterval), 120000);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erreur lors de la réservation');
+    }
+  };
+
+  const cancelRide = async () => {
+    if (!activeRide) return;
+    try {
+      await api.post(`/rides/${activeRide.id}/cancel`);
+      setActiveRide(null);
+      setStep('idle');
+      setEstimate(null);
+      toast.success('Course annulée');
+    } catch (error) {
+      toast.error('Erreur lors de l\'annulation');
+    }
+  };
+
+  const handlePayment = async () => {
+    if (!activeRide) return;
+    try {
+      const response = await api.post('/payments/create-checkout', {
+        ride_id: activeRide.id,
+        origin_url: window.location.origin
+      });
+      window.location.href = response.data.url;
+    } catch (error) {
+      toast.error('Erreur lors du paiement');
+    }
+  };
+
+  const rateDriver = async (rating) => {
+    if (!activeRide) return;
+    try {
+      await api.post('/ratings', { ride_id: activeRide.id, rating });
+      toast.success('Merci pour votre évaluation!');
+      setActiveRide(null);
+      setStep('idle');
+    } catch (error) {
+      toast.error('Erreur lors de l\'évaluation');
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch(status) {
+      case 'pending': return 'text-yellow-500';
+      case 'accepted': return 'text-blue-500';
+      case 'in_progress': return 'text-green-500';
+      case 'completed': return 'text-primary';
+      default: return 'text-muted-foreground';
+    }
+  };
+
+  const getStatusText = (status) => {
+    switch(status) {
+      case 'pending': return 'Recherche d\'un chauffeur...';
+      case 'accepted': return 'Chauffeur en route';
+      case 'in_progress': return 'Course en cours';
+      case 'completed': return 'Course terminée';
+      default: return status;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="fixed top-0 left-0 right-0 z-50 glass p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+              <Car className="w-5 h-5 text-primary-foreground" />
+            </div>
+            <span className="text-xl font-bold" style={{ fontFamily: 'Space Grotesk' }}>Volt</span>
+          </div>
+          
+          <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" data-testid="menu-btn" className="rounded-full">
+                <Menu className="w-6 h-6" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent className="bg-card border-border">
+              <SheetHeader>
+                <SheetTitle className="text-left">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center">
+                      <User className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">{user?.first_name} {user?.last_name}</p>
+                      <p className="text-sm text-muted-foreground flex items-center gap-1">
+                        <Star className="w-3 h-3 fill-primary text-primary" />
+                        {user?.rating?.toFixed(1)}
+                      </p>
+                    </div>
+                  </div>
+                </SheetTitle>
+              </SheetHeader>
+              <nav className="mt-8 space-y-2">
+                <Link to="/profile" onClick={() => setMenuOpen(false)}>
+                  <Button variant="ghost" className="w-full justify-start h-12" data-testid="nav-profile">
+                    <User className="w-5 h-5 mr-3" /> Mon profil
+                  </Button>
+                </Link>
+                <Link to="/history" onClick={() => setMenuOpen(false)}>
+                  <Button variant="ghost" className="w-full justify-start h-12" data-testid="nav-history">
+                    <History className="w-5 h-5 mr-3" /> Historique
+                  </Button>
+                </Link>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start h-12 text-destructive hover:text-destructive"
+                  onClick={logout}
+                  data-testid="nav-logout"
+                >
+                  <LogOut className="w-5 h-5 mr-3" /> Déconnexion
+                </Button>
+              </nav>
+            </SheetContent>
+          </Sheet>
+        </div>
+      </header>
+
+      {/* Map Area */}
+      <div className="h-screen map-container pt-20">
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-center text-muted-foreground">
+            <Navigation className="w-16 h-16 mx-auto mb-4 opacity-30" />
+            <p className="text-sm">Carte interactive</p>
+          </div>
+        </div>
+        
+        {/* Map Grid Lines */}
+        <div className="absolute inset-0 opacity-10">
+          {[...Array(10)].map((_, i) => (
+            <div key={i} className="absolute left-0 right-0 border-t border-white/20" style={{ top: `${i * 10}%` }} />
+          ))}
+          {[...Array(10)].map((_, i) => (
+            <div key={i} className="absolute top-0 bottom-0 border-l border-white/20" style={{ left: `${i * 10}%` }} />
+          ))}
+        </div>
+      </div>
+
+      {/* Bottom Panel */}
+      <div className="fixed bottom-0 left-0 right-0 mobile-drawer glass p-6 z-40">
+        {step === 'idle' && (
+          <div className="space-y-4 animate-fade-in">
+            <h2 className="text-xl font-semibold" style={{ fontFamily: 'Space Grotesk' }}>Où allez-vous?</h2>
+            
+            <div className="space-y-3">
+              <div className="relative">
+                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" />
+                <Input
+                  data-testid="input-pickup"
+                  placeholder="Point de départ"
+                  value={pickup.address}
+                  onChange={(e) => setPickup({ ...pickup, address: e.target.value })}
+                  className="h-14 pl-12 bg-muted border-white/10 rounded-xl text-lg"
+                />
+              </div>
+              <div className="relative">
+                <Navigation className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary" />
+                <Input
+                  data-testid="input-destination"
+                  placeholder="Destination"
+                  value={destination.address}
+                  onChange={(e) => setDestination({ ...destination, address: e.target.value })}
+                  className="h-14 pl-12 bg-muted border-white/10 rounded-xl text-lg"
+                />
+              </div>
+            </div>
+            
+            <Button 
+              onClick={getEstimate}
+              data-testid="estimate-btn"
+              className="w-full h-14 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full font-bold text-lg"
+            >
+              Estimer le prix
+            </Button>
+          </div>
+        )}
+
+        {step === 'booking' && estimate && (
+          <div className="space-y-4 animate-fade-in">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold" style={{ fontFamily: 'Space Grotesk' }}>Estimation</h2>
+              <Button variant="ghost" size="icon" onClick={() => { setStep('idle'); setEstimate(null); }}>
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+            
+            <Card className="bg-muted/50 border-white/10">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
+                      <Car className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">Volt Standard</p>
+                      <p className="text-sm text-muted-foreground">{estimate.distance_km} km</p>
+                    </div>
+                  </div>
+                  <p className="text-2xl font-bold text-primary">{estimate.estimated_fare}€</p>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Button 
+              onClick={createRide}
+              data-testid="book-ride-btn"
+              className="w-full h-14 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full font-bold text-lg pulse-glow"
+            >
+              Réserver maintenant
+            </Button>
+          </div>
+        )}
+
+        {step === 'searching' && (
+          <div className="space-y-4 animate-fade-in text-center py-4">
+            <div className="w-16 h-16 mx-auto border-4 border-primary border-t-transparent rounded-full animate-spin" />
+            <h2 className="text-xl font-semibold" style={{ fontFamily: 'Space Grotesk' }}>Recherche en cours...</h2>
+            <p className="text-muted-foreground">Nous cherchons un chauffeur près de vous</p>
+            <Button 
+              variant="outline"
+              onClick={cancelRide}
+              data-testid="cancel-search-btn"
+              className="mt-4"
+            >
+              Annuler
+            </Button>
+          </div>
+        )}
+
+        {step === 'ride_active' && activeRide && (
+          <div className="space-y-4 animate-fade-in">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className={`text-sm font-medium ${getStatusColor(activeRide.status)}`}>
+                  {getStatusText(activeRide.status)}
+                </p>
+                <h2 className="text-xl font-semibold" style={{ fontFamily: 'Space Grotesk' }}>
+                  {activeRide.status === 'completed' ? 'Course terminée!' : 'Votre course'}
+                </h2>
+              </div>
+              {activeRide.status !== 'completed' && (
+                <Button variant="outline" size="sm" onClick={cancelRide} data-testid="cancel-ride-btn">
+                  <X className="w-4 h-4 mr-1" /> Annuler
+                </Button>
+              )}
+            </div>
+
+            {activeRide.driver_name && (
+              <Card className="bg-muted/50 border-white/10">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center">
+                        <User className="w-6 h-6 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-semibold">{activeRide.driver_name}</p>
+                        <p className="text-sm text-muted-foreground">Votre chauffeur</p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="icon" className="rounded-full" data-testid="call-driver-btn">
+                      <Phone className="w-5 h-5" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            <div className="flex items-center justify-between py-2">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Clock className="w-4 h-4" />
+                <span className="text-sm">{activeRide.distance_km} km</span>
+              </div>
+              <p className="text-xl font-bold text-primary">
+                {activeRide.final_fare || activeRide.estimated_fare}€
+              </p>
+            </div>
+
+            {activeRide.status === 'completed' && activeRide.payment_status !== 'paid' && (
+              <Button 
+                onClick={handlePayment}
+                data-testid="pay-btn"
+                className="w-full h-14 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full font-bold text-lg"
+              >
+                <CreditCard className="w-5 h-5 mr-2" /> Payer {activeRide.final_fare || activeRide.estimated_fare}€
+              </Button>
+            )}
+
+            {activeRide.status === 'completed' && activeRide.payment_status === 'paid' && (
+              <div className="space-y-3">
+                <p className="text-center text-muted-foreground">Notez votre chauffeur</p>
+                <div className="flex justify-center gap-2">
+                  {[1, 2, 3, 4, 5].map((rating) => (
+                    <button
+                      key={rating}
+                      onClick={() => rateDriver(rating)}
+                      data-testid={`rate-${rating}-btn`}
+                      className="w-12 h-12 rounded-full bg-muted hover:bg-primary/20 flex items-center justify-center transition-colors"
+                    >
+                      <Star className="w-6 h-6 text-primary" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default PassengerDashboard;
