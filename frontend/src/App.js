@@ -10,6 +10,8 @@ import RideHistory from './pages/RideHistory';
 import ProfilePage from './pages/ProfilePage';
 import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentCancel from './pages/PaymentCancel';
+import ScheduledRidesPage from './pages/ScheduledRidesPage';
+import PaymentsPage from './pages/PaymentsPage';
 import './App.css';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
