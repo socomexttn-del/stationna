@@ -77,6 +77,10 @@ class NotificationManager:
         await db.notifications.insert_one(notification)
         return notification
     
+    async def notify_driver(self, driver_id: str, notification_type: str, data: dict):
+        """Send notification to specific driver"""
+        return await self.create_notification(driver_id, notification_type, data, "driver")
+    
     async def notify_passenger(self, passenger_id: str, notification_type: str, data: dict):
         """Send notification to specific passenger"""
         return await self.create_notification(passenger_id, notification_type, data, "passenger")
