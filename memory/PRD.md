@@ -75,6 +75,6 @@ Application de taxi complète avec passagers et chauffeurs, géolocalisation, es
 - Support multi-langues
 
 ## Next Tasks
-1. Ajouter le tracking GPS temps réel du chauffeur sur la carte
-2. Ajouter le chat in-app passager/chauffeur
-3. Implémenter les notifications push natives (PWA)
+1. Ajouter le chat in-app passager/chauffeur
+2. Implémenter les notifications push natives (PWA)
+3. Ajouter les courses planifiées (réservation à l'avance)
