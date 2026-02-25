@@ -94,6 +94,48 @@ const DriverDashboard = () => {
     }
   };
 
+  // Send GPS location to server
+  const sendLocation = useCallback(async () => {
+    if (!navigator.geolocation) return;
+    
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          await api.put('/drivers/location', {
+            lat: latitude,
+            lng: longitude,
+            address: 'Position actuelle'
+          });
+          console.log('Location sent:', latitude, longitude);
+        } catch (error) {
+          console.error('Error sending location:', error);
+        }
+      },
+      (error) => {
+        console.error('Geolocation error:', error);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+    );
+  }, [api]);
+
+  // Start/stop location tracking based on active ride
+  useEffect(() => {
+    let locationInterval;
+    
+    if (activeRide && (activeRide.status === 'accepted' || activeRide.status === 'in_progress')) {
+      // Send location immediately and then every 5 seconds
+      sendLocation();
+      locationInterval = setInterval(sendLocation, 5000);
+    }
+    
+    return () => {
+      if (locationInterval) {
+        clearInterval(locationInterval);
+      }
+    };
+  }, [activeRide, sendLocation]);
+
   useEffect(() => {
     fetchStats();
     fetchActiveRide();
