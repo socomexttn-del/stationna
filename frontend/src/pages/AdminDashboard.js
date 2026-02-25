@@ -262,11 +262,12 @@ const AdminDashboard = () => {
                 <thead>
                   <tr className="text-left text-sm text-muted-foreground border-b border-white/10">
                     <th className="pb-3 font-medium">Chauffeur</th>
+                    <th className="pb-3 font-medium">Véhicule</th>
                     <th className="pb-3 font-medium text-center">Courses</th>
-                    <th className="pb-3 font-medium text-center">Aujourd'hui</th>
                     <th className="pb-3 font-medium text-center">Note</th>
                     <th className="pb-3 font-medium text-right">Revenus</th>
                     <th className="pb-3 font-medium text-center">Statut</th>
+                    <th className="pb-3 font-medium text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -278,11 +279,17 @@ const AdminDashboard = () => {
                           <p className="text-xs text-muted-foreground">{driver.email}</p>
                         </div>
                       </td>
-                      <td className="py-3 text-center">{driver.stats.total_rides}</td>
-                      <td className="py-3 text-center">
-                        <span className="text-primary font-medium">{driver.stats.rides_today}</span>
-                        <span className="text-muted-foreground text-xs ml-1">({driver.stats.revenue_today}€)</span>
+                      <td className="py-3">
+                        {driver.vehicle ? (
+                          <div>
+                            <p className="text-sm font-medium">{driver.vehicle.make} {driver.vehicle.model}</p>
+                            <p className="text-xs text-muted-foreground">{driver.vehicle.license_plate}</p>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-orange-500">Non configuré</span>
+                        )}
                       </td>
+                      <td className="py-3 text-center">{driver.stats.total_rides}</td>
                       <td className="py-3 text-center">
                         <div className="flex items-center justify-center gap-1">
                           <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
@@ -300,6 +307,17 @@ const AdminDashboard = () => {
                         }`}>
                           {driver.is_available ? 'En ligne' : 'Hors ligne'}
                         </span>
+                      </td>
+                      <td className="py-3 text-center">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => viewDriverDocuments(driver)}
+                          className="text-xs"
+                        >
+                          <FileText className="w-3 h-3 mr-1" />
+                          Docs
+                        </Button>
                       </td>
                     </tr>
                   ))}
