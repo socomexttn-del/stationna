@@ -9,6 +9,7 @@ Application de taxi complète avec passagers et chauffeurs, géolocalisation, es
 - **Database**: MongoDB
 - **Payment**: Stripe via emergentintegrations
 - **Auth**: JWT (email/password)
+- **Notifications**: Polling-based real-time notifications (3s interval)
 
 ## User Personas
 1. **Passager**: Utilisateur qui réserve des courses
@@ -24,6 +25,7 @@ Application de taxi complète avec passagers et chauffeurs, géolocalisation, es
 - Paiement Stripe après course
 - Système de notation mutuel
 - Historique des courses
+- Notifications push pour nouvelles courses
 
 ## What's Been Implemented (Jan 2026)
 - ✅ Landing page avec hero section et CTAs
@@ -39,16 +41,18 @@ Application de taxi complète avec passagers et chauffeurs, géolocalisation, es
 - ✅ Historique des courses
 - ✅ Page profil avec gestion véhicule
 - ✅ Design theme "Nocturnal Velocity"
+- ✅ Notifications en temps réel (polling 3s)
+- ✅ Son de notification pour nouvelles courses
+- ✅ Indicateur de connexion Live/Offline
 
 ## Prioritized Backlog
 
 ### P0 - Critical (Next Phase)
 - Intégration carte interactive (Mapbox/Google Maps)
 - Géolocalisation réelle du chauffeur
-- Notifications push en temps réel (WebSocket)
+- Autocomplétion d'adresses
 
 ### P1 - Important
-- Recherche d'adresses avec autocomplétion
 - Suivi GPS du chauffeur sur la carte
 - Chat in-app passager/chauffeur
 - Historique des paiements détaillé
@@ -62,6 +66,5 @@ Application de taxi complète avec passagers et chauffeurs, géolocalisation, es
 
 ## Next Tasks
 1. Intégrer une API de cartographie (Mapbox recommandé)
-2. Ajouter WebSocket pour updates temps réel
-3. Implémenter l'autocomplétion d'adresses
-4. Ajouter le tracking GPS chauffeur
+2. Ajouter l'autocomplétion d'adresses
+3. Implémenter le tracking GPS chauffeur sur carte
