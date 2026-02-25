@@ -418,24 +418,40 @@ const PassengerDashboard = () => {
                       <Car className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <p className="font-semibold">Volt Standard</p>
-                      <p className="text-sm text-muted-foreground">{routeInfo?.distance || estimate.distance_km} km</p>
+                      <p className="font-semibold">Volt Taxi</p>
+                      <p className="text-sm text-muted-foreground">{routeInfo?.distance || estimate.distance_km} km • {estimate.duration_minutes || routeInfo?.duration} min</p>
                     </div>
                   </div>
                   <p className="text-2xl font-bold text-primary">{estimate.estimated_fare}€</p>
                 </div>
                 
-                {/* Route details */}
-                {routeInfo && (
-                  <div className="flex items-center gap-4 pt-3 border-t border-white/10">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Clock className="w-4 h-4" />
-                      <span className="text-sm">{routeInfo.duration} min</span>
+                {/* Fare breakdown */}
+                {estimate.fare_details && (
+                  <div className="space-y-2 pt-3 border-t border-white/10 text-sm">
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Prise en charge</span>
+                      <span>{estimate.fare_details.prise_en_charge}€</span>
                     </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Route className="w-4 h-4" />
-                      <span className="text-sm">{routeInfo.distance} km</span>
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Distance ({estimate.distance_km} km × 1,30€)</span>
+                      <span>{estimate.fare_details.distance_cost}€</span>
                     </div>
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Temps ({estimate.duration_minutes} min × 0,70€)</span>
+                      <span>{estimate.fare_details.time_cost}€</span>
+                    </div>
+                    {estimate.fare_details.supplement_details?.map((sup, idx) => (
+                      <div key={idx} className="flex justify-between text-muted-foreground">
+                        <span>{sup.name}</span>
+                        <span>+{sup.amount}€</span>
+                      </div>
+                    ))}
+                    {estimate.fare_details.minimum_applied && (
+                      <div className="flex justify-between text-yellow-500 text-xs">
+                        <span>Tarif minimum appliqué</span>
+                        <span>8,00€</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -446,7 +462,7 @@ const PassengerDashboard = () => {
               data-testid="book-ride-btn"
               className="w-full h-14 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full font-bold text-lg pulse-glow"
             >
-              Réserver maintenant
+              Réserver maintenant (+4€ immédiat)
             </Button>
           </div>
         )}
