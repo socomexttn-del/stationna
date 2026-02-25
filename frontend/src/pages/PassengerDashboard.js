@@ -198,9 +198,18 @@ const PassengerDashboard = () => {
     if (!activeRide?.id || !activeRide?.driver_id) return;
     
     try {
-      const response = await api.get(`/rides/${activeRide.id}/driver-location`);
-      if (response.data.location) {
-        setDriverLocation(response.data.location);
+      // Fetch both location and path
+      const [locationRes, pathRes] = await Promise.all([
+        api.get(`/rides/${activeRide.id}/driver-location`),
+        api.get(`/rides/${activeRide.id}/driver-path`)
+      ]);
+      
+      if (locationRes.data.location) {
+        setDriverLocation(locationRes.data.location);
+      }
+      
+      if (pathRes.data.path && pathRes.data.path.length > 0) {
+        setDriverPath(pathRes.data.path);
       }
     } catch (error) {
       console.error('Error fetching driver location:', error);
