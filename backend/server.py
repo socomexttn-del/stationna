@@ -138,6 +138,7 @@ class UserResponse(BaseModel):
     total_rides: int = 0
     is_available: bool = False
     vehicle_info: Optional[Dict] = None
+    location: Optional[Dict] = None
     created_at: str
 
 class TokenResponse(BaseModel):
