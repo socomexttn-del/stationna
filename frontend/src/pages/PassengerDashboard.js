@@ -22,6 +22,7 @@ const PassengerDashboard = () => {
   const [estimate, setEstimate] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [routeInfo, setRouteInfo] = useState(null);
+  const [driverLocation, setDriverLocation] = useState(null);
   
   const [pickup, setPickup] = useState({ lat: 48.8566, lng: 2.3522, address: '' });
   const [destination, setDestination] = useState({ lat: 48.8738, lng: 2.2950, address: '' });
@@ -30,6 +31,20 @@ const PassengerDashboard = () => {
   const handleRouteCalculated = useCallback((info) => {
     setRouteInfo(info);
   }, []);
+
+  // Fetch driver location for active ride
+  const fetchDriverLocation = useCallback(async () => {
+    if (!activeRide?.id || !activeRide?.driver_id) return;
+    
+    try {
+      const response = await api.get(`/rides/${activeRide.id}/driver-location`);
+      if (response.data.location) {
+        setDriverLocation(response.data.location);
+      }
+    } catch (error) {
+      console.error('Error fetching driver location:', error);
+    }
+  }, [activeRide?.id, activeRide?.driver_id, api]);
 
   // Notification handler for real-time updates
   const handleNotification = useCallback((data) => {
@@ -62,6 +77,14 @@ const PassengerDashboard = () => {
           { duration: 5000 }
         );
         fetchActiveRide();
+        setDriverLocation(null);
+        break;
+      
+      case 'driver_location':
+        // Real-time driver location update
+        if (data.location) {
+          setDriverLocation(data.location);
+        }
         break;
         
       default:
@@ -71,6 +94,23 @@ const PassengerDashboard = () => {
 
   // Connect to notification polling
   useNotifications(api, 'passenger', handleNotification);
+
+  // Poll driver location when ride is active
+  useEffect(() => {
+    let locationInterval;
+    
+    if (activeRide && activeRide.driver_id && 
+        (activeRide.status === 'accepted' || activeRide.status === 'in_progress')) {
+      fetchDriverLocation();
+      locationInterval = setInterval(fetchDriverLocation, 5000);
+    } else {
+      setDriverLocation(null);
+    }
+    
+    return () => {
+      if (locationInterval) clearInterval(locationInterval);
+    };
+  }, [activeRide, fetchDriverLocation]);
 
   useEffect(() => {
     fetchActiveRide();
