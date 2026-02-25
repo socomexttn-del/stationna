@@ -50,8 +50,8 @@ const PassengerDashboard = () => {
     fetchFrequentTrips();
   }, [fetchFrequentTrips]);
 
-  // Use a frequent trip
-  const useFrequentTrip = async (trip) => {
+  // Load a frequent trip
+  const loadFrequentTrip = async (trip) => {
     setPickup(trip.pickup);
     setDestination(trip.destination);
     setVehicleType(trip.vehicle_type);
