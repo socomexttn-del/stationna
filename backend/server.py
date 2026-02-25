@@ -1039,6 +1039,56 @@ async def delete_favorite_address(favorite_id: str, current_user: dict = Depends
         raise HTTPException(status_code=404, detail="Favorite not found")
     return {"status": "ok"}
 
+# ======================== FREQUENT TRIPS ========================
+
+@api_router.post("/frequent-trips", response_model=FrequentTripResponse)
+async def create_frequent_trip(data: FrequentTripCreate, current_user: dict = Depends(get_current_user)):
+    """Create a frequent trip for quick booking"""
+    trip = {
+        "id": str(uuid.uuid4()),
+        "user_id": current_user["id"],
+        "name": data.name,
+        "pickup": data.pickup.model_dump(),
+        "destination": data.destination.model_dump(),
+        "vehicle_type": data.vehicle_type,
+        "passenger_count": data.passenger_count,
+        "use_count": 0,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.frequent_trips.insert_one(trip)
+    return FrequentTripResponse(**trip)
+
+@api_router.get("/frequent-trips", response_model=List[FrequentTripResponse])
+async def get_frequent_trips(current_user: dict = Depends(get_current_user)):
+    """Get all frequent trips for current user, sorted by most used"""
+    trips = await db.frequent_trips.find(
+        {"user_id": current_user["id"]}, 
+        {"_id": 0}
+    ).sort("use_count", -1).to_list(10)
+    return [FrequentTripResponse(**t) for t in trips]
+
+@api_router.post("/frequent-trips/{trip_id}/use")
+async def use_frequent_trip(trip_id: str, current_user: dict = Depends(get_current_user)):
+    """Increment use count when a frequent trip is used"""
+    result = await db.frequent_trips.update_one(
+        {"id": trip_id, "user_id": current_user["id"]},
+        {"$inc": {"use_count": 1}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    return {"status": "ok"}
+
+@api_router.delete("/frequent-trips/{trip_id}")
+async def delete_frequent_trip(trip_id: str, current_user: dict = Depends(get_current_user)):
+    """Delete a frequent trip"""
+    result = await db.frequent_trips.delete_one({
+        "id": trip_id,
+        "user_id": current_user["id"]
+    })
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    return {"status": "ok"}
+
 # ======================== PROMO CODES ========================
 
 @api_router.post("/promo/create")
