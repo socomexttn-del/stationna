@@ -462,6 +462,14 @@ async def complete_ride(ride_id: str, current_user: dict = Depends(get_current_u
     await db.users.update_one({"id": ride["passenger_id"]}, {"$inc": {"total_rides": 1}})
     
     updated = await db.rides.find_one({"id": ride_id}, {"_id": 0})
+    
+    # Notify passenger that ride completed
+    await manager.notify_passenger(ride["passenger_id"], {
+        "type": "ride_completed",
+        "ride_id": ride_id,
+        "final_fare": ride["estimated_fare"]
+    })
+    
     return RideResponse(**updated)
 
 @api_router.post("/rides/{ride_id}/cancel", response_model=RideResponse)
