@@ -56,6 +56,26 @@ const DriverDashboard = () => {
           }
           return prev;
         });
+        // Push notification
+        notifyNewRide(data.passenger_name, data.pickup?.address);
+        // Play notification sound
+        playNotificationSound();
+        break;
+      
+      case 'ride_assigned':
+        // New ride automatically assigned to this driver
+        toast.success(
+          <div className="flex flex-col gap-1">
+            <span className="font-semibold">Course attribuée!</span>
+            <span className="text-sm">{data.pickup?.address}</span>
+            <span className="text-primary font-bold">{data.estimated_fare}€</span>
+          </div>,
+          { duration: 10000 }
+        );
+        // Push notification
+        notifyRideAssigned(data.passenger_name, data.pickup?.address);
+        // Refresh active ride
+        fetchActiveRide();
         // Play notification sound
         playNotificationSound();
         break;
@@ -76,6 +96,8 @@ const DriverDashboard = () => {
             </div>,
             { duration: 4000 }
           );
+          // Push notification
+          notifyNewMessage(data.sender_name, data.message);
           playNotificationSound();
         }
         break;
