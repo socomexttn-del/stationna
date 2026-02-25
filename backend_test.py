@@ -338,6 +338,24 @@ def main():
                     time.sleep(1)
                     tester.test_complete_ride(tester.test_ride_id, tester.driver_token)
 
+    print("\n=== GPS LOCATION TRACKING TESTS ===")
+    
+    # Test driver location updates (key GPS feature)
+    if driver_login_success:
+        print("\n🌍 Testing GPS location updates...")
+        tester.test_driver_location_update(tester.driver_token)
+        
+        # Test getting driver location for ride
+        if tester.test_ride_id:
+            tester.test_get_driver_location_for_ride(tester.test_ride_id, tester.passenger_token)
+    
+    # Test notification system for location updates
+    if passenger_login_success:
+        tester.test_notifications(tester.passenger_token, "passenger")
+    
+    if driver_login_success:
+        tester.test_notifications(tester.driver_token, "driver")
+        
     print("\n=== ADDITIONAL FEATURE TESTS ===")
     
     # Test ride history for both users
