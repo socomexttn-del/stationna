@@ -8,6 +8,7 @@ const MapComponent = ({
   pickupLocation, 
   destinationLocation, 
   driverLocation,
+  availableDrivers = [],  // List of available drivers to show on map
   onMapClick,
   onRouteCalculated,
   className = ''
@@ -17,6 +18,7 @@ const MapComponent = ({
   const pickupMarker = useRef(null);
   const destinationMarker = useRef(null);
   const driverMarker = useRef(null);
+  const driverMarkers = useRef([]);  // Array of available driver markers
   const [mapLoaded, setMapLoaded] = useState(false);
 
   // Initialize map
