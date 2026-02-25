@@ -296,7 +296,7 @@ def estimate_duration_minutes(distance_km: float) -> int:
     AVG_SPEED_KMH = 25
     return max(5, round((distance_km / AVG_SPEED_KMH) * 60))
 
-def calculate_fare(distance_km: float, duration_minutes: int = 0, is_scheduled: bool = False, is_immediate: bool = True, extra_passengers: int = 0) -> dict:
+def calculate_fare(distance_km: float, duration_minutes: int = 0, is_scheduled: bool = False, is_immediate: bool = True, vehicle_type: str = "standard", passenger_count: int = 1) -> dict:
     """
     Calculate fare based on official taxi rates:
     - Prise en charge: 4.48€
@@ -305,7 +305,8 @@ def calculate_fare(distance_km: float, duration_minutes: int = 0, is_scheduled: 
     - Tarif minimum: 8€
     - Supplément réservation immédiate: +4€
     - Supplément réservation à l'avance: +7€
-    - Supplément 5ème passager+: +5.50€
+    - Supplément 5ème passager+: +5.50€ par passager
+    - Van: +10€ de base
     """
     # Base rates
     PRISE_EN_CHARGE = 4.48
@@ -317,6 +318,7 @@ def calculate_fare(distance_km: float, duration_minutes: int = 0, is_scheduled: 
     SUPPLEMENT_IMMEDIAT = 4.00
     SUPPLEMENT_AVANCE = 7.00
     SUPPLEMENT_PASSAGER = 5.50
+    SUPPLEMENT_VAN = 10.00
     
     # Calculate base fare
     base = PRISE_EN_CHARGE
@@ -327,6 +329,11 @@ def calculate_fare(distance_km: float, duration_minutes: int = 0, is_scheduled: 
     supplements = 0
     supplement_details = []
     
+    # Vehicle type supplement
+    if vehicle_type == "van":
+        supplements += SUPPLEMENT_VAN
+        supplement_details.append({"name": "Van (7 places)", "amount": SUPPLEMENT_VAN})
+    
     if is_scheduled:
         supplements += SUPPLEMENT_AVANCE
         supplement_details.append({"name": "Réservation à l'avance", "amount": SUPPLEMENT_AVANCE})
@@ -334,10 +341,12 @@ def calculate_fare(distance_km: float, duration_minutes: int = 0, is_scheduled: 
         supplements += SUPPLEMENT_IMMEDIAT
         supplement_details.append({"name": "Réservation immédiate", "amount": SUPPLEMENT_IMMEDIAT})
     
+    # Extra passengers (5th passenger and above)
+    extra_passengers = max(0, passenger_count - 4)
     if extra_passengers > 0:
         passenger_supplement = SUPPLEMENT_PASSAGER * extra_passengers
         supplements += passenger_supplement
-        supplement_details.append({"name": f"Supplément {extra_passengers} passager(s) sup.", "amount": passenger_supplement})
+        supplement_details.append({"name": f"Supplément {extra_passengers} passager(s) sup.", "amount": round(passenger_supplement, 2)})
     
     # Total before minimum
     subtotal = base + distance_cost + time_cost + supplements
