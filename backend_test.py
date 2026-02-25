@@ -537,6 +537,46 @@ def main():
     if driver_login_success:
         tester.test_get_me(tester.driver_token, "driver")
 
+    print("\n=== NEW FEATURES TESTS ===")
+    
+    # Test scheduled rides
+    scheduled_ride_id = None
+    if passenger_login_success:
+        print("\n📅 Testing Scheduled Rides...")
+        schedule_success, schedule_response = tester.test_schedule_ride(tester.passenger_token)
+        if schedule_success and 'id' in schedule_response:
+            scheduled_ride_id = schedule_response['id']
+        tester.test_get_scheduled_rides(tester.passenger_token)
+        if scheduled_ride_id:
+            tester.test_activate_scheduled_ride(scheduled_ride_id, tester.passenger_token)
+
+    # Test favorite addresses
+    favorite_id = None
+    if passenger_login_success:
+        print("\n⭐ Testing Favorite Addresses...")
+        fav_success, fav_response = tester.test_add_favorite_address(tester.passenger_token, "Maison")
+        if fav_success and 'id' in fav_response:
+            favorite_id = fav_response['id']
+        tester.test_add_favorite_address(tester.passenger_token, "Travail")
+        tester.test_get_favorite_addresses(tester.passenger_token)
+        if favorite_id:
+            # Note: DELETE method test
+            tester.run_test("Delete favorite address", "DELETE", f"favorites/{favorite_id}", 200, token=tester.passenger_token)
+
+    # Test promo codes and referral
+    if passenger_login_success:
+        print("\n🎁 Testing Promo Codes & Referral...")
+        tester.test_create_promo_code(tester.passenger_token, "WELCOME10")
+        tester.test_apply_promo_code(tester.passenger_token, "WELCOME10")
+        tester.test_get_my_promo_codes(tester.passenger_token)
+        tester.test_get_referral_code(tester.passenger_token)
+
+    # Test payment history and summary
+    if passenger_login_success:
+        print("\n💳 Testing Payment History & Summary...")
+        tester.test_payment_history(tester.passenger_token)
+        tester.test_payment_summary(tester.passenger_token)
+
     print("\n=== RIDE WORKFLOW TESTS ===")
     
     # Test passenger ride creation
