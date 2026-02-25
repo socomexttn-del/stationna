@@ -929,7 +929,8 @@ async def create_promo_code(data: PromoCodeCreate, current_user: dict = Depends(
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.promo_codes.insert_one(promo)
-    return {"status": "ok", "promo": promo}
+    # Return only serializable data without MongoDB _id
+    return {"status": "ok", "promo": {k: v for k, v in promo.items() if k != "_id"}}
 
 @api_router.post("/promo/apply")
 async def apply_promo_code(data: PromoCodeApply, current_user: dict = Depends(get_current_user)):
