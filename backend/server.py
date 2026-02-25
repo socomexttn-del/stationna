@@ -298,6 +298,14 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     token_data = decode_token(credentials.credentials)
     user = await db.users.find_one({"id": token_data["user_id"]}, {"_id": 0})
     if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
+
+async def get_admin_user(current_user: dict = Depends(get_current_user)):
+    """Verify that the current user is an admin"""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return current_user
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
