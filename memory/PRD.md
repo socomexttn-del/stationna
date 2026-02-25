@@ -60,8 +60,8 @@ Application de taxi complète avec passagers et chauffeurs, géolocalisation, es
 ## Prioritized Backlog
 
 ### P0 - Critical (Next Phase)
-- Chat in-app passager/chauffeur
 - Notifications push natives (PWA)
+- Courses planifiées (réservation à l'avance)
 
 ### P1 - Important
 - Chat in-app passager/chauffeur
