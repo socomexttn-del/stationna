@@ -257,8 +257,30 @@ const PassengerDashboard = () => {
           pickupLocation={pickup.address ? pickup : null}
           destinationLocation={destination.address ? destination : null}
           driverLocation={activeRide?.driver_id ? { lat: 48.86, lng: 2.35 } : null}
+          onRouteCalculated={handleRouteCalculated}
           className="absolute inset-0"
         />
+        
+        {/* Route Info Badge */}
+        {routeInfo && pickup.address && destination.address && step === 'idle' && (
+          <div className="absolute top-24 left-4 right-4 z-30">
+            <div className="glass rounded-xl p-3 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
+                  <Route className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Itinéraire</p>
+                  <p className="font-semibold">{routeInfo.distance} km</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">Temps estimé</p>
+                <p className="font-semibold text-primary">{routeInfo.duration} min</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Bottom Panel */}
