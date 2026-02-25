@@ -27,6 +27,67 @@ const DriverDashboard = () => {
   const [showReceipt, setShowReceipt] = useState(false);
   const [stats, setStats] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const [locationError, setLocationError] = useState(null);
+
+  // Get current location on mount
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const location = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            address: 'Position actuelle'
+          };
+          setCurrentLocation(location);
+          
+          // Update driver location in database
+          try {
+            await api.put('/drivers/location', location);
+            console.log('Driver location updated');
+          } catch (error) {
+            console.error('Error updating location:', error);
+          }
+        },
+        (error) => {
+          console.error('Geolocation error:', error);
+          setLocationError('Impossible d\'obtenir votre position');
+          toast.error('Activez la géolocalisation pour recevoir des courses');
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    } else {
+      setLocationError('Géolocalisation non supportée');
+    }
+  }, [api]);
+
+  // Continuous location tracking when available
+  useEffect(() => {
+    if (!isAvailable || !navigator.geolocation) return;
+
+    const watchId = navigator.geolocation.watchPosition(
+      async (position) => {
+        const location = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          address: 'Position actuelle'
+        };
+        setCurrentLocation(location);
+        
+        // Update location in database
+        try {
+          await api.put('/drivers/location', location);
+        } catch (error) {
+          console.error('Error updating location:', error);
+        }
+      },
+      (error) => console.error('Watch position error:', error),
+      { enableHighAccuracy: true, maximumAge: 30000 }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [isAvailable, api]);
 
   // Notification handler
   const handleNotification = useCallback((data) => {
