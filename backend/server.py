@@ -299,7 +299,6 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 
 def calculate_distance(pickup: Dict, destination: Dict) -> float:
     """Calculate distance between two points using Haversine formula"""
-    import math
     lat1, lon1 = pickup['lat'], pickup['lng']
     lat2, lon2 = destination['lat'], destination['lng']
     
@@ -309,6 +308,41 @@ def calculate_distance(pickup: Dict, destination: Dict) -> float:
     a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
     c = 2 * math.asin(math.sqrt(a))
     return round(R * c, 2)
+
+async def find_nearest_driver(pickup_location: Dict, max_distance_km: float = 15.0) -> Optional[Dict]:
+    """Find the nearest available driver to the pickup location"""
+    available_drivers = await db.users.find({
+        "role": "driver",
+        "is_available": True,
+        "location": {"$ne": None}
+    }, {"_id": 0}).to_list(100)
+    
+    if not available_drivers:
+        return None
+    
+    # Calculate distance for each driver and sort
+    drivers_with_distance = []
+    for driver in available_drivers:
+        if driver.get("location") and driver["location"].get("lat") and driver["location"].get("lng"):
+            distance = calculate_distance(pickup_location, driver["location"])
+            if distance <= max_distance_km:
+                drivers_with_distance.append({
+                    "driver": driver,
+                    "distance": distance
+                })
+    
+    if not drivers_with_distance:
+        return None
+    
+    # Sort by distance and return the nearest
+    drivers_with_distance.sort(key=lambda x: x["distance"])
+    nearest = drivers_with_distance[0]
+    
+    return {
+        "driver": nearest["driver"],
+        "distance_to_pickup": nearest["distance"],
+        "eta_minutes": max(2, round(nearest["distance"] * 2.5))  # ~2.5 min per km in city
+    }
 
 def estimate_duration_minutes(distance_km: float) -> int:
     """Estimate trip duration based on average city speed (25 km/h)"""
