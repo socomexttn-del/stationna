@@ -1,0 +1,327 @@
+import requests
+import sys
+from datetime import datetime
+import time
+
+class TaxiAPITester:
+    def __init__(self, base_url="https://taxi-connect-47.preview.emergentagent.com"):
+        self.base_url = base_url
+        self.passenger_token = None
+        self.driver_token = None
+        self.tests_run = 0
+        self.tests_passed = 0
+        self.test_ride_id = None
+
+    def run_test(self, name, method, endpoint, expected_status, data=None, token=None):
+        """Run a single API test"""
+        url = f"{self.base_url}/api/{endpoint}"
+        headers = {'Content-Type': 'application/json'}
+        if token:
+            headers['Authorization'] = f'Bearer {token}'
+
+        self.tests_run += 1
+        print(f"\n🔍 Testing {name}...")
+        
+        try:
+            if method == 'GET':
+                response = requests.get(url, headers=headers, timeout=10)
+            elif method == 'POST':
+                response = requests.post(url, json=data, headers=headers, timeout=10)
+            elif method == 'PUT':
+                response = requests.put(url, json=data, headers=headers, timeout=10)
+
+            success = response.status_code == expected_status
+            if success:
+                self.tests_passed += 1
+                print(f"✅ Passed - Status: {response.status_code}")
+                try:
+                    return True, response.json()
+                except:
+                    return True, {}
+            else:
+                print(f"❌ Failed - Expected {expected_status}, got {response.status_code}")
+                try:
+                    print(f"   Response: {response.text}")
+                except:
+                    pass
+                return False, {}
+
+        except requests.exceptions.Timeout:
+            print(f"❌ Failed - Request timeout")
+            return False, {}
+        except Exception as e:
+            print(f"❌ Failed - Error: {str(e)}")
+            return False, {}
+
+    def test_login(self, email, password, role_type="passenger"):
+        """Test login and get token"""
+        success, response = self.run_test(
+            f"Login as {role_type}",
+            "POST",
+            "auth/login",
+            200,
+            data={"email": email, "password": password}
+        )
+        if success and 'token' in response:
+            if role_type == "passenger":
+                self.passenger_token = response['token']
+            else:
+                self.driver_token = response['token']
+            return True, response
+        return False, {}
+
+    def test_register(self, email, password, first_name, last_name, phone, role):
+        """Test user registration"""
+        success, response = self.run_test(
+            f"Register {role}",
+            "POST",
+            "auth/register",
+            200,
+            data={
+                "email": email, 
+                "password": password,
+                "first_name": first_name,
+                "last_name": last_name,
+                "phone": phone,
+                "role": role
+            }
+        )
+        return success, response
+
+    def test_get_me(self, token, role_type):
+        """Test getting current user info"""
+        success, response = self.run_test(
+            f"Get {role_type} profile",
+            "GET",
+            "auth/me",
+            200,
+            token=token
+        )
+        return success, response
+
+    def test_ride_estimate(self):
+        """Test ride fare estimation"""
+        success, response = self.run_test(
+            "Ride fare estimation",
+            "POST",
+            "rides/estimate",
+            200,
+            data={
+                "pickup": {"lat": 48.8566, "lng": 2.3522, "address": "Paris Centre"},
+                "destination": {"lat": 48.8738, "lng": 2.2950, "address": "Arc de Triomphe"}
+            }
+        )
+        return success, response
+
+    def test_create_ride(self, token):
+        """Test creating a ride as passenger"""
+        success, response = self.run_test(
+            "Create ride",
+            "POST",
+            "rides",
+            200,
+            data={
+                "pickup": {"lat": 48.8566, "lng": 2.3522, "address": "Paris Centre"},
+                "destination": {"lat": 48.8738, "lng": 2.2950, "address": "Arc de Triomphe"}
+            },
+            token=token
+        )
+        if success and 'id' in response:
+            self.test_ride_id = response['id']
+        return success, response
+
+    def test_driver_availability(self, token, available=True):
+        """Test updating driver availability"""
+        success, response = self.run_test(
+            f"Set driver availability to {available}",
+            "PUT",
+            "users/availability",
+            200,
+            data={
+                "is_available": available,
+                "location": {"lat": 48.8566, "lng": 2.3522, "address": "Paris Centre"}
+            },
+            token=token
+        )
+        return success, response
+
+    def test_available_rides(self, token):
+        """Test getting available rides for driver"""
+        success, response = self.run_test(
+            "Get available rides",
+            "GET",
+            "rides/available",
+            200,
+            token=token
+        )
+        return success, response
+
+    def test_accept_ride(self, ride_id, token):
+        """Test accepting a ride as driver"""
+        success, response = self.run_test(
+            "Accept ride",
+            "POST",
+            f"rides/{ride_id}/accept",
+            200,
+            token=token
+        )
+        return success, response
+
+    def test_start_ride(self, ride_id, token):
+        """Test starting a ride as driver"""
+        success, response = self.run_test(
+            "Start ride",
+            "POST",
+            f"rides/{ride_id}/start",
+            200,
+            token=token
+        )
+        return success, response
+
+    def test_complete_ride(self, ride_id, token):
+        """Test completing a ride as driver"""
+        success, response = self.run_test(
+            "Complete ride",
+            "POST",
+            f"rides/{ride_id}/complete",
+            200,
+            token=token
+        )
+        return success, response
+
+    def test_ride_history(self, token, role_type):
+        """Test getting ride history"""
+        success, response = self.run_test(
+            f"Get {role_type} ride history",
+            "GET",
+            "rides/history/me",
+            200,
+            token=token
+        )
+        return success, response
+
+    def test_driver_stats(self, token):
+        """Test getting driver statistics"""
+        success, response = self.run_test(
+            "Get driver stats",
+            "GET",
+            "stats/driver",
+            200,
+            token=token
+        )
+        return success, response
+
+    def test_vehicle_update(self, token):
+        """Test updating vehicle information"""
+        success, response = self.run_test(
+            "Update vehicle info",
+            "PUT",
+            "users/vehicle",
+            200,
+            data={
+                "make": "Toyota",
+                "model": "Prius",
+                "year": 2022,
+                "color": "White",
+                "license_plate": "AB-123-CD"
+            },
+            token=token
+        )
+        return success, response
+
+def main():
+    print("🚕 Starting Volt Taxi API Tests...")
+    tester = TaxiAPITester()
+    
+    # Test credentials from the requirements
+    passenger_email = "passenger@test.com"
+    passenger_password = "test123"
+    driver_email = "driver@test.com"
+    driver_password = "test123"
+
+    # Test basic endpoints first
+    print("\n=== BASIC ENDPOINT TESTS ===")
+    
+    # Test root endpoint
+    tester.run_test("Root endpoint", "GET", "", 200)
+    
+    # Test ride estimation (no auth required)
+    tester.test_ride_estimate()
+
+    print("\n=== AUTHENTICATION TESTS ===")
+    
+    # Test passenger login
+    passenger_login_success, passenger_data = tester.test_login(passenger_email, passenger_password, "passenger")
+    if not passenger_login_success:
+        print("❌ Passenger login failed - stopping passenger tests")
+        passenger_data = {}
+
+    # Test driver login  
+    driver_login_success, driver_data = tester.test_login(driver_email, driver_password, "driver")
+    if not driver_login_success:
+        print("❌ Driver login failed - stopping driver tests")
+        driver_data = {}
+
+    # Test profile retrieval
+    if passenger_login_success:
+        tester.test_get_me(tester.passenger_token, "passenger")
+    
+    if driver_login_success:
+        tester.test_get_me(tester.driver_token, "driver")
+
+    print("\n=== RIDE WORKFLOW TESTS ===")
+    
+    # Test passenger ride creation
+    if passenger_login_success:
+        tester.test_create_ride(tester.passenger_token)
+    
+    # Test driver functionality
+    if driver_login_success:
+        # Set driver as available
+        tester.test_driver_availability(tester.driver_token, True)
+        
+        # Get available rides
+        tester.test_available_rides(tester.driver_token)
+        
+        # Test accepting ride if one was created
+        if tester.test_ride_id:
+            print(f"\n🔄 Testing ride workflow with ride ID: {tester.test_ride_id}")
+            
+            # Accept the ride
+            accept_success, _ = tester.test_accept_ride(tester.test_ride_id, tester.driver_token)
+            
+            if accept_success:
+                # Start the ride
+                time.sleep(1)
+                start_success, _ = tester.test_start_ride(tester.test_ride_id, tester.driver_token)
+                
+                if start_success:
+                    # Complete the ride
+                    time.sleep(1)
+                    tester.test_complete_ride(tester.test_ride_id, tester.driver_token)
+
+    print("\n=== ADDITIONAL FEATURE TESTS ===")
+    
+    # Test ride history for both users
+    if passenger_login_success:
+        tester.test_ride_history(tester.passenger_token, "passenger")
+    
+    if driver_login_success:
+        tester.test_ride_history(tester.driver_token, "driver")
+        tester.test_driver_stats(tester.driver_token)
+        tester.test_vehicle_update(tester.driver_token)
+
+    # Print final results
+    print(f"\n📊 Final Results:")
+    print(f"Tests passed: {tester.tests_passed}/{tester.tests_run}")
+    print(f"Success rate: {(tester.tests_passed/tester.tests_run*100):.1f}%")
+    
+    if tester.tests_passed == tester.tests_run:
+        print("🎉 All tests passed!")
+        return 0
+    else:
+        print("⚠️  Some tests failed")
+        return 1
+
+if __name__ == "__main__":
+    sys.exit(main())
