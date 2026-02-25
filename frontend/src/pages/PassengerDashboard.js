@@ -592,14 +592,61 @@ const PassengerDashboard = () => {
             <h2 className="text-xl font-semibold" style={{ fontFamily: 'Space Grotesk' }}>Où allez-vous?</h2>
             
             <div className="space-y-3">
-              <AddressAutocomplete
-                value={pickup}
-                onChange={setPickup}
-                placeholder="Point de départ"
-                icon={MapPin}
-                iconColor="text-green-500"
-                dataTestId="input-pickup"
-              />
+              {/* Location indicator */}
+              {isLocating && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 p-2 rounded-lg">
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  <span>Détection de votre position...</span>
+                </div>
+              )}
+              
+              <div className="relative">
+                <AddressAutocomplete
+                  value={pickup}
+                  onChange={setPickup}
+                  placeholder="Point de départ"
+                  icon={MapPin}
+                  iconColor="text-green-500"
+                  dataTestId="input-pickup"
+                />
+                {/* Relocate button */}
+                <button
+                  onClick={() => {
+                    if (navigator.geolocation) {
+                      setIsLocating(true);
+                      navigator.geolocation.getCurrentPosition(
+                        async (position) => {
+                          const { latitude, longitude } = position.coords;
+                          try {
+                            const MAPBOX_TOKEN = process.env.REACT_APP_MAPBOX_TOKEN;
+                            const response = await fetch(
+                              `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${MAPBOX_TOKEN}&language=fr`
+                            );
+                            const data = await response.json();
+                            const address = data.features?.[0]?.place_name || 'Position actuelle';
+                            setPickup({ lat: latitude, lng: longitude, address });
+                            toast.success('Position mise à jour');
+                          } catch (error) {
+                            setPickup({ lat: latitude, lng: longitude, address: 'Position actuelle' });
+                          }
+                          setIsLocating(false);
+                        },
+                        () => {
+                          toast.error('Impossible d\'obtenir votre position');
+                          setIsLocating(false);
+                        },
+                        { enableHighAccuracy: true }
+                      );
+                    }
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-muted hover:bg-primary/20 rounded-full flex items-center justify-center transition-colors"
+                  title="Me localiser"
+                  data-testid="relocate-btn"
+                >
+                  <Crosshair className="w-4 h-4 text-primary" />
+                </button>
+              </div>
+              
               <AddressAutocomplete
                 value={destination}
                 onChange={setDestination}
