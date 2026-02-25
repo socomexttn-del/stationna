@@ -587,6 +587,7 @@ const PassengerDashboard = () => {
           pickupLocation={activeRide ? activeRide.pickup : (pickup.address ? pickup : null)}
           destinationLocation={activeRide ? activeRide.destination : (destination.address ? destination : null)}
           driverLocation={driverLocation}
+          driverPath={driverPath}
           availableDrivers={!activeRide ? availableDrivers : []}
           onRouteCalculated={handleRouteCalculated}
           className="absolute inset-0"
