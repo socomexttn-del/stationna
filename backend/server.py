@@ -833,6 +833,11 @@ async def get_scheduled_rides(current_user: dict = Depends(get_current_user)):
     if current_user["role"] == "passenger":
         query["passenger_id"] = current_user["id"]
     rides = await db.rides.find(query, {"_id": 0}).sort("scheduled_time", 1).to_list(50)
+    
+    if not rides:
+        # Return empty list instead of raising 404
+        return []
+    
     return [RideResponse(**r) for r in rides]
 
 @api_router.post("/rides/{ride_id}/activate", response_model=RideResponse)
