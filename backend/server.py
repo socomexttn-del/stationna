@@ -598,6 +598,36 @@ async def update_document_status(
     
     return {"status": "ok", "document_status": status}
 
+class DriverStatusUpdate(BaseModel):
+    is_active: bool
+
+@api_router.put("/admin/drivers/{driver_id}/status")
+async def update_driver_status(
+    driver_id: str,
+    data: DriverStatusUpdate,
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Activate or deactivate a driver account (admin only)"""
+    result = await db.users.update_one(
+        {"id": driver_id, "role": "driver"},
+        {"$set": {
+            "is_active": data.is_active,
+            "is_available": False if not data.is_active else False,  # Force offline if deactivated
+            "status_updated_at": datetime.now(timezone.utc).isoformat(),
+            "status_updated_by": admin_user["id"]
+        }}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Driver not found")
+    
+    return {
+        "status": "ok", 
+        "driver_id": driver_id,
+        "is_active": data.is_active,
+        "message": f"Chauffeur {'activé' if data.is_active else 'désactivé'}"
+    }
+
 @api_router.get("/drivers/available", response_model=List[UserResponse])
 async def get_available_drivers(current_user: dict = Depends(get_current_user)):
     drivers = await db.users.find({"role": "driver", "is_available": True}, {"_id": 0, "password_hash": 0}).to_list(100)
