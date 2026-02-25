@@ -452,8 +452,7 @@ async def complete_ride(ride_id: str, current_user: dict = Depends(get_current_u
     updated = await db.rides.find_one({"id": ride_id}, {"_id": 0})
     
     # Notify passenger that ride completed
-    await manager.notify_passenger(ride["passenger_id"], {
-        "type": "ride_completed",
+    await notification_manager.notify_passenger(ride["passenger_id"], "ride_completed", {
         "ride_id": ride_id,
         "final_fare": ride["estimated_fare"]
     })
