@@ -198,15 +198,25 @@ const AddressAutocomplete = ({
       </div>
       
       {showSuggestions && suggestions.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden max-h-80 overflow-y-auto">
           {suggestions.map((suggestion) => (
             <button
               key={suggestion.id}
               onClick={() => handleSelectSuggestion(suggestion)}
               className="w-full px-4 py-3 text-left hover:bg-muted transition-colors flex items-start gap-3 border-b border-border last:border-0"
             >
-              <MapPin className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" />
-              <span className="text-sm">{suggestion.address}</span>
+              <MapPin className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
+                suggestion.type === 'poi' ? 'text-yellow-500' : 
+                suggestion.type === 'place' ? 'text-blue-500' : 'text-primary'
+              }`} />
+              <div className="flex flex-col min-w-0">
+                <span className="text-sm font-medium truncate">{suggestion.shortAddress}</span>
+                {suggestion.city && (
+                  <span className="text-xs text-muted-foreground truncate">
+                    {suggestion.postcode ? `${suggestion.postcode} ` : ''}{suggestion.city}
+                  </span>
+                )}
+              </div>
             </button>
           ))}
         </div>
