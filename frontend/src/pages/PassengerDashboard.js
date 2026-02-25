@@ -7,9 +7,10 @@ import { Card, CardContent } from '../components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../components/ui/sheet';
 import MapComponent from '../components/MapComponent';
 import AddressAutocomplete from '../components/AddressAutocomplete';
+import ChatComponent from '../components/ChatComponent';
 import { 
   Car, MapPin, Navigation, Star, Clock, CreditCard, 
-  Menu, User, History, LogOut, Phone, X, Route
+  Menu, User, History, LogOut, Phone, X, Route, MessageCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -18,6 +19,8 @@ const PassengerDashboard = () => {
   const navigate = useNavigate();
   
   const [step, setStep] = useState('idle'); // idle, booking, searching, ride_active
+  const [chatOpen, setChatOpen] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const [activeRide, setActiveRide] = useState(null);
   const [estimate, setEstimate] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
