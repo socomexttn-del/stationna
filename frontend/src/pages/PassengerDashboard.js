@@ -89,6 +89,20 @@ const PassengerDashboard = () => {
           setDriverLocation(data.location);
         }
         break;
+      
+      case 'new_message':
+        // New chat message notification
+        if (!chatOpen) {
+          setUnreadMessages(prev => prev + 1);
+          toast.info(
+            <div className="flex flex-col gap-1">
+              <span className="font-semibold">{data.sender_name}</span>
+              <span className="text-sm">{data.message}</span>
+            </div>,
+            { duration: 4000 }
+          );
+        }
+        break;
         
       default:
         break;
