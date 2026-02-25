@@ -423,6 +423,23 @@ async def create_ride(data: RideRequest, current_user: dict = Depends(get_curren
     distance = calculate_distance(pickup, destination)
     fare = calculate_fare(distance)
     
+    # Check for available promo code
+    discount_applied = 0
+    promo_used = None
+    user_promo = await db.user_promos.find_one({
+        "user_id": current_user["id"],
+        "used": False
+    }, {"_id": 0})
+    
+    if user_promo:
+        discount_applied = user_promo["discount_percent"]
+        fare = round(fare * (1 - discount_applied / 100), 2)
+        promo_used = user_promo["id"]
+        # Mark promo as used
+        await db.user_promos.update_one({"id": user_promo["id"]}, {"$set": {"used": True}})
+        # Increment promo code usage
+        await db.promo_codes.update_one({"id": user_promo["promo_id"]}, {"$inc": {"used_count": 1}})
+    
     ride_id = str(uuid.uuid4())
     ride = {
         "id": ride_id,
@@ -434,6 +451,8 @@ async def create_ride(data: RideRequest, current_user: dict = Depends(get_curren
         "destination": destination,
         "distance_km": distance,
         "estimated_fare": fare,
+        "discount_applied": discount_applied,
+        "promo_used": promo_used,
         "final_fare": None,
         "status": "pending",
         "payment_status": "pending",
