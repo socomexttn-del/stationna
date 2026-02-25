@@ -10,7 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../c
 import ChatComponent from '../components/ChatComponent';
 import { 
   Car, MapPin, Navigation, Star, Clock, DollarSign,
-  Menu, User, History, LogOut, Check, X, Play, Phone, Bell, Wifi, WifiOff, MessageCircle
+  Menu, User, History, LogOut, Check, X, Play, Phone, Bell, Wifi, WifiOff, MessageCircle, FileText
 } from 'lucide-react';
 import { toast } from 'sonner';
 
