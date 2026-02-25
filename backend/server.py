@@ -34,7 +34,7 @@ STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY')
 stripe.api_key = STRIPE_API_KEY
 
 # Stripe publishable key for frontend (test mode)
-STRIPE_PUBLISHABLE_KEY = "pk_test_emergent"
+STRIPE_PUBLISHABLE_KEY = "pk_test_51J5B0aIhFRBc7tGx0JDKBKeJkqwUnUIud8an11Pw16H2O3zx6OcvobFGwzHMHO1sL2Zf1L9AKW9lLJmDa1Umxzyd00f17O26XT"
 
 # Create the main app
 app = FastAPI(title="Volt Taxi API")
