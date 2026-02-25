@@ -76,6 +76,6 @@ Application de taxi complète avec passagers et chauffeurs, géolocalisation, es
 - Support multi-langues
 
 ## Next Tasks
-1. Ajouter le chat in-app passager/chauffeur
-2. Implémenter les notifications push natives (PWA)
-3. Ajouter les courses planifiées (réservation à l'avance)
+1. Implémenter les notifications push natives (PWA)
+2. Ajouter les courses planifiées (réservation à l'avance)
+3. Ajouter les favoris d'adresses
