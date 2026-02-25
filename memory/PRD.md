@@ -4,12 +4,13 @@
 Application de taxi complète avec passagers et chauffeurs, géolocalisation, estimation prix, suivi temps réel, historique, notation/avis, paiement Stripe, authentification JWT.
 
 ## Architecture
-- **Frontend**: React 19 + Tailwind CSS + Shadcn/UI
+- **Frontend**: React 19 + Tailwind CSS + Shadcn/UI + Mapbox GL JS
 - **Backend**: FastAPI (Python) 
 - **Database**: MongoDB
 - **Payment**: Stripe via emergentintegrations
 - **Auth**: JWT (email/password)
 - **Notifications**: Polling-based real-time notifications (3s interval)
+- **Maps**: Mapbox GL JS (dark-v11 theme) + Geocoding API
 
 ## User Personas
 1. **Passager**: Utilisateur qui réserve des courses
@@ -26,6 +27,7 @@ Application de taxi complète avec passagers et chauffeurs, géolocalisation, es
 - Système de notation mutuel
 - Historique des courses
 - Notifications push pour nouvelles courses
+- Carte interactive avec géolocalisation
 
 ## What's Been Implemented (Jan 2026)
 - ✅ Landing page avec hero section et CTAs
@@ -44,18 +46,21 @@ Application de taxi complète avec passagers et chauffeurs, géolocalisation, es
 - ✅ Notifications en temps réel (polling 3s)
 - ✅ Son de notification pour nouvelles courses
 - ✅ Indicateur de connexion Live/Offline
+- ✅ **Carte Mapbox interactive** (dark theme)
+- ✅ **Autocomplétion d'adresses** (Geocoding API)
+- ✅ **Marqueurs** pickup (vert), destination (jaune), chauffeur (bleu)
+- ✅ **Géolocalisation** du navigateur
 
 ## Prioritized Backlog
 
 ### P0 - Critical (Next Phase)
-- Intégration carte interactive (Mapbox/Google Maps)
-- Géolocalisation réelle du chauffeur
-- Autocomplétion d'adresses
+- Suivi GPS temps réel du chauffeur sur la carte
+- Tracé de l'itinéraire sur la carte (Directions API)
 
 ### P1 - Important
-- Suivi GPS du chauffeur sur la carte
 - Chat in-app passager/chauffeur
 - Historique des paiements détaillé
+- Notifications push natives (PWA)
 
 ### P2 - Nice to Have
 - Mode sombre/clair toggle
@@ -65,6 +70,6 @@ Application de taxi complète avec passagers et chauffeurs, géolocalisation, es
 - Support multi-langues
 
 ## Next Tasks
-1. Intégrer une API de cartographie (Mapbox recommandé)
-2. Ajouter l'autocomplétion d'adresses
-3. Implémenter le tracking GPS chauffeur sur carte
+1. Ajouter le tracking GPS temps réel du chauffeur
+2. Implémenter le tracé d'itinéraire (Mapbox Directions API)
+3. Ajouter le chat in-app
