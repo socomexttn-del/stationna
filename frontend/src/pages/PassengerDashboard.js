@@ -185,7 +185,12 @@ const PassengerDashboard = () => {
 
   const createRide = async () => {
     try {
-      const response = await api.post('/rides', { pickup, destination });
+      const response = await api.post('/rides', { 
+        pickup, 
+        destination,
+        vehicle_type: vehicleType,
+        passenger_count: passengers
+      });
       setActiveRide(response.data);
       setStep('searching');
       toast.success('Recherche d\'un chauffeur...');
