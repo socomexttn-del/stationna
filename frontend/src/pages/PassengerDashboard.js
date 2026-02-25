@@ -465,9 +465,39 @@ const PassengerDashboard = () => {
                 <Car className="w-5 h-5 text-blue-500" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Chauffeur en route</p>
-                <p className="font-semibold text-blue-400">Position en temps réel</p>
+                <p className="text-sm text-muted-foreground">
+                  {activeRide.status === 'accepted' ? 'Chauffeur en route' : 'Course en cours'}
+                </p>
+                <p className="font-semibold text-blue-400">
+                  {activeRide.driver_eta_minutes && activeRide.status === 'accepted' 
+                    ? `Arrivée dans ~${activeRide.driver_eta_minutes} min`
+                    : 'Position en temps réel'
+                  }
+                </p>
               </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Auto-assigned driver badge - Show immediately after booking */}
+        {activeRide && activeRide.status === 'accepted' && !driverLocation && (
+          <div className="absolute top-24 left-4 right-4 z-30">
+            <div className="glass rounded-xl p-3 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">
+                  <Car className="w-5 h-5 text-green-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Chauffeur attribué</p>
+                  <p className="font-semibold text-green-400">{activeRide.driver_name}</p>
+                </div>
+              </div>
+              {activeRide.driver_eta_minutes && (
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground">Arrivée estimée</p>
+                  <p className="font-semibold text-primary">{activeRide.driver_eta_minutes} min</p>
+                </div>
+              )}
             </div>
           </div>
         )}
