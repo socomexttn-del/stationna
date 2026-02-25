@@ -180,11 +180,24 @@ class DriverAvailability(BaseModel):
     location: Optional[LocationModel] = None
 
 class VehicleUpdate(BaseModel):
-    make: str
-    model: str
+    make: str  # Marque (Peugeot, Renault, etc.)
+    model: str  # Modèle (308, Clio, etc.)
     year: int
     color: str
-    license_plate: str
+    license_plate: str  # Plaque d'immatriculation
+    vehicle_type: str = "standard"  # standard ou van
+
+class VehicleDocuments(BaseModel):
+    carte_grise: Optional[str] = None  # URL du document
+    assurance: Optional[str] = None
+    controle_technique: Optional[str] = None
+    permis_conduire: Optional[str] = None
+    carte_vtc: Optional[str] = None  # Carte professionnelle VTC
+
+class DriverDocumentsUpdate(BaseModel):
+    document_type: str  # carte_grise, assurance, controle_technique, permis_conduire, carte_vtc
+    document_url: str
+    expiry_date: Optional[str] = None  # Date d'expiration
 
 class FareEstimateRequest(BaseModel):
     pickup: LocationModel
