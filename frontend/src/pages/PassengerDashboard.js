@@ -13,7 +13,7 @@ import RatingModal from '../components/RatingModal';
 import { 
   Car, MapPin, Navigation, Star, Clock, CreditCard, 
   Menu, User, History, LogOut, Phone, X, Route, MessageCircle,
-  Calendar, Gift, Users, Truck, Bookmark, Plus, Trash2, Zap, Bell
+  Calendar, Gift, Users, Truck, Bookmark, Plus, Trash2, Zap, Bell, Crosshair, Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 
