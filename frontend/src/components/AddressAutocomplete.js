@@ -252,14 +252,23 @@ const AddressAutocomplete = ({
               className="w-full px-4 py-3 text-left hover:bg-muted transition-colors flex items-start gap-3 border-b border-border last:border-0"
             >
               <MapPin className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
+                suggestion.isLocal ? 'text-yellow-500' :
                 suggestion.type === 'poi' ? 'text-yellow-500' : 
                 suggestion.type === 'place' ? 'text-blue-500' : 'text-primary'
               }`} />
-              <div className="flex flex-col min-w-0">
-                <span className="text-sm font-medium truncate">{suggestion.shortAddress}</span>
-                {suggestion.city && (
+              <div className="flex flex-col min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium truncate">{suggestion.shortAddress}</span>
+                  {suggestion.isLocal && (
+                    <span className="text-[10px] bg-yellow-500/20 text-yellow-500 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                      Populaire
+                    </span>
+                  )}
+                </div>
+                {(suggestion.city || suggestion.address) && (
                   <span className="text-xs text-muted-foreground truncate">
-                    {suggestion.postcode ? `${suggestion.postcode} ` : ''}{suggestion.city}
+                    {suggestion.isLocal ? suggestion.address : 
+                      (suggestion.postcode ? `${suggestion.postcode} ` : '') + suggestion.city}
                   </span>
                 )}
               </div>
