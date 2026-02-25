@@ -20,6 +20,7 @@ French (Français)
 - [x] Scheduled rides
 - [x] Vehicle type selection (Standard/Van)
 - [x] Passenger count with supplements
+- [x] Frequent trips (one-click booking)
 
 ### Maps & Location
 - [x] Mapbox integration with interactive map
@@ -47,6 +48,7 @@ French (Français)
 
 ### Additional Features
 - [x] Favorite addresses
+- [x] Frequent trips with use counter
 - [x] Promo codes
 - [x] Payment history
 - [x] Ride history
@@ -84,9 +86,10 @@ Aéroports:
 
 ## Backlog (Priority Order)
 1. P1 - Push notifications (PWA)
-2. P2 - Live driver path on map
-3. P3 - Wallet/credit system
-4. P3 - Session persistence improvements
+2. P2 - SMS notifications (Twilio)
+3. P2 - Live driver path on map
+4. P3 - Wallet/credit system
+5. P3 - Session persistence improvements
 
 ## Last Updated
-2025-02-25 - Added vehicle type selection and improved address search
+2025-02-25 - Added frequent trips feature
