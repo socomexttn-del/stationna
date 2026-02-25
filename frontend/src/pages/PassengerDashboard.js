@@ -805,24 +805,27 @@ const PassengerDashboard = () => {
                 </div>
                 <div className="flex gap-2 overflow-x-auto pb-2 -mx-2 px-2">
                   {frequentTrips.slice(0, 4).map((trip) => (
-                    <button
+                    <div
                       key={trip.id}
                       onClick={() => loadFrequentTrip(trip)}
-                      className="flex-shrink-0 bg-muted/50 hover:bg-muted border border-white/10 hover:border-primary/50 rounded-xl px-3 py-2 text-left transition-all group relative"
+                      className="flex-shrink-0 bg-muted/50 hover:bg-muted border border-white/10 hover:border-primary/50 rounded-xl px-3 py-2 text-left transition-all group relative cursor-pointer"
                     >
-                      <button
+                      <div
+                        role="button"
+                        tabIndex={0}
                         onClick={(e) => deleteFrequentTrip(trip.id, e)}
-                        className="absolute -top-1 -right-1 w-5 h-5 bg-red-500/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        onKeyDown={(e) => e.key === 'Enter' && deleteFrequentTrip(trip.id, e)}
+                        className="absolute -top-1 -right-1 w-5 h-5 bg-red-500/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                       >
                         <X className="w-3 h-3 text-white" />
-                      </button>
+                      </div>
                       <p className="text-sm font-medium truncate max-w-[140px]">{trip.name}</p>
                       <p className="text-xs text-muted-foreground flex items-center gap-1">
                         {trip.vehicle_type === 'van' ? <Truck className="w-3 h-3" /> : <Car className="w-3 h-3" />}
                         <span>{trip.passenger_count}p</span>
                         {trip.use_count > 0 && <span className="text-primary">• {trip.use_count}×</span>}
                       </p>
-                    </button>
+                    </div>
                   ))}
                 </div>
               </div>
