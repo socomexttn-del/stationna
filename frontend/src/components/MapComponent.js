@@ -334,6 +334,38 @@ const MapComponent = ({
     }
   }, [driverLocation, mapLoaded]);
 
+  // Update driver path (traveled route)
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return;
+
+    const source = map.current.getSource('driver-path');
+    if (!source) return;
+
+    if (driverPath && driverPath.length > 1) {
+      // Convert path points to coordinates [lng, lat]
+      const coordinates = driverPath.map(point => [point.lng, point.lat]);
+      
+      source.setData({
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'LineString',
+          coordinates
+        }
+      });
+    } else {
+      // Clear path if no data
+      source.setData({
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'LineString',
+          coordinates: []
+        }
+      });
+    }
+  }, [driverPath, mapLoaded]);
+
   // Update available drivers markers (yellow Volt cars)
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
