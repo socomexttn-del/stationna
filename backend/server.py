@@ -1066,6 +1066,103 @@ async def create_checkout(data: PaymentCreateRequest, request: Request, current_
     
     return {"url": session.url, "session_id": session.session_id}
 
+# Payment Intent endpoint for inline card form
+class PaymentIntentRequest(BaseModel):
+    ride_id: str
+
+class PaymentIntentResponse(BaseModel):
+    client_secret: str
+    payment_intent_id: str
+    amount: float
+    currency: str
+    publishable_key: str
+
+@api_router.post("/payments/create-payment-intent", response_model=PaymentIntentResponse)
+async def create_payment_intent(data: PaymentIntentRequest, current_user: dict = Depends(get_current_user)):
+    """Create a Stripe Payment Intent for inline card payment"""
+    ride = await db.rides.find_one({"id": data.ride_id, "status": "completed"}, {"_id": 0})
+    if not ride:
+        raise HTTPException(status_code=404, detail="Course non trouvée ou non terminée")
+    
+    if ride["passenger_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Ce n'est pas votre course")
+    
+    if ride.get("payment_status") == "paid":
+        raise HTTPException(status_code=400, detail="Course déjà payée")
+    
+    amount = float(ride.get("final_fare") or ride.get("estimated_fare", 0))
+    amount_cents = int(amount * 100)  # Stripe expects amount in cents
+    
+    try:
+        # Create Payment Intent
+        intent = stripe.PaymentIntent.create(
+            amount=amount_cents,
+            currency="eur",
+            metadata={
+                "ride_id": data.ride_id,
+                "user_id": current_user["id"],
+                "user_email": current_user["email"]
+            },
+            automatic_payment_methods={"enabled": True}
+        )
+        
+        # Create payment transaction record
+        transaction = {
+            "id": str(uuid.uuid4()),
+            "payment_intent_id": intent.id,
+            "ride_id": data.ride_id,
+            "user_id": current_user["id"],
+            "user_email": current_user["email"],
+            "amount": amount,
+            "currency": "eur",
+            "payment_status": "pending",
+            "payment_method": "card",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.payment_transactions.insert_one(transaction)
+        
+        return PaymentIntentResponse(
+            client_secret=intent.client_secret,
+            payment_intent_id=intent.id,
+            amount=amount,
+            currency="eur",
+            publishable_key=STRIPE_PUBLISHABLE_KEY
+        )
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur de paiement: {str(e)}")
+
+@api_router.post("/payments/confirm-payment")
+async def confirm_payment(payment_intent_id: str, current_user: dict = Depends(get_current_user)):
+    """Confirm payment after successful card submission"""
+    try:
+        intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+        
+        if intent.status == "succeeded":
+            # Update transaction status
+            transaction = await db.payment_transactions.find_one(
+                {"payment_intent_id": payment_intent_id}, 
+                {"_id": 0}
+            )
+            
+            if transaction and transaction["payment_status"] != "paid":
+                await db.payment_transactions.update_one(
+                    {"payment_intent_id": payment_intent_id},
+                    {"$set": {"payment_status": "paid", "updated_at": datetime.now(timezone.utc).isoformat()}}
+                )
+                await db.rides.update_one(
+                    {"id": transaction["ride_id"]},
+                    {"$set": {"payment_status": "paid", "payment_method": "card"}}
+                )
+            
+            return {"status": "succeeded", "message": "Paiement confirmé avec succès"}
+        else:
+            return {"status": intent.status, "message": "Paiement en attente de confirmation"}
+            
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
 @api_router.get("/payments/status/{session_id}")
 async def get_payment_status(session_id: str, request: Request, current_user: dict = Depends(get_current_user)):
     host_url = str(request.base_url).rstrip('/')
