@@ -224,6 +224,11 @@ const DriverDashboard = () => {
               <Car className="w-5 h-5 text-primary-foreground" />
             </div>
             <span className="text-xl font-bold" style={{ fontFamily: 'Space Grotesk' }}>Volt Driver</span>
+            {/* WebSocket connection indicator */}
+            <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs ${isConnected ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
+              {isConnected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+              {isConnected ? 'Live' : 'Hors ligne'}
+            </div>
           </div>
           
           <div className="flex items-center gap-4">
