@@ -59,8 +59,8 @@ Application de taxi complète avec passagers et chauffeurs, géolocalisation, es
 ## Prioritized Backlog
 
 ### P0 - Critical (Next Phase)
-- Suivi GPS temps réel du chauffeur sur la carte
-- Tracé de l'itinéraire sur la carte (Directions API)
+- Chat in-app passager/chauffeur
+- Notifications push natives (PWA)
 
 ### P1 - Important
 - Chat in-app passager/chauffeur
