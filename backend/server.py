@@ -701,25 +701,44 @@ async def create_ride(data: RideRequest, current_user: dict = Depends(get_curren
         await db.promo_codes.update_one({"id": user_promo["promo_id"]}, {"$inc": {"used_count": 1}})
     
     ride_id = str(uuid.uuid4())
+    # Generate short reservation number (e.g., VT-240225-001)
+    today = datetime.now(timezone.utc).strftime("%y%m%d")
+    ride_count_today = await db.rides.count_documents({"created_at": {"$regex": f"^{datetime.now(timezone.utc).strftime('%Y-%m-%d')}"}})
+    reservation_number = f"VT-{today}-{str(ride_count_today + 1).zfill(3)}"
+    
+    # Calculate commission (18%)
+    commission_rate = 0.18
+    commission_amount = round(fare * commission_rate, 2)
+    driver_earnings = round(fare - commission_amount, 2)
     
     # Find nearest available driver
     nearest_driver_info = await find_nearest_driver(pickup)
     
     ride = {
         "id": ride_id,
+        "reservation_number": reservation_number,
         "passenger_id": current_user["id"],
         "passenger_name": f"{current_user['first_name']} {current_user['last_name']}",
+        "passenger_phone": current_user.get("phone"),
         "driver_id": None,
         "driver_name": None,
+        "driver_company": None,
+        "driver_phone": None,
+        "driver_license_plate": None,
+        "driver_identification": None,
         "pickup": pickup,
         "destination": destination,
         "distance_km": distance,
         "estimated_fare": fare,
+        "commission_rate": commission_rate,
+        "commission_amount": commission_amount,
+        "driver_earnings": driver_earnings,
         "discount_applied": discount_applied,
         "promo_used": promo_used,
         "final_fare": None,
         "status": "pending",
         "payment_status": "pending",
+        "payment_method": None,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "accepted_at": None,
         "completed_at": None,
@@ -730,8 +749,14 @@ async def create_ride(data: RideRequest, current_user: dict = Depends(get_curren
     # If a nearby driver is found, auto-assign the ride
     if nearest_driver_info:
         driver = nearest_driver_info["driver"]
+        vehicle = driver.get("vehicle_info", {})
+        
         ride["driver_id"] = driver["id"]
         ride["driver_name"] = f"{driver['first_name']} {driver['last_name']}"
+        ride["driver_company"] = driver.get("company_name", "Indépendant")
+        ride["driver_phone"] = driver.get("phone")
+        ride["driver_license_plate"] = vehicle.get("license_plate")
+        ride["driver_identification"] = driver["id"][:8].upper()  # Short ID
         ride["status"] = "accepted"
         ride["accepted_at"] = datetime.now(timezone.utc).isoformat()
         ride["driver_eta_minutes"] = nearest_driver_info["eta_minutes"]
