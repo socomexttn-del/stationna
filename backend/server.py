@@ -184,6 +184,14 @@ class VehicleUpdate(BaseModel):
 class FareEstimateRequest(BaseModel):
     pickup: LocationModel
     destination: LocationModel
+    vehicle_type: str = "standard"  # "standard" (4 places) or "van" (7 places)
+    passenger_count: int = 1
+
+class RideRequest(BaseModel):
+    pickup: LocationModel
+    destination: LocationModel
+    vehicle_type: str = "standard"
+    passenger_count: int = 1
 
 class PaymentCreateRequest(BaseModel):
     ride_id: str
