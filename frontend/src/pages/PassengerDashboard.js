@@ -30,6 +30,8 @@ const PassengerDashboard = () => {
   
   const [pickup, setPickup] = useState({ lat: 48.8566, lng: 2.3522, address: '' });
   const [destination, setDestination] = useState({ lat: 48.8738, lng: 2.2950, address: '' });
+  const [passengers, setPassengers] = useState(1);
+  const [vehicleType, setVehicleType] = useState('standard');
 
   // Handle route calculation callback
   const handleRouteCalculated = useCallback((info) => {
