@@ -91,6 +91,26 @@ const PassengerDashboard = () => {
     await api.post('/ratings', ratingData);
   };
 
+  // Fetch available drivers for map display
+  const fetchAvailableDrivers = useCallback(async () => {
+    // Don't fetch if we have an active ride (driver assigned)
+    if (activeRide) return;
+    
+    try {
+      const response = await api.get('/drivers/available');
+      setAvailableDrivers(response.data || []);
+    } catch (error) {
+      console.error('Error fetching available drivers:', error);
+    }
+  }, [api, activeRide]);
+
+  // Poll available drivers every 10 seconds
+  useEffect(() => {
+    fetchAvailableDrivers();
+    const interval = setInterval(fetchAvailableDrivers, 10000);
+    return () => clearInterval(interval);
+  }, [fetchAvailableDrivers]);
+
   // Fetch frequent trips
   const fetchFrequentTrips = useCallback(async () => {
     try {
