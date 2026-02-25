@@ -6,6 +6,7 @@ import LandingPage from './pages/LandingPage';
 import AuthPage from './pages/AuthPage';
 import PassengerDashboard from './pages/PassengerDashboard';
 import DriverDashboard from './pages/DriverDashboard';
+import DriverVehiclePage from './pages/DriverVehiclePage';
 import AdminDashboard from './pages/AdminDashboard';
 import RideHistory from './pages/RideHistory';
 import ProfilePage from './pages/ProfilePage';
