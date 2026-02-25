@@ -1,0 +1,112 @@
+{
+  "identity": {
+    "name": "Volt",
+    "theme": "Nocturnal Velocity",
+    "core_concept": "Precision mobility in the dark city. High contrast, safety-first, electric aesthetic.",
+    "emotional_tone": "Efficient, Safe, Premium, Fast",
+    "target_audience": "Urban professionals and modern drivers"
+  },
+  "typography": {
+    "font_family_primary": "Plus Jakarta Sans, sans-serif",
+    "font_family_secondary": "Space Grotesk, sans-serif",
+    "scale": {
+      "display": "text-5xl md:text-7xl font-bold tracking-tighter leading-none",
+      "h1": "text-4xl md:text-5xl font-bold tracking-tight",
+      "h2": "text-3xl font-semibold tracking-tight",
+      "h3": "text-2xl font-semibold tracking-normal",
+      "body_lg": "text-lg font-medium leading-relaxed",
+      "body": "text-base text-muted-foreground leading-relaxed",
+      "caption": "text-sm font-medium tracking-wide uppercase text-muted-foreground"
+    }
+  },
+  "colors": {
+    "palette": {
+      "background": "#09090b",
+      "foreground": "#f4f4f5",
+      "primary": "#facc15",
+      "primary_foreground": "#000000",
+      "secondary": "#27272a",
+      "secondary_foreground": "#fafafa",
+      "accent": "#3b82f6",
+      "accent_foreground": "#ffffff",
+      "muted": "#18181b",
+      "muted_foreground": "#a1a1aa",
+      "border": "#27272a",
+      "success": "#22c55e",
+      "destructive": "#ef4444",
+      "warning": "#f59e0b"
+    },
+    "gradients": {
+      "hero_glow": "radial-gradient(circle at center, rgba(250, 204, 21, 0.15) 0%, rgba(9, 9, 11, 0) 70%)",
+      "glass_surface": "linear-gradient(180deg, rgba(24, 24, 27, 0.8) 0%, rgba(9, 9, 11, 0.9) 100%)"
+    }
+  },
+  "layout_strategy": {
+    "container_padding": "p-4 md:p-8 lg:p-12",
+    "grid_system": "grid grid-cols-1 md:grid-cols-12 gap-6",
+    "border_radius": "rounded-xl",
+    "glass_panel": "backdrop-blur-xl bg-black/60 border border-white/10 shadow-2xl",
+    "dashboard_grid": "grid grid-cols-1 md:grid-cols-4 gap-4",
+    "mobile_drawer": "fixed bottom-0 left-0 right-0 bg-background border-t border-border rounded-t-3xl p-6 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-primary text-primary-foreground hover:bg-primary/90 h-12 px-6 rounded-full font-bold shadow-[0_0_20px_rgba(250,204,21,0.3)] transition-all active:scale-95",
+      "secondary": "bg-secondary text-secondary-foreground hover:bg-secondary/80 h-12 px-6 rounded-full font-medium border border-white/5",
+      "ghost": "hover:bg-white/5 text-foreground h-12 px-4 rounded-full"
+    },
+    "cards": {
+      "base": "bg-card text-card-foreground rounded-xl border border-border/50 shadow-sm",
+      "glass": "backdrop-blur-md bg-zinc-900/70 border border-white/10 shadow-lg",
+      "interactive": "group hover:border-primary/50 transition-colors duration-300 cursor-pointer"
+    },
+    "inputs": {
+      "default": "bg-zinc-900/50 border-white/10 focus:border-primary/50 focus:ring-1 focus:ring-primary/50 h-12 rounded-lg text-lg px-4"
+    },
+    "maps": {
+      "container": "relative w-full h-full overflow-hidden rounded-2xl border border-white/5 shadow-inner bg-zinc-900",
+      "overlay": "absolute top-4 left-4 right-4 z-10"
+    }
+  },
+  "motion": {
+    "page_transition": {
+      "initial": { "opacity": 0, "y": 20 },
+      "animate": { "opacity": 1, "y": 0 },
+      "exit": { "opacity": 0, "y": -20 },
+      "transition": { "duration": 0.4, "ease": [0.22, 1, 0.36, 1] }
+    },
+    "hover_lift": "hover:-translate-y-1 transition-transform duration-300 ease-out",
+    "pulse": "animate-pulse"
+  },
+  "visual_enhancers": {
+    "textures": "bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay pointer-events-none fixed inset-0 z-50",
+    "glow_effects": "shadow-[0_0_30px_-5px_rgba(250,204,21,0.15)]",
+    "map_style": "Dark Mode Map (Mapbox Dark or Google Maps Night Mode)"
+  },
+  "images": {
+    "hero_background": "https://images.pexels.com/photos/26604738/pexels-photo-26604738.jpeg",
+    "driver_promo": "https://images.pexels.com/photos/31335088/pexels-photo-31335088.jpeg",
+    "passenger_mood": "https://images.pexels.com/photos/5835289/pexels-photo-5835289.jpeg",
+    "vehicle_premium": "https://images.pexels.com/photos/31298995/pexels-photo-31298995.jpeg",
+    "map_placeholder": "https://images.unsplash.com/photo-1761735679524-cce020c75c09"
+  },
+  "icons": {
+    "library": "lucide-react",
+    "style": "stroke-width={1.5} className='w-6 h-6'",
+    "install_command": "yarn add lucide-react"
+  },
+  "accessibility": {
+    "contrast_check": "Ensure yellow text is only on dark backgrounds. Use black text on yellow buttons.",
+    "focus_states": "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+    "touch_targets": "Minimum 44px height for all mobile interactive elements"
+  },
+  "universal_guidelines": [
+    "Do not use gradients for main backgrounds, use deep solid colors with noise texture.",
+    "Maps should be the primary interface for logged-in users.",
+    "Use 'Sheet' or 'Drawer' components for mobile interactions instead of Modals.",
+    "Input fields should be large (h-12 or h-14) for easy tapping.",
+    "Status colors: Green (Available/Arrived), Yellow (Waiting), Blue (En Route).",
+    "Always use a 'back' button on sub-pages.",
+    "Add data-testid to all buttons and inputs."
+  ]
+}
