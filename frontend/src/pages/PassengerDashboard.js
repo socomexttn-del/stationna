@@ -38,6 +38,9 @@ const PassengerDashboard = () => {
   const [completedRideForRating, setCompletedRideForRating] = useState(null);
   const [isLocating, setIsLocating] = useState(true);
   const [availableDrivers, setAvailableDrivers] = useState([]);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentData, setPaymentData] = useState(null);
+  const [loadingPayment, setLoadingPayment] = useState(false);
   
   const [pickup, setPickup] = useState({ lat: 48.8566, lng: 2.3522, address: '' });
   const [destination, setDestination] = useState({ lat: 48.8738, lng: 2.2950, address: '' });
