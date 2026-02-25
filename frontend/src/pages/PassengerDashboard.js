@@ -317,6 +317,7 @@ const PassengerDashboard = () => {
       locationInterval = setInterval(fetchDriverLocation, 5000);
     } else {
       setDriverLocation(null);
+      setDriverPath([]);
     }
     
     return () => {
