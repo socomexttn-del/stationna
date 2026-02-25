@@ -403,6 +403,16 @@ const PassengerDashboard = () => {
                 </SheetTitle>
               </SheetHeader>
               <nav className="mt-8 space-y-2">
+                {permission !== 'granted' && (
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start h-12 border-primary/50 text-primary"
+                    onClick={requestPermission}
+                    data-testid="enable-notifications"
+                  >
+                    <Bell className="w-5 h-5 mr-3" /> Activer les notifications
+                  </Button>
+                )}
                 <Link to="/profile" onClick={() => setMenuOpen(false)}>
                   <Button variant="ghost" className="w-full justify-start h-12" data-testid="nav-profile">
                     <User className="w-5 h-5 mr-3" /> Mon profil
