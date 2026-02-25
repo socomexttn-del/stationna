@@ -3,12 +3,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../hooks/useNotifications';
 import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Card, CardContent } from '../components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../components/ui/sheet';
+import MapComponent from '../components/MapComponent';
+import AddressAutocomplete from '../components/AddressAutocomplete';
 import { 
   Car, MapPin, Navigation, Star, Clock, CreditCard, 
-  Menu, User, History, LogOut, Phone, X, Check
+  Menu, User, History, LogOut, Phone, X
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -245,23 +246,13 @@ const PassengerDashboard = () => {
       </header>
 
       {/* Map Area */}
-      <div className="h-screen map-container pt-20">
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center text-muted-foreground">
-            <Navigation className="w-16 h-16 mx-auto mb-4 opacity-30" />
-            <p className="text-sm">Carte interactive</p>
-          </div>
-        </div>
-        
-        {/* Map Grid Lines */}
-        <div className="absolute inset-0 opacity-10">
-          {[...Array(10)].map((_, i) => (
-            <div key={i} className="absolute left-0 right-0 border-t border-white/20" style={{ top: `${i * 10}%` }} />
-          ))}
-          {[...Array(10)].map((_, i) => (
-            <div key={i} className="absolute top-0 bottom-0 border-l border-white/20" style={{ left: `${i * 10}%` }} />
-          ))}
-        </div>
+      <div className="h-screen pt-20">
+        <MapComponent 
+          pickupLocation={pickup.address ? pickup : null}
+          destinationLocation={destination.address ? destination : null}
+          driverLocation={activeRide?.driver_id ? { lat: 48.86, lng: 2.35 } : null}
+          className="absolute inset-0"
+        />
       </div>
 
       {/* Bottom Panel */}
@@ -271,26 +262,22 @@ const PassengerDashboard = () => {
             <h2 className="text-xl font-semibold" style={{ fontFamily: 'Space Grotesk' }}>Où allez-vous?</h2>
             
             <div className="space-y-3">
-              <div className="relative">
-                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" />
-                <Input
-                  data-testid="input-pickup"
-                  placeholder="Point de départ"
-                  value={pickup.address}
-                  onChange={(e) => setPickup({ ...pickup, address: e.target.value })}
-                  className="h-14 pl-12 bg-muted border-white/10 rounded-xl text-lg"
-                />
-              </div>
-              <div className="relative">
-                <Navigation className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary" />
-                <Input
-                  data-testid="input-destination"
-                  placeholder="Destination"
-                  value={destination.address}
-                  onChange={(e) => setDestination({ ...destination, address: e.target.value })}
-                  className="h-14 pl-12 bg-muted border-white/10 rounded-xl text-lg"
-                />
-              </div>
+              <AddressAutocomplete
+                value={pickup}
+                onChange={setPickup}
+                placeholder="Point de départ"
+                icon={MapPin}
+                iconColor="text-green-500"
+                dataTestId="input-pickup"
+              />
+              <AddressAutocomplete
+                value={destination}
+                onChange={setDestination}
+                placeholder="Destination"
+                icon={Navigation}
+                iconColor="text-primary"
+                dataTestId="input-destination"
+              />
             </div>
             
             <Button 
