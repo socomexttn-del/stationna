@@ -51,6 +51,10 @@ Application de taxi complète avec passagers et chauffeurs, géolocalisation, es
 - ✅ **Marqueurs** pickup (vert), destination (jaune), chauffeur (bleu)
 - ✅ **Géolocalisation** du navigateur
 
+- ✅ **Tracé d'itinéraire** Mapbox Directions API
+- ✅ **Temps estimé d'arrivée** affiché sur la carte
+- ✅ **Effet glow** sur la ligne d'itinéraire
+
 ## Prioritized Backlog
 
 ### P0 - Critical (Next Phase)
