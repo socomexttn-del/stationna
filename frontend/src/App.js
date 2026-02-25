@@ -52,6 +52,9 @@ const PublicRoute = ({ children }) => {
   }
   
   if (user) {
+    if (user.role === 'admin') {
+      return <Navigate to="/admin" replace />;
+    }
     return <Navigate to={user.role === 'driver' ? '/driver' : '/passenger'} replace />;
   }
   
@@ -65,6 +68,7 @@ function AppRoutes() {
       <Route path="/auth" element={<PublicRoute><AuthPage /></PublicRoute>} />
       <Route path="/passenger" element={<ProtectedRoute allowedRoles={['passenger']}><PassengerDashboard /></ProtectedRoute>} />
       <Route path="/driver" element={<ProtectedRoute allowedRoles={['driver']}><DriverDashboard /></ProtectedRoute>} />
+      <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
       <Route path="/history" element={<ProtectedRoute><RideHistory /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
       <Route path="/scheduled" element={<ProtectedRoute allowedRoles={['passenger']}><ScheduledRidesPage /></ProtectedRoute>} />
