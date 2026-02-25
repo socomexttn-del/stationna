@@ -11,7 +11,7 @@ import ChatComponent from '../components/ChatComponent';
 import { 
   Car, MapPin, Navigation, Star, Clock, CreditCard, 
   Menu, User, History, LogOut, Phone, X, Route, MessageCircle,
-  Calendar, Gift, Users, Truck
+  Calendar, Gift, Users, Truck, Bookmark, Plus, Trash2, Zap
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -27,11 +27,86 @@ const PassengerDashboard = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [routeInfo, setRouteInfo] = useState(null);
   const [driverLocation, setDriverLocation] = useState(null);
+  const [frequentTrips, setFrequentTrips] = useState([]);
+  const [showSaveTrip, setShowSaveTrip] = useState(false);
+  const [tripName, setTripName] = useState('');
   
   const [pickup, setPickup] = useState({ lat: 48.8566, lng: 2.3522, address: '' });
   const [destination, setDestination] = useState({ lat: 48.8738, lng: 2.2950, address: '' });
   const [passengers, setPassengers] = useState(1);
   const [vehicleType, setVehicleType] = useState('standard');
+
+  // Fetch frequent trips
+  const fetchFrequentTrips = useCallback(async () => {
+    try {
+      const response = await api.get('/frequent-trips');
+      setFrequentTrips(response.data);
+    } catch (error) {
+      console.error('Error fetching frequent trips:', error);
+    }
+  }, [api]);
+
+  useEffect(() => {
+    fetchFrequentTrips();
+  }, [fetchFrequentTrips]);
+
+  // Use a frequent trip
+  const useFrequentTrip = async (trip) => {
+    setPickup(trip.pickup);
+    setDestination(trip.destination);
+    setVehicleType(trip.vehicle_type);
+    setPassengers(trip.passenger_count);
+    
+    // Increment use count
+    try {
+      await api.post(`/frequent-trips/${trip.id}/use`);
+      fetchFrequentTrips();
+    } catch (error) {
+      console.error('Error updating trip use count:', error);
+    }
+    
+    toast.success(`Trajet "${trip.name}" chargé !`);
+  };
+
+  // Save current trip as frequent
+  const saveFrequentTrip = async () => {
+    if (!tripName.trim()) {
+      toast.error('Veuillez entrer un nom pour ce trajet');
+      return;
+    }
+    if (!pickup.address || !destination.address) {
+      toast.error('Veuillez remplir les adresses');
+      return;
+    }
+    
+    try {
+      await api.post('/frequent-trips', {
+        name: tripName,
+        pickup,
+        destination,
+        vehicle_type: vehicleType,
+        passenger_count: passengers
+      });
+      toast.success('Trajet enregistré !');
+      setShowSaveTrip(false);
+      setTripName('');
+      fetchFrequentTrips();
+    } catch (error) {
+      toast.error('Erreur lors de l\'enregistrement');
+    }
+  };
+
+  // Delete a frequent trip
+  const deleteFrequentTrip = async (tripId, e) => {
+    e.stopPropagation();
+    try {
+      await api.delete(`/frequent-trips/${tripId}`);
+      toast.success('Trajet supprimé');
+      fetchFrequentTrips();
+    } catch (error) {
+      toast.error('Erreur lors de la suppression');
+    }
+  };
 
   // Handle route calculation callback
   const handleRouteCalculated = useCallback((info) => {
