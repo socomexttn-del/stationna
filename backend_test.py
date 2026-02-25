@@ -267,6 +267,83 @@ class TaxiAPITester:
         )
         return success, response
 
+    def test_send_chat_message(self, ride_id, message, token):
+        """Test sending a chat message"""
+        success, response = self.run_test(
+            "Send chat message",
+            "POST",
+            "chat/send",
+            200,
+            data={
+                "ride_id": ride_id,
+                "message": message
+            },
+            token=token
+        )
+        return success, response
+
+    def test_get_chat_messages(self, ride_id, token):
+        """Test getting chat messages for a ride"""
+        success, response = self.run_test(
+            "Get chat messages",
+            "GET",
+            f"chat/{ride_id}",
+            200,
+            token=token
+        )
+        return success, response
+
+    def test_get_unread_message_count(self, ride_id, token):
+        """Test getting unread message count"""
+        success, response = self.run_test(
+            "Get unread message count",
+            "GET",
+            f"chat/{ride_id}/unread-count",
+            200,
+            token=token
+        )
+        return success, response
+
+    def test_mark_messages_read(self, ride_id, token):
+        """Test marking messages as read"""
+        success, response = self.run_test(
+            "Mark messages as read",
+            "POST",
+            f"chat/{ride_id}/mark-read",
+            200,
+            token=token
+        )
+        return success, response
+
+    def test_chat_unauthorized_access(self, ride_id, token):
+        """Test that users can't access chat for rides they're not part of"""
+        # This should fail with 403
+        success, response = self.run_test(
+            "Chat unauthorized access",
+            "GET",
+            f"chat/{ride_id}",
+            403,
+            token=token
+        )
+        return success, response
+
+    def test_chat_inactive_ride(self, token):
+        """Test that chat is only available during active rides"""
+        # Create a fake ride ID that doesn't exist or is not active
+        fake_ride_id = "fake-ride-id-12345"
+        success, response = self.run_test(
+            "Chat on inactive/non-existent ride",
+            "POST",
+            "chat/send",
+            404,  # Should return 404 for non-existent ride
+            data={
+                "ride_id": fake_ride_id,
+                "message": "This should fail"
+            },
+            token=token
+        )
+        return success, response
+
 def main():
     print("🚕 Starting Volt Taxi API Tests...")
     tester = TaxiAPITester()
