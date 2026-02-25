@@ -73,6 +73,17 @@ const AdminDashboard = () => {
     }
   };
 
+  const toggleDriverStatus = async (driver) => {
+    const newStatus = !driver.is_active;
+    try {
+      await api.put(`/admin/drivers/${driver.id}/status`, { is_active: newStatus });
+      toast.success(`Chauffeur ${newStatus ? 'activé' : 'désactivé'}`);
+      fetchAllStats(); // Refresh data
+    } catch (error) {
+      toast.error('Erreur lors de la mise à jour du statut');
+    }
+  };
+
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
