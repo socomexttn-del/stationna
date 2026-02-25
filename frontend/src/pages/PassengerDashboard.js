@@ -336,11 +336,25 @@ const PassengerDashboard = () => {
                     </div>
                     <div>
                       <p className="font-semibold">Volt Standard</p>
-                      <p className="text-sm text-muted-foreground">{estimate.distance_km} km</p>
+                      <p className="text-sm text-muted-foreground">{routeInfo?.distance || estimate.distance_km} km</p>
                     </div>
                   </div>
                   <p className="text-2xl font-bold text-primary">{estimate.estimated_fare}€</p>
                 </div>
+                
+                {/* Route details */}
+                {routeInfo && (
+                  <div className="flex items-center gap-4 pt-3 border-t border-white/10">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Clock className="w-4 h-4" />
+                      <span className="text-sm">{routeInfo.duration} min</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Route className="w-4 h-4" />
+                      <span className="text-sm">{routeInfo.distance} km</span>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
             
