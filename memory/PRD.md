@@ -13,7 +13,7 @@ French (Français)
 - [x] Passenger, Driver, and Admin roles
 - [x] User profiles with ratings
 - [x] Automatic geolocation on login
-- [x] **Session persistence fixed** (no more random logouts)
+- [x] Session persistence (no more random logouts)
 
 ### Ride Management
 - [x] Ride booking flow (immediate & scheduled)
@@ -28,33 +28,33 @@ French (Français)
 
 ### Maps & Location
 - [x] Mapbox integration with interactive map
-- [x] Address autocomplete with popular locations (gares, aéroports)
+- [x] Address autocomplete with popular locations
 - [x] Route drawing with ETA/distance
 - [x] Live GPS tracking of driver
-- [x] **Available drivers shown on passenger map with VOLT car icons**
-- [x] Proximity-based search (Paris default)
+- [x] Available drivers shown with VOLT car icons
+- [x] **Driver path tracking (blue line on map)** ✨ NEW
 
 ### Notifications
-- [x] Real-time in-app notifications (HTTP polling)
-- [x] Push notifications (PWA/Service Worker)
+- [x] Real-time in-app notifications
+- [x] Push notifications (PWA)
 - [x] Driver/passenger notifications with ETA
 
 ### Payments
 - [x] Stripe integration (test mode)
 - [x] Fare estimation with detailed breakdown
-- [x] **Inline credit card payment form (Stripe Elements)**
+- [x] Inline credit card payment form (Stripe Elements)
 - [x] Payment history tracking
-- [x] **User's Stripe API keys configured**
+- [x] User's Stripe API keys configured
 
 ### Communication
 - [x] In-app chat between passenger and driver
-- [x] Driver/passenger notifications
 
 ### Admin Features
 - [x] Admin dashboard with statistics
 - [x] Driver stats (earnings, rides, rating)
 - [x] Recent rides overview
 - [x] Driver document validation
+- [x] **Driver account management (activate/deactivate)** ✨ NEW
 
 ### Driver Features
 - [x] Driver dashboard with earnings
@@ -74,7 +74,7 @@ French (Français)
 - **Frontend**: React, Tailwind CSS, Shadcn UI, Stripe Elements
 - **Backend**: FastAPI, MongoDB (motor)
 - **Maps**: Mapbox GL JS, Geocoding API, Directions API
-- **Payments**: Stripe API (Payment Intents for inline card)
+- **Payments**: Stripe API (Payment Intents)
 - **Auth**: JWT tokens with persistent sessions
 
 ## API Keys Configured
@@ -84,31 +84,25 @@ French (Français)
 
 ## Latest Updates (2025-02-25)
 
-### Session 1 Accomplishments
-1. **Fixed driver routing**: Driver login correctly redirects to /driver dashboard
-2. **Added VOLT car icons on map**: Available drivers now appear on passenger map with yellow VOLT-branded car markers
-3. **Implemented Stripe Elements payment**: Passengers can enter credit card details directly in the app
-4. **Testing agent restored**: testing_agent_v3 now working
-5. **Stripe API keys configured**: User's real Stripe test keys integrated
+### Session Accomplishments
+1. **Driver path tracking**: Blue line shows driver's traveled route on passenger map
+2. **Admin driver management**: Activate/deactivate driver accounts from admin dashboard
+3. **Session persistence fixed**: Complete rewrite of AuthContext.js
+4. **Stripe payment integration**: User's Stripe keys configured
+5. **VOLT car icons on map**: Available drivers visible with yellow markers
 
-### Session 2 Accomplishments
-6. **Session persistence fixed**: Complete rewrite of AuthContext.js
-   - Stable API instance with useMemo
-   - Axios interceptors for automatic token handling
-   - Only logout on 401 errors, not network errors
-   - LocalStorage sync between tabs
-   - Memoized callbacks for performance
+### New API Endpoints
+- `GET /api/rides/{ride_id}/driver-path` - Get driver's path history
+- `PUT /api/admin/drivers/{driver_id}/status` - Toggle driver account status
 
-### E2E Test Results
-- ✅ Ride flow (create → accept → start → complete): WORKING
-- ✅ Payment Intent creation with Stripe: WORKING
-- ✅ Session persistence after navigation: WORKING
-- ✅ Session persistence after hard refresh: WORKING
+### Test Results (iteration_8)
+- Backend: 100% (10/10 tests passed)
+- Frontend: 100% (all P1 features working)
 
 ## Backlog (Priority Order)
-1. P1 - Live driver path on map (show route history)
-2. P1 - Admin driver management (activate/deactivate)
-3. P3 - Wallet/credit system for passengers
+1. ~~P1 - Live driver path on map~~ ✅ DONE
+2. ~~P1 - Admin driver management~~ ✅ DONE
+3. P2 - Wallet/credit system for passengers
 4. P3 - Export statistics (CSV/PDF)
 
 ## Known Issues Resolved
@@ -117,4 +111,4 @@ French (Français)
 - ~~Stripe API key invalid~~ ✅ FIXED
 
 ## Last Updated
-2025-02-25 - Fixed session persistence + Stripe payment integration complete
+2025-02-25 - Completed P1 features: driver path tracking + admin driver management
