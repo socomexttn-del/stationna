@@ -357,6 +357,11 @@ const DriverDashboard = () => {
                       <User className="w-5 h-5 mr-3" /> Mon profil
                     </Button>
                   </Link>
+                  <Link to="/driver/vehicle" onClick={() => setMenuOpen(false)}>
+                    <Button variant="ghost" className="w-full justify-start h-12" data-testid="driver-nav-vehicle">
+                      <Car className="w-5 h-5 mr-3" /> Mon véhicule
+                    </Button>
+                  </Link>
                   <Link to="/history" onClick={() => setMenuOpen(false)}>
                     <Button variant="ghost" className="w-full justify-start h-12" data-testid="driver-nav-history">
                       <History className="w-5 h-5 mr-3" /> Historique
