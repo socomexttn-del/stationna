@@ -10,7 +10,8 @@ import AddressAutocomplete from '../components/AddressAutocomplete';
 import ChatComponent from '../components/ChatComponent';
 import { 
   Car, MapPin, Navigation, Star, Clock, CreditCard, 
-  Menu, User, History, LogOut, Phone, X, Route, MessageCircle
+  Menu, User, History, LogOut, Phone, X, Route, MessageCircle,
+  Calendar, Gift
 } from 'lucide-react';
 import { toast } from 'sonner';
 
