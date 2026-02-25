@@ -8,6 +8,7 @@ const MapComponent = ({
   pickupLocation, 
   destinationLocation, 
   driverLocation,
+  driverPath = [],  // Array of {lat, lng} points for driver's traveled path
   availableDrivers = [],  // List of available drivers to show on map
   onMapClick,
   onRouteCalculated,
