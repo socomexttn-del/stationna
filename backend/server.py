@@ -405,6 +405,21 @@ async def accept_ride(ride_id: str, current_user: dict = Depends(get_current_use
     
     await db.users.update_one({"id": current_user["id"]}, {"$set": {"is_available": False}})
     updated = await db.rides.find_one({"id": ride_id}, {"_id": 0})
+    
+    # Notify passenger that driver accepted
+    await manager.notify_passenger(ride["passenger_id"], {
+        "type": "ride_accepted",
+        "driver_name": f"{current_user['first_name']} {current_user['last_name']}",
+        "driver_id": current_user["id"],
+        "ride_id": ride_id
+    })
+    
+    # Notify other drivers that ride is taken
+    await manager.notify_all_drivers({
+        "type": "ride_taken",
+        "ride_id": ride_id
+    })
+    
     return RideResponse(**updated)
 
 @api_router.post("/rides/{ride_id}/start", response_model=RideResponse)
