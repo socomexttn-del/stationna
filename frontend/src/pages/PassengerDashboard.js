@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useWebSocket } from '../hooks/useWebSocket';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -12,7 +13,7 @@ import {
 import { toast } from 'sonner';
 
 const PassengerDashboard = () => {
-  const { user, logout, api } = useAuth();
+  const { user, logout, api, token } = useAuth();
   const navigate = useNavigate();
   
   const [step, setStep] = useState('idle'); // idle, booking, searching, ride_active
@@ -22,6 +23,47 @@ const PassengerDashboard = () => {
   
   const [pickup, setPickup] = useState({ lat: 48.8566, lng: 2.3522, address: '' });
   const [destination, setDestination] = useState({ lat: 48.8738, lng: 2.2950, address: '' });
+
+  // WebSocket message handler for real-time updates
+  const handleWebSocketMessage = useCallback((data) => {
+    console.log('Passenger WebSocket message:', data);
+    
+    switch (data.type) {
+      case 'ride_accepted':
+        toast.success(
+          <div className="flex flex-col gap-1">
+            <span className="font-semibold">Chauffeur trouvé!</span>
+            <span className="text-sm">{data.driver_name} arrive</span>
+          </div>,
+          { duration: 5000 }
+        );
+        setStep('ride_active');
+        fetchActiveRide();
+        break;
+        
+      case 'ride_started':
+        toast.success('La course a démarré!', { duration: 3000 });
+        fetchActiveRide();
+        break;
+        
+      case 'ride_completed':
+        toast.success(
+          <div className="flex flex-col gap-1">
+            <span className="font-semibold">Course terminée!</span>
+            <span className="text-sm">Montant: {data.final_fare}€</span>
+          </div>,
+          { duration: 5000 }
+        );
+        fetchActiveRide();
+        break;
+        
+      default:
+        break;
+    }
+  }, []);
+
+  // Connect to WebSocket
+  useWebSocket(token, 'passenger', handleWebSocketMessage);
 
   useEffect(() => {
     fetchActiveRide();
