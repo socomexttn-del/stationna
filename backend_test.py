@@ -414,14 +414,34 @@ class TaxiAPITester:
 
     def test_delete_favorite_address(self, favorite_id, token):
         """Test deleting a favorite address"""
-        success, response = self.run_test(
-            "Delete favorite address",
-            "POST",  # Note: actually DELETE method but using POST for consistency
-            f"favorites/{favorite_id}",
-            200,
-            token=token
-        )
-        return success, response
+        url = f"{self.base_url}/api/favorites/{favorite_id}"
+        headers = {'Content-Type': 'application/json'}
+        if token:
+            headers['Authorization'] = f'Bearer {token}'
+
+        self.tests_run += 1
+        print(f"\n🔍 Testing Delete favorite address...")
+        
+        try:
+            response = requests.delete(url, headers=headers, timeout=10)
+            success = response.status_code == 200
+            if success:
+                self.tests_passed += 1
+                print(f"✅ Passed - Status: {response.status_code}")
+                try:
+                    return True, response.json()
+                except:
+                    return True, {}
+            else:
+                print(f"❌ Failed - Expected 200, got {response.status_code}")
+                try:
+                    print(f"   Response: {response.text}")
+                except:
+                    pass
+                return False, {}
+        except Exception as e:
+            print(f"❌ Failed - Error: {str(e)}")
+            return False, {}
 
     def test_create_promo_code(self, token, code="TEST10"):
         """Test creating a promo code"""
