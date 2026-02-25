@@ -1038,10 +1038,19 @@ const PassengerDashboard = () => {
             {activeRide.status === 'completed' && activeRide.payment_status !== 'paid' && (
               <Button 
                 onClick={handlePayment}
+                disabled={loadingPayment}
                 data-testid="pay-btn"
                 className="w-full h-14 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full font-bold text-lg"
               >
-                <CreditCard className="w-5 h-5 mr-2" /> Payer {activeRide.final_fare || activeRide.estimated_fare}€
+                {loadingPayment ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Chargement...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="w-5 h-5 mr-2" /> Payer {activeRide.final_fare || activeRide.estimated_fare}€
+                  </>
+                )}
               </Button>
             )}
 
