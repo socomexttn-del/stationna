@@ -184,6 +184,15 @@ const PassengerDashboard = () => {
         );
         // Push notification
         notifyRideCompleted(data.final_fare);
+        // Show rating modal after a short delay
+        setTimeout(() => {
+          setCompletedRideForRating({
+            id: data.ride_id,
+            driver_name: data.driver_name,
+            final_fare: data.final_fare
+          });
+          setShowRatingModal(true);
+        }, 1500);
         fetchActiveRide();
         setDriverLocation(null);
         break;
