@@ -294,15 +294,30 @@ const PassengerDashboard = () => {
       {/* Map Area */}
       <div className="h-screen pt-20">
         <MapComponent 
-          pickupLocation={pickup.address ? pickup : null}
-          destinationLocation={destination.address ? destination : null}
-          driverLocation={activeRide?.driver_id ? { lat: 48.86, lng: 2.35 } : null}
+          pickupLocation={activeRide ? activeRide.pickup : (pickup.address ? pickup : null)}
+          destinationLocation={activeRide ? activeRide.destination : (destination.address ? destination : null)}
+          driverLocation={driverLocation}
           onRouteCalculated={handleRouteCalculated}
           className="absolute inset-0"
         />
         
+        {/* Driver Location Badge - Show when tracking driver */}
+        {driverLocation && activeRide && (
+          <div className="absolute top-24 left-4 z-30">
+            <div className="glass rounded-xl p-3 flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center animate-pulse">
+                <Car className="w-5 h-5 text-blue-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Chauffeur en route</p>
+                <p className="font-semibold text-blue-400">Position en temps réel</p>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {/* Route Info Badge */}
-        {routeInfo && pickup.address && destination.address && step === 'idle' && (
+        {routeInfo && pickup.address && destination.address && step === 'idle' && !activeRide && (
           <div className="absolute top-24 left-4 right-4 z-30">
             <div className="glass rounded-xl p-3 flex items-center justify-between">
               <div className="flex items-center gap-3">
