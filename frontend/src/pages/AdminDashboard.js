@@ -52,6 +52,26 @@ const AdminDashboard = () => {
     }
   };
 
+  const viewDriverDocuments = async (driver) => {
+    try {
+      const response = await api.get(`/admin/drivers/${driver.id}/documents`);
+      setDriverDocuments(response.data);
+      setSelectedDriver(driver);
+    } catch (error) {
+      toast.error('Erreur lors du chargement des documents');
+    }
+  };
+
+  const updateDocStatus = async (docType, status) => {
+    try {
+      await api.put(`/admin/drivers/${selectedDriver.id}/documents/${docType}/status?status=${status}`);
+      toast.success(`Document ${status === 'approved' ? 'approuvé' : 'rejeté'}`);
+      viewDriverDocuments(selectedDriver);
+    } catch (error) {
+      toast.error('Erreur lors de la mise à jour');
+    }
+  };
+
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
