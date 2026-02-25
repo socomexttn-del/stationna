@@ -283,11 +283,70 @@ def calculate_distance(pickup: Dict, destination: Dict) -> float:
     c = 2 * math.asin(math.sqrt(a))
     return round(R * c, 2)
 
-def calculate_fare(distance_km: float) -> float:
-    """Calculate fare: base + per km rate"""
-    BASE_FARE = 3.50
-    PER_KM_RATE = 1.80
-    return round(BASE_FARE + (distance_km * PER_KM_RATE), 2)
+def estimate_duration_minutes(distance_km: float) -> int:
+    """Estimate trip duration based on average city speed (25 km/h)"""
+    AVG_SPEED_KMH = 25
+    return max(5, round((distance_km / AVG_SPEED_KMH) * 60))
+
+def calculate_fare(distance_km: float, duration_minutes: int = 0, is_scheduled: bool = False, is_immediate: bool = True, extra_passengers: int = 0) -> dict:
+    """
+    Calculate fare based on official taxi rates:
+    - Prise en charge: 4.48€
+    - Prix au km: 1.30€/km
+    - Tarif horaire (attente): 42.15€/h = 0.70€/min
+    - Tarif minimum: 8€
+    - Supplément réservation immédiate: +4€
+    - Supplément réservation à l'avance: +7€
+    - Supplément 5ème passager+: +5.50€
+    """
+    # Base rates
+    PRISE_EN_CHARGE = 4.48
+    PRIX_KM = 1.30
+    TARIF_MINUTE = 0.70  # 42.15€/h ÷ 60
+    TARIF_MINIMUM = 8.00
+    
+    # Supplements
+    SUPPLEMENT_IMMEDIAT = 4.00
+    SUPPLEMENT_AVANCE = 7.00
+    SUPPLEMENT_PASSAGER = 5.50
+    
+    # Calculate base fare
+    base = PRISE_EN_CHARGE
+    distance_cost = distance_km * PRIX_KM
+    time_cost = duration_minutes * TARIF_MINUTE
+    
+    # Calculate supplements
+    supplements = 0
+    supplement_details = []
+    
+    if is_scheduled:
+        supplements += SUPPLEMENT_AVANCE
+        supplement_details.append({"name": "Réservation à l'avance", "amount": SUPPLEMENT_AVANCE})
+    elif is_immediate:
+        supplements += SUPPLEMENT_IMMEDIAT
+        supplement_details.append({"name": "Réservation immédiate", "amount": SUPPLEMENT_IMMEDIAT})
+    
+    if extra_passengers > 0:
+        passenger_supplement = SUPPLEMENT_PASSAGER * extra_passengers
+        supplements += passenger_supplement
+        supplement_details.append({"name": f"Supplément {extra_passengers} passager(s) sup.", "amount": passenger_supplement})
+    
+    # Total before minimum
+    subtotal = base + distance_cost + time_cost + supplements
+    
+    # Apply minimum fare
+    total = max(TARIF_MINIMUM, subtotal)
+    
+    return {
+        "prise_en_charge": PRISE_EN_CHARGE,
+        "distance_cost": round(distance_cost, 2),
+        "time_cost": round(time_cost, 2),
+        "supplements": round(supplements, 2),
+        "supplement_details": supplement_details,
+        "subtotal": round(subtotal, 2),
+        "minimum_applied": subtotal < TARIF_MINIMUM,
+        "total": round(total, 2)
+    }
 
 # ======================== AUTH ROUTES ========================
 
