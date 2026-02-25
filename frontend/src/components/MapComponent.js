@@ -97,6 +97,52 @@ const MapComponent = ({
           'line-dasharray': [2, 4]
         }
       });
+
+      // Add driver path source (traveled route)
+      map.current.addSource('driver-path', {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'LineString',
+            coordinates: []
+          }
+        }
+      });
+
+      // Driver path glow effect
+      map.current.addLayer({
+        id: 'driver-path-glow',
+        type: 'line',
+        source: 'driver-path',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': '#3b82f6',
+          'line-width': 10,
+          'line-opacity': 0.4,
+          'line-blur': 3
+        }
+      });
+
+      // Driver path main line
+      map.current.addLayer({
+        id: 'driver-path-line',
+        type: 'line',
+        source: 'driver-path',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': '#3b82f6',
+          'line-width': 4,
+          'line-opacity': 0.9
+        }
+      });
     });
 
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
