@@ -35,11 +35,55 @@ const PassengerDashboard = () => {
   const [tripName, setTripName] = useState('');
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [completedRideForRating, setCompletedRideForRating] = useState(null);
+  const [isLocating, setIsLocating] = useState(true);
   
   const [pickup, setPickup] = useState({ lat: 48.8566, lng: 2.3522, address: '' });
   const [destination, setDestination] = useState({ lat: 48.8738, lng: 2.2950, address: '' });
   const [passengers, setPassengers] = useState(1);
   const [vehicleType, setVehicleType] = useState('standard');
+
+  // Get user's current location on mount
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          
+          // Reverse geocode to get address
+          try {
+            const MAPBOX_TOKEN = process.env.REACT_APP_MAPBOX_TOKEN;
+            const response = await fetch(
+              `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${MAPBOX_TOKEN}&language=fr`
+            );
+            const data = await response.json();
+            const address = data.features?.[0]?.place_name || 'Position actuelle';
+            
+            setPickup({
+              lat: latitude,
+              lng: longitude,
+              address: address
+            });
+            toast.success('Position détectée', { duration: 2000 });
+          } catch (error) {
+            setPickup({
+              lat: latitude,
+              lng: longitude,
+              address: 'Position actuelle'
+            });
+          }
+          setIsLocating(false);
+        },
+        (error) => {
+          console.error('Geolocation error:', error);
+          setIsLocating(false);
+          toast.info('Activez la géolocalisation pour un meilleur service', { duration: 3000 });
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    } else {
+      setIsLocating(false);
+    }
+  }, []);
 
   // Submit rating
   const submitRating = async (ratingData) => {
