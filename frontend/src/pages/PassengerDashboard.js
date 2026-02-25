@@ -31,6 +31,7 @@ const PassengerDashboard = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [routeInfo, setRouteInfo] = useState(null);
   const [driverLocation, setDriverLocation] = useState(null);
+  const [driverPath, setDriverPath] = useState([]);
   const [frequentTrips, setFrequentTrips] = useState([]);
   const [showSaveTrip, setShowSaveTrip] = useState(false);
   const [tripName, setTripName] = useState('');
