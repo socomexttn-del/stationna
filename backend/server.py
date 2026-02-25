@@ -143,10 +143,6 @@ class LocationModel(BaseModel):
     lng: float
     address: str
 
-class RideRequest(BaseModel):
-    pickup: LocationModel
-    destination: LocationModel
-
 class RideResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
