@@ -160,6 +160,7 @@ class RideResponse(BaseModel):
     final_fare: Optional[float] = None
     status: str
     payment_status: str = "pending"
+    scheduled_time: Optional[str] = None
     created_at: str
     accepted_at: Optional[str] = None
     completed_at: Optional[str] = None
