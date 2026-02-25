@@ -447,6 +447,28 @@ const DriverDashboard = () => {
 
       {/* Main Content */}
       <div className="pt-24 pb-8 px-4 space-y-6">
+        {/* Location Status */}
+        {!currentLocation && !locationError && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 p-3 rounded-xl">
+            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+            <span>Détection de votre position...</span>
+          </div>
+        )}
+        
+        {locationError && (
+          <div className="flex items-center gap-2 text-sm text-orange-500 bg-orange-500/10 p-3 rounded-xl">
+            <Crosshair className="w-4 h-4" />
+            <span>{locationError} - Activez la géolocalisation pour recevoir des courses</span>
+          </div>
+        )}
+        
+        {currentLocation && isAvailable && (
+          <div className="flex items-center gap-2 text-sm text-green-500 bg-green-500/10 p-3 rounded-xl">
+            <Crosshair className="w-4 h-4" />
+            <span>Position active - Vous recevrez les courses à proximité</span>
+          </div>
+        )}
+
         {/* Stats Cards */}
         {stats && (
           <div className="grid grid-cols-2 gap-4">
