@@ -312,6 +312,50 @@ async def get_available_drivers(current_user: dict = Depends(get_current_user)):
     drivers = await db.users.find({"role": "driver", "is_available": True}, {"_id": 0, "password_hash": 0}).to_list(100)
     return [UserResponse(**d) for d in drivers]
 
+@api_router.put("/drivers/location")
+async def update_driver_location(data: LocationModel, current_user: dict = Depends(get_current_user)):
+    """Update driver's current GPS location"""
+    if current_user["role"] != "driver":
+        raise HTTPException(status_code=403, detail="Only drivers can update location")
+    
+    location_data = data.model_dump()
+    location_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.users.update_one(
+        {"id": current_user["id"]}, 
+        {"$set": {"location": location_data}}
+    )
+    
+    # Also notify passenger if driver has an active ride
+    active_ride = await db.rides.find_one({
+        "driver_id": current_user["id"],
+        "status": {"$in": ["accepted", "in_progress"]}
+    }, {"_id": 0})
+    
+    if active_ride:
+        await notification_manager.notify_passenger(active_ride["passenger_id"], "driver_location", {
+            "ride_id": active_ride["id"],
+            "location": location_data
+        })
+    
+    return {"status": "ok", "location": location_data}
+
+@api_router.get("/rides/{ride_id}/driver-location")
+async def get_driver_location(ride_id: str, current_user: dict = Depends(get_current_user)):
+    """Get current location of driver for a specific ride"""
+    ride = await db.rides.find_one({"id": ride_id}, {"_id": 0})
+    if not ride:
+        raise HTTPException(status_code=404, detail="Ride not found")
+    
+    if ride["passenger_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Not your ride")
+    
+    if not ride.get("driver_id"):
+        return {"location": None}
+    
+    driver = await db.users.find_one({"id": ride["driver_id"]}, {"_id": 0, "location": 1})
+    return {"location": driver.get("location") if driver else None}
+
 # ======================== RIDE ROUTES ========================
 
 @api_router.post("/rides/estimate")
