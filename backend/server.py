@@ -45,67 +45,65 @@ security = HTTPBearer()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# ======================== WEBSOCKET CONNECTION MANAGER ========================
+# ======================== NOTIFICATION SYSTEM ========================
 
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: Dict[str, List[WebSocket]] = {
-            "drivers": [],
-            "passengers": {}
+class NotificationManager:
+    """Store notifications in MongoDB for reliable delivery via polling"""
+    
+    async def create_notification(self, user_id: str, notification_type: str, data: dict, role: str = None):
+        """Create a notification for a user or broadcast to all drivers"""
+        notification = {
+            "id": str(uuid.uuid4()),
+            "user_id": user_id,  # Can be "broadcast_drivers" for all drivers
+            "role": role,
+            "type": notification_type,
+            "data": data,
+            "read": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
         }
-        self.driver_sockets: Dict[str, WebSocket] = {}
+        await db.notifications.insert_one(notification)
+        return notification
     
-    async def connect_driver(self, websocket: WebSocket, driver_id: str):
-        await websocket.accept()
-        self.driver_sockets[driver_id] = websocket
-        logger.info(f"Driver {driver_id} connected to WebSocket")
+    async def notify_all_drivers(self, notification_type: str, data: dict):
+        """Broadcast notification to all available drivers"""
+        notification = {
+            "id": str(uuid.uuid4()),
+            "user_id": "broadcast_drivers",
+            "role": "driver",
+            "type": notification_type,
+            "data": data,
+            "read": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.notifications.insert_one(notification)
+        return notification
     
-    async def connect_passenger(self, websocket: WebSocket, passenger_id: str):
-        await websocket.accept()
-        self.active_connections["passengers"][passenger_id] = websocket
-        logger.info(f"Passenger {passenger_id} connected to WebSocket")
-    
-    def disconnect_driver(self, driver_id: str):
-        if driver_id in self.driver_sockets:
-            del self.driver_sockets[driver_id]
-            logger.info(f"Driver {driver_id} disconnected")
-    
-    def disconnect_passenger(self, passenger_id: str):
-        if passenger_id in self.active_connections["passengers"]:
-            del self.active_connections["passengers"][passenger_id]
-            logger.info(f"Passenger {passenger_id} disconnected")
-    
-    async def notify_all_drivers(self, message: dict):
-        """Send notification to all connected drivers"""
-        disconnected = []
-        for driver_id, websocket in self.driver_sockets.items():
-            try:
-                await websocket.send_json(message)
-            except Exception as e:
-                logger.error(f"Error sending to driver {driver_id}: {e}")
-                disconnected.append(driver_id)
-        for driver_id in disconnected:
-            self.disconnect_driver(driver_id)
-    
-    async def notify_driver(self, driver_id: str, message: dict):
-        """Send notification to specific driver"""
-        if driver_id in self.driver_sockets:
-            try:
-                await self.driver_sockets[driver_id].send_json(message)
-            except Exception as e:
-                logger.error(f"Error sending to driver {driver_id}: {e}")
-                self.disconnect_driver(driver_id)
-    
-    async def notify_passenger(self, passenger_id: str, message: dict):
+    async def notify_passenger(self, passenger_id: str, notification_type: str, data: dict):
         """Send notification to specific passenger"""
-        if passenger_id in self.active_connections["passengers"]:
-            try:
-                await self.active_connections["passengers"][passenger_id].send_json(message)
-            except Exception as e:
-                logger.error(f"Error sending to passenger {passenger_id}: {e}")
-                self.disconnect_passenger(passenger_id)
+        return await self.create_notification(passenger_id, notification_type, data, "passenger")
+    
+    async def get_notifications(self, user_id: str, role: str, since: str = None):
+        """Get unread notifications for a user"""
+        query = {
+            "$or": [
+                {"user_id": user_id, "read": False},
+                {"user_id": "broadcast_drivers", "role": role, "read": False}
+            ]
+        }
+        if since:
+            query["created_at"] = {"$gt": since}
+        
+        notifications = await db.notifications.find(query, {"_id": 0}).sort("created_at", -1).to_list(50)
+        return notifications
+    
+    async def mark_as_read(self, notification_ids: list, user_id: str):
+        """Mark notifications as read"""
+        await db.notifications.update_many(
+            {"id": {"$in": notification_ids}},
+            {"$set": {"read": True}}
+        )
 
-manager = ConnectionManager()
+notification_manager = NotificationManager()
 
 # ======================== MODELS ========================
 
