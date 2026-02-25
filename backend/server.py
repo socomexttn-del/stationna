@@ -624,12 +624,36 @@ async def update_driver_location(data: LocationModel, current_user: dict = Depen
     }, {"_id": 0})
     
     if active_ride:
+        # Store location in path history for the ride
+        path_point = {
+            "lat": data.lat,
+            "lng": data.lng,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        await db.rides.update_one(
+            {"id": active_ride["id"]},
+            {"$push": {"driver_path": path_point}}
+        )
+        
         await notification_manager.notify_passenger(active_ride["passenger_id"], "driver_location", {
             "ride_id": active_ride["id"],
             "location": location_data
         })
     
     return {"status": "ok", "location": location_data}
+
+@api_router.get("/rides/{ride_id}/driver-path")
+async def get_driver_path(ride_id: str, current_user: dict = Depends(get_current_user)):
+    """Get the driver's path history for a ride"""
+    ride = await db.rides.find_one({"id": ride_id}, {"_id": 0, "driver_path": 1, "passenger_id": 1, "driver_id": 1})
+    if not ride:
+        raise HTTPException(status_code=404, detail="Ride not found")
+    
+    # Allow passenger or driver to view
+    if ride.get("passenger_id") != current_user["id"] and ride.get("driver_id") != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Not your ride")
+    
+    return {"path": ride.get("driver_path", [])}
 
 @api_router.get("/rides/{ride_id}/driver-location")
 async def get_driver_location(ride_id: str, current_user: dict = Depends(get_current_user)):
