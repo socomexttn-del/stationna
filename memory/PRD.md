@@ -1,86 +1,92 @@
-# Volt Taxi - PRD (Product Requirements Document)
+# Volt Taxi - Product Requirements Document
 
 ## Original Problem Statement
-Application de taxi complète avec passagers et chauffeurs, géolocalisation, estimation prix, suivi temps réel, historique, notation/avis, paiement Stripe, authentification JWT.
+Application de taxi complète avec rôles passager/chauffeur, authentification JWT, paiements Stripe, cartes Mapbox interactives, et tarification personnalisée.
 
-## Architecture
-- **Frontend**: React 19 + Tailwind CSS + Shadcn/UI + Mapbox GL JS
-- **Backend**: FastAPI (Python) 
-- **Database**: MongoDB
-- **Payment**: Stripe via emergentintegrations
-- **Auth**: JWT (email/password)
-- **Notifications**: Polling-based real-time notifications (3s interval)
-- **Maps**: Mapbox GL JS (dark-v11 theme) + Geocoding API
+## User Language
+French (Français)
 
-## User Personas
-1. **Passager**: Utilisateur qui réserve des courses
-2. **Chauffeur**: Conducteur qui accepte et effectue les courses
+## Core Features Implemented
 
-## Core Requirements (Static)
-- Authentification JWT (inscription/connexion)
-- Deux rôles: passager et chauffeur
-- Réservation de course avec adresses
-- Estimation du prix basée sur la distance
-- Acceptation/refus de course par chauffeur
-- Cycle complet: pending → accepted → in_progress → completed
-- Paiement Stripe après course
-- Système de notation mutuel
-- Historique des courses
-- Notifications push pour nouvelles courses
-- Carte interactive avec géolocalisation
+### Authentication & Users
+- [x] JWT authentication
+- [x] Passenger and Driver roles
+- [x] User profiles with ratings
 
-## What's Been Implemented (Jan 2026)
-- ✅ Landing page avec hero section et CTAs
-- ✅ Page d'authentification (login/register)
-- ✅ Dashboard passager avec formulaire de réservation
-- ✅ Dashboard chauffeur avec stats et gestion disponibilité
-- ✅ Estimation de tarif en temps réel
-- ✅ Création et gestion des courses
-- ✅ Acceptation de course par chauffeur
-- ✅ Démarrage et complétion de course
-- ✅ Intégration paiement Stripe
-- ✅ Système de notation
-- ✅ Historique des courses
-- ✅ Page profil avec gestion véhicule
-- ✅ Design theme "Nocturnal Velocity"
-- ✅ Notifications en temps réel (polling 3s)
-- ✅ Son de notification pour nouvelles courses
-- ✅ Indicateur de connexion Live/Offline
-- ✅ **Carte Mapbox interactive** (dark theme)
-- ✅ **Autocomplétion d'adresses** (Geocoding API)
-- ✅ **Marqueurs** pickup (vert), destination (jaune), chauffeur (bleu)
-- ✅ **Géolocalisation** du navigateur
+### Ride Management
+- [x] Ride booking flow
+- [x] Real-time ride status updates
+- [x] Ride cancellation
+- [x] Scheduled rides
+- [x] Vehicle type selection (Standard/Van)
+- [x] Passenger count with supplements
 
-- ✅ **Courses planifiées** avec supplément +7€
-- ✅ **Favoris d'adresses** (Maison, Travail, etc.)
-- ✅ **Historique des paiements** avec résumé
-- ✅ **Codes promo et parrainage** (-10% première course)
-- ✅ **Tarification officielle** (prise en charge 4,48€, 1,30€/km, 0,70€/min, minimum 8€)
-- ✅ **Chat in-app** passager/chauffeur pendant la course
-- ✅ **Suivi GPS temps réel** du chauffeur sur la carte
-- ✅ **Tracé d'itinéraire** Mapbox Directions API
-- ✅ **Temps estimé d'arrivée** affiché sur la carte
-- ✅ **Effet glow** sur la ligne d'itinéraire
+### Maps & Location
+- [x] Mapbox integration with interactive map
+- [x] Address autocomplete with popular locations (gares, aéroports)
+- [x] Route drawing with ETA/distance
+- [x] Live GPS tracking of driver
+- [x] Proximity-based search (Paris default)
 
-## Prioritized Backlog
+### Payments
+- [x] Stripe integration (test mode)
+- [x] Fare estimation with detailed breakdown
+- [x] Official tariff structure:
+  - Prise en charge: 4.48€
+  - Distance: 1.30€/km
+  - Temps: 0.70€/min
+  - Van supplement: +10€
+  - Immediate booking: +4€
+  - Extra passenger (>4): +5.50€/person
+  - Minimum fare: 8€
 
-### P0 - Critical (Next Phase)
-- Notifications push natives (PWA)
-- Courses planifiées (réservation à l'avance)
+### Communication
+- [x] In-app chat between passenger and driver
+- [x] Real-time notifications (HTTP polling)
+- [x] Driver/passenger notifications
 
-### P1 - Important
-- Chat in-app passager/chauffeur
-- Historique des paiements détaillé
-- Notifications push natives (PWA)
+### Additional Features
+- [x] Favorite addresses
+- [x] Promo codes
+- [x] Payment history
+- [x] Ride history
 
-### P2 - Nice to Have
-- Mode sombre/clair toggle
-- Courses planifiées (réservation à l'avance)
-- Favoris d'adresses
-- Parrainage et codes promo
-- Support multi-langues
+## Popular Locations
+```
+Gares:
+- Gare du Nord, 75010 Paris
+- Gare de l'Est, 75010 Paris
+- Gare de Lyon, 75012 Paris
+- Gare Saint-Lazare, 75008 Paris
+- Gare d'Austerlitz, 75013 Paris
+- Gare Montparnasse, 75015 Paris
 
-## Next Tasks
-1. Implémenter les notifications push natives (PWA)
-2. Ajouter les courses planifiées (réservation à l'avance)
-3. Ajouter les favoris d'adresses
+Aéroports:
+- Aéroport CDG, 95700 Roissy-en-France
+- Aéroport Orly, 94390 Orly
+- Aéroport Beauvais, 60000 Beauvais
+```
+
+## Tech Stack
+- **Frontend**: React, Tailwind CSS, Shadcn UI
+- **Backend**: FastAPI, MongoDB (motor)
+- **Maps**: Mapbox GL JS, Geocoding API, Directions API
+- **Payments**: Stripe API (test keys)
+- **Auth**: JWT tokens
+
+## Test Accounts
+- Passenger: passenger@test.com / password
+- Driver: driver@test.com / password
+
+## API Keys Required
+- Mapbox: Provided by user
+- Stripe: Using test key (sk_test_emergent)
+
+## Backlog (Priority Order)
+1. P1 - Push notifications (PWA)
+2. P2 - Live driver path on map
+3. P3 - Wallet/credit system
+4. P3 - Session persistence improvements
+
+## Last Updated
+2025-02-25 - Added vehicle type selection and improved address search
