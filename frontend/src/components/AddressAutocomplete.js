@@ -4,23 +4,19 @@ import { Input } from './ui/input';
 
 const MAPBOX_TOKEN = process.env.REACT_APP_MAPBOX_TOKEN;
 
-// Popular locations in France for better search results
+// Popular locations - Gares et Aéroports
 const POPULAR_LOCATIONS = [
-  { id: 'gare-nord', text: 'Gare du Nord', address: 'Gare du Nord, 18 Rue de Dunkerque, 75010 Paris', lat: 48.8809, lng: 2.3553, type: 'poi' },
-  { id: 'gare-lyon', text: 'Gare de Lyon', address: 'Gare de Lyon, Place Louis-Armand, 75012 Paris', lat: 48.8443, lng: 2.3738, type: 'poi' },
-  { id: 'gare-est', text: 'Gare de l\'Est', address: 'Gare de l\'Est, Place du 11 Novembre 1918, 75010 Paris', lat: 48.8763, lng: 2.3594, type: 'poi' },
-  { id: 'gare-montparnasse', text: 'Gare Montparnasse', address: 'Gare Montparnasse, 17 Boulevard de Vaugirard, 75015 Paris', lat: 48.8408, lng: 2.3194, type: 'poi' },
-  { id: 'gare-saint-lazare', text: 'Gare Saint-Lazare', address: 'Gare Saint-Lazare, 13 Rue d\'Amsterdam, 75008 Paris', lat: 48.8765, lng: 2.3252, type: 'poi' },
-  { id: 'cdg', text: 'Aéroport Charles de Gaulle', address: 'Aéroport Paris-Charles de Gaulle, 95700 Roissy-en-France', lat: 49.0097, lng: 2.5479, type: 'poi' },
-  { id: 'orly', text: 'Aéroport d\'Orly', address: 'Aéroport de Paris-Orly, 94390 Orly', lat: 48.7262, lng: 2.3652, type: 'poi' },
-  { id: 'tour-eiffel', text: 'Tour Eiffel', address: 'Tour Eiffel, Champ de Mars, 75007 Paris', lat: 48.8584, lng: 2.2945, type: 'poi' },
-  { id: 'arc-triomphe', text: 'Arc de Triomphe', address: 'Arc de Triomphe, Place Charles de Gaulle, 75008 Paris', lat: 48.8738, lng: 2.2950, type: 'poi' },
-  { id: 'louvre', text: 'Musée du Louvre', address: 'Musée du Louvre, Rue de Rivoli, 75001 Paris', lat: 48.8606, lng: 2.3376, type: 'poi' },
-  { id: 'disneyland', text: 'Disneyland Paris', address: 'Disneyland Paris, Boulevard de Parc, 77700 Chessy', lat: 48.8673, lng: 2.7839, type: 'poi' },
-  { id: 'la-defense', text: 'La Défense', address: 'La Défense, 92800 Puteaux', lat: 48.8918, lng: 2.2362, type: 'poi' },
-  { id: 'chatelet', text: 'Châtelet-Les Halles', address: 'Châtelet-Les Halles, 75001 Paris', lat: 48.8619, lng: 2.3469, type: 'poi' },
-  { id: 'opera', text: 'Opéra Garnier', address: 'Opéra Garnier, Place de l\'Opéra, 75009 Paris', lat: 48.8719, lng: 2.3316, type: 'poi' },
-  { id: 'versailles', text: 'Château de Versailles', address: 'Château de Versailles, Place d\'Armes, 78000 Versailles', lat: 48.8048, lng: 2.1203, type: 'poi' },
+  // Gares parisiennes
+  { id: 'gare-nord', text: 'Gare du Nord', address: 'Gare du Nord, 75010 Paris', lat: 48.8809, lng: 2.3553, type: 'poi' },
+  { id: 'gare-est', text: 'Gare de l\'Est', address: 'Gare de l\'Est, 75010 Paris', lat: 48.8763, lng: 2.3594, type: 'poi' },
+  { id: 'gare-lyon', text: 'Gare de Lyon', address: 'Gare de Lyon, 75012 Paris', lat: 48.8443, lng: 2.3738, type: 'poi' },
+  { id: 'gare-saint-lazare', text: 'Gare Saint-Lazare', address: 'Gare Saint-Lazare, 75008 Paris', lat: 48.8765, lng: 2.3252, type: 'poi' },
+  { id: 'gare-austerlitz', text: 'Gare d\'Austerlitz', address: 'Gare d\'Austerlitz, 75013 Paris', lat: 48.8424, lng: 2.3656, type: 'poi' },
+  { id: 'gare-montparnasse', text: 'Gare Montparnasse', address: 'Gare Montparnasse, 75015 Paris', lat: 48.8408, lng: 2.3194, type: 'poi' },
+  // Aéroports
+  { id: 'cdg', text: 'Aéroport CDG', address: 'Aéroport Paris-Charles de Gaulle, 95700 Roissy-en-France', lat: 49.0097, lng: 2.5479, type: 'poi' },
+  { id: 'orly', text: 'Aéroport Orly', address: 'Aéroport de Paris-Orly, 94390 Orly', lat: 48.7262, lng: 2.3652, type: 'poi' },
+  { id: 'beauvais', text: 'Aéroport Beauvais', address: 'Aéroport de Beauvais-Tillé, 60000 Beauvais', lat: 49.4544, lng: 2.1128, type: 'poi' },
 ];
 
 const AddressAutocomplete = ({ 
