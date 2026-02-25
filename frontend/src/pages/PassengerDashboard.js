@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useWebSocket } from '../hooks/useWebSocket';
+import { useNotifications } from '../hooks/useNotifications';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -13,7 +13,7 @@ import {
 import { toast } from 'sonner';
 
 const PassengerDashboard = () => {
-  const { user, logout, api, token } = useAuth();
+  const { user, logout, api } = useAuth();
   const navigate = useNavigate();
   
   const [step, setStep] = useState('idle'); // idle, booking, searching, ride_active
@@ -24,9 +24,9 @@ const PassengerDashboard = () => {
   const [pickup, setPickup] = useState({ lat: 48.8566, lng: 2.3522, address: '' });
   const [destination, setDestination] = useState({ lat: 48.8738, lng: 2.2950, address: '' });
 
-  // WebSocket message handler for real-time updates
-  const handleWebSocketMessage = useCallback((data) => {
-    console.log('Passenger WebSocket message:', data);
+  // Notification handler for real-time updates
+  const handleNotification = useCallback((data) => {
+    console.log('Passenger notification:', data);
     
     switch (data.type) {
       case 'ride_accepted':
@@ -62,8 +62,8 @@ const PassengerDashboard = () => {
     }
   }, []);
 
-  // Connect to WebSocket
-  useWebSocket(token, 'passenger', handleWebSocketMessage);
+  // Connect to notification polling
+  useNotifications(api, 'passenger', handleNotification);
 
   useEffect(() => {
     fetchActiveRide();
