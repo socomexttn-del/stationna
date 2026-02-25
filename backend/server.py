@@ -597,6 +597,10 @@ async def create_ride(data: RideRequest, current_user: dict = Depends(get_curren
         await db.promo_codes.update_one({"id": user_promo["promo_id"]}, {"$inc": {"used_count": 1}})
     
     ride_id = str(uuid.uuid4())
+    
+    # Find nearest available driver
+    nearest_driver_info = await find_nearest_driver(pickup)
+    
     ride = {
         "id": ride_id,
         "passenger_id": current_user["id"],
@@ -614,19 +618,59 @@ async def create_ride(data: RideRequest, current_user: dict = Depends(get_curren
         "payment_status": "pending",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "accepted_at": None,
-        "completed_at": None
+        "completed_at": None,
+        "vehicle_type": data.vehicle_type,
+        "passenger_count": data.passenger_count
     }
+    
+    # If a nearby driver is found, auto-assign the ride
+    if nearest_driver_info:
+        driver = nearest_driver_info["driver"]
+        ride["driver_id"] = driver["id"]
+        ride["driver_name"] = f"{driver['first_name']} {driver['last_name']}"
+        ride["status"] = "accepted"
+        ride["accepted_at"] = datetime.now(timezone.utc).isoformat()
+        ride["driver_eta_minutes"] = nearest_driver_info["eta_minutes"]
+        ride["driver_distance_km"] = nearest_driver_info["distance_to_pickup"]
+        
+        # Mark driver as unavailable
+        await db.users.update_one(
+            {"id": driver["id"]},
+            {"$set": {"is_available": False}}
+        )
+    
     await db.rides.insert_one(ride)
     
-    # Notify all drivers about the new ride
-    await notification_manager.notify_all_drivers("new_ride", {
-        "id": ride_id,
-        "passenger_name": ride["passenger_name"],
-        "pickup": pickup,
-        "destination": destination,
-        "distance_km": distance,
-        "estimated_fare": fare
-    })
+    if nearest_driver_info:
+        # Notify the assigned driver
+        await notification_manager.notify_driver(ride["driver_id"], "ride_assigned", {
+            "id": ride_id,
+            "passenger_name": ride["passenger_name"],
+            "pickup": pickup,
+            "destination": destination,
+            "distance_km": distance,
+            "estimated_fare": fare,
+            "eta_minutes": nearest_driver_info["eta_minutes"]
+        })
+        
+        # Notify passenger that driver was found
+        await notification_manager.notify_passenger(current_user["id"], "ride_accepted", {
+            "ride_id": ride_id,
+            "driver_name": ride["driver_name"],
+            "driver_id": ride["driver_id"],
+            "eta_minutes": nearest_driver_info["eta_minutes"],
+            "driver_distance_km": nearest_driver_info["distance_to_pickup"]
+        })
+    else:
+        # Notify all drivers about the new ride (fallback)
+        await notification_manager.notify_all_drivers("new_ride", {
+            "id": ride_id,
+            "passenger_name": ride["passenger_name"],
+            "pickup": pickup,
+            "destination": destination,
+            "distance_km": distance,
+            "estimated_fare": fare
+        })
     
     return RideResponse(**ride)
 
