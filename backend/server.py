@@ -745,6 +745,90 @@ async def mark_notifications_read(notification_ids: List[str], current_user: dic
     await notification_manager.mark_as_read(notification_ids, current_user["id"])
     return {"status": "ok"}
 
+# ======================== CHAT ROUTES ========================
+
+@api_router.post("/chat/send", response_model=ChatMessageResponse)
+async def send_chat_message(data: ChatMessage, current_user: dict = Depends(get_current_user)):
+    """Send a chat message for a specific ride"""
+    ride = await db.rides.find_one({"id": data.ride_id}, {"_id": 0})
+    if not ride:
+        raise HTTPException(status_code=404, detail="Ride not found")
+    
+    # Verify user is part of this ride
+    if ride["passenger_id"] != current_user["id"] and ride.get("driver_id") != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Not authorized to send messages for this ride")
+    
+    # Only allow chat during active ride
+    if ride["status"] not in ["accepted", "in_progress"]:
+        raise HTTPException(status_code=400, detail="Chat only available during active ride")
+    
+    message_id = str(uuid.uuid4())
+    message = {
+        "id": message_id,
+        "ride_id": data.ride_id,
+        "sender_id": current_user["id"],
+        "sender_name": f"{current_user['first_name']} {current_user['last_name']}",
+        "sender_role": current_user["role"],
+        "message": data.message,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.chat_messages.insert_one(message)
+    
+    # Notify the other party
+    recipient_id = ride["driver_id"] if current_user["role"] == "passenger" else ride["passenger_id"]
+    if recipient_id:
+        await notification_manager.create_notification(
+            recipient_id, 
+            "new_message",
+            {
+                "ride_id": data.ride_id,
+                "sender_name": message["sender_name"],
+                "message": data.message[:50] + "..." if len(data.message) > 50 else data.message
+            },
+            "driver" if current_user["role"] == "passenger" else "passenger"
+        )
+    
+    return ChatMessageResponse(**message)
+
+@api_router.get("/chat/{ride_id}", response_model=List[ChatMessageResponse])
+async def get_chat_messages(ride_id: str, current_user: dict = Depends(get_current_user)):
+    """Get all chat messages for a specific ride"""
+    ride = await db.rides.find_one({"id": ride_id}, {"_id": 0})
+    if not ride:
+        raise HTTPException(status_code=404, detail="Ride not found")
+    
+    # Verify user is part of this ride
+    if ride["passenger_id"] != current_user["id"] and ride.get("driver_id") != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Not authorized to view messages for this ride")
+    
+    messages = await db.chat_messages.find({"ride_id": ride_id}, {"_id": 0}).sort("created_at", 1).to_list(100)
+    return [ChatMessageResponse(**m) for m in messages]
+
+@api_router.get("/chat/{ride_id}/unread-count")
+async def get_unread_message_count(ride_id: str, current_user: dict = Depends(get_current_user)):
+    """Get count of unread messages for a ride"""
+    ride = await db.rides.find_one({"id": ride_id}, {"_id": 0})
+    if not ride:
+        return {"count": 0}
+    
+    # Count messages from the other party
+    other_role = "driver" if current_user["role"] == "passenger" else "passenger"
+    count = await db.chat_messages.count_documents({
+        "ride_id": ride_id,
+        "sender_role": other_role,
+        "read_by": {"$ne": current_user["id"]}
+    })
+    return {"count": count}
+
+@api_router.post("/chat/{ride_id}/mark-read")
+async def mark_messages_read(ride_id: str, current_user: dict = Depends(get_current_user)):
+    """Mark all messages in a ride as read by current user"""
+    await db.chat_messages.update_many(
+        {"ride_id": ride_id, "sender_id": {"$ne": current_user["id"]}},
+        {"$addToSet": {"read_by": current_user["id"]}}
+    )
+    return {"status": "ok"}
+
 @api_router.get("/")
 async def root():
     return {"message": "Volt Taxi API", "status": "running"}
