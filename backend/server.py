@@ -115,7 +115,8 @@ class UserBase(BaseModel):
     first_name: str
     last_name: str
     phone: str
-    role: str = Field(..., pattern="^(passenger|driver)$")
+    role: str = Field(..., pattern="^(passenger|driver|admin)$")
+    company_name: Optional[str] = None  # Pour les chauffeurs
 
 class UserCreate(UserBase):
     password: str
@@ -132,6 +133,7 @@ class UserResponse(BaseModel):
     last_name: str
     phone: str
     role: str
+    company_name: Optional[str] = None
     rating: float = 5.0
     total_rides: int = 0
     is_available: bool = False
