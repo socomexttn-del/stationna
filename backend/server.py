@@ -763,6 +763,273 @@ async def get_driver_stats(current_user: dict = Depends(get_current_user)):
         "rating": current_user.get("rating", 5.0)
     }
 
+# ======================== SCHEDULED RIDES ========================
+
+@api_router.post("/rides/schedule", response_model=RideResponse)
+async def schedule_ride(data: ScheduledRideRequest, current_user: dict = Depends(get_current_user)):
+    """Schedule a ride for a future time"""
+    if current_user["role"] != "passenger":
+        raise HTTPException(status_code=403, detail="Only passengers can schedule rides")
+    
+    # Validate scheduled time is in the future
+    try:
+        scheduled_dt = datetime.fromisoformat(data.scheduled_time.replace('Z', '+00:00'))
+        if scheduled_dt <= datetime.now(timezone.utc):
+            raise HTTPException(status_code=400, detail="Scheduled time must be in the future")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid datetime format")
+    
+    pickup = data.pickup.model_dump()
+    destination = data.destination.model_dump()
+    distance = calculate_distance(pickup, destination)
+    fare = calculate_fare(distance)
+    
+    ride_id = str(uuid.uuid4())
+    ride = {
+        "id": ride_id,
+        "passenger_id": current_user["id"],
+        "passenger_name": f"{current_user['first_name']} {current_user['last_name']}",
+        "driver_id": None,
+        "driver_name": None,
+        "pickup": pickup,
+        "destination": destination,
+        "distance_km": distance,
+        "estimated_fare": fare,
+        "final_fare": None,
+        "status": "scheduled",
+        "payment_status": "pending",
+        "scheduled_time": data.scheduled_time,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "accepted_at": None,
+        "completed_at": None
+    }
+    await db.rides.insert_one(ride)
+    return RideResponse(**ride)
+
+@api_router.get("/rides/scheduled", response_model=List[RideResponse])
+async def get_scheduled_rides(current_user: dict = Depends(get_current_user)):
+    """Get all scheduled rides for the current user"""
+    query = {"status": "scheduled"}
+    if current_user["role"] == "passenger":
+        query["passenger_id"] = current_user["id"]
+    rides = await db.rides.find(query, {"_id": 0}).sort("scheduled_time", 1).to_list(50)
+    return [RideResponse(**r) for r in rides]
+
+@api_router.post("/rides/{ride_id}/activate", response_model=RideResponse)
+async def activate_scheduled_ride(ride_id: str, current_user: dict = Depends(get_current_user)):
+    """Activate a scheduled ride (change status to pending)"""
+    ride = await db.rides.find_one({"id": ride_id, "status": "scheduled"}, {"_id": 0})
+    if not ride:
+        raise HTTPException(status_code=404, detail="Scheduled ride not found")
+    
+    if ride["passenger_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Not your ride")
+    
+    await db.rides.update_one({"id": ride_id}, {"$set": {"status": "pending"}})
+    
+    # Notify drivers
+    await notification_manager.notify_all_drivers("new_ride", {
+        "id": ride_id,
+        "passenger_name": ride["passenger_name"],
+        "pickup": ride["pickup"],
+        "destination": ride["destination"],
+        "distance_km": ride["distance_km"],
+        "estimated_fare": ride["estimated_fare"]
+    })
+    
+    updated = await db.rides.find_one({"id": ride_id}, {"_id": 0})
+    return RideResponse(**updated)
+
+# ======================== FAVORITE ADDRESSES ========================
+
+@api_router.post("/favorites", response_model=FavoriteAddressResponse)
+async def add_favorite_address(data: FavoriteAddressCreate, current_user: dict = Depends(get_current_user)):
+    """Add a favorite address"""
+    # Check if name already exists
+    existing = await db.favorite_addresses.find_one({
+        "user_id": current_user["id"],
+        "name": data.name
+    })
+    if existing:
+        # Update existing
+        await db.favorite_addresses.update_one(
+            {"id": existing["id"]},
+            {"$set": {"location": data.location.model_dump()}}
+        )
+        updated = await db.favorite_addresses.find_one({"id": existing["id"]}, {"_id": 0})
+        return FavoriteAddressResponse(**updated)
+    
+    fav_id = str(uuid.uuid4())
+    favorite = {
+        "id": fav_id,
+        "user_id": current_user["id"],
+        "name": data.name,
+        "location": data.location.model_dump(),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.favorite_addresses.insert_one(favorite)
+    return FavoriteAddressResponse(**favorite)
+
+@api_router.get("/favorites", response_model=List[FavoriteAddressResponse])
+async def get_favorite_addresses(current_user: dict = Depends(get_current_user)):
+    """Get all favorite addresses for current user"""
+    favorites = await db.favorite_addresses.find(
+        {"user_id": current_user["id"]}, 
+        {"_id": 0}
+    ).to_list(20)
+    return [FavoriteAddressResponse(**f) for f in favorites]
+
+@api_router.delete("/favorites/{favorite_id}")
+async def delete_favorite_address(favorite_id: str, current_user: dict = Depends(get_current_user)):
+    """Delete a favorite address"""
+    result = await db.favorite_addresses.delete_one({
+        "id": favorite_id,
+        "user_id": current_user["id"]
+    })
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Favorite not found")
+    return {"status": "ok"}
+
+# ======================== PROMO CODES ========================
+
+@api_router.post("/promo/create")
+async def create_promo_code(data: PromoCodeCreate, current_user: dict = Depends(get_current_user)):
+    """Create a promo code (admin only - for demo, any user can create)"""
+    existing = await db.promo_codes.find_one({"code": data.code.upper()})
+    if existing:
+        raise HTTPException(status_code=400, detail="Promo code already exists")
+    
+    promo = {
+        "id": str(uuid.uuid4()),
+        "code": data.code.upper(),
+        "discount_percent": data.discount_percent,
+        "max_uses": data.max_uses,
+        "used_count": 0,
+        "valid_until": data.valid_until,
+        "created_by": current_user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.promo_codes.insert_one(promo)
+    return {"status": "ok", "promo": promo}
+
+@api_router.post("/promo/apply")
+async def apply_promo_code(data: PromoCodeApply, current_user: dict = Depends(get_current_user)):
+    """Apply a promo code to user's account"""
+    promo = await db.promo_codes.find_one({"code": data.code.upper()}, {"_id": 0})
+    if not promo:
+        raise HTTPException(status_code=404, detail="Code promo invalide")
+    
+    # Check if still valid
+    valid_until = datetime.fromisoformat(promo["valid_until"].replace('Z', '+00:00'))
+    if valid_until < datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="Code promo expiré")
+    
+    # Check max uses
+    if promo["used_count"] >= promo["max_uses"]:
+        raise HTTPException(status_code=400, detail="Code promo épuisé")
+    
+    # Check if user already used this code
+    user_promo = await db.user_promos.find_one({
+        "user_id": current_user["id"],
+        "promo_id": promo["id"]
+    })
+    if user_promo:
+        raise HTTPException(status_code=400, detail="Vous avez déjà utilisé ce code")
+    
+    # Add promo to user
+    await db.user_promos.insert_one({
+        "id": str(uuid.uuid4()),
+        "user_id": current_user["id"],
+        "promo_id": promo["id"],
+        "code": promo["code"],
+        "discount_percent": promo["discount_percent"],
+        "used": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {
+        "status": "ok",
+        "message": f"Code promo appliqué! {promo['discount_percent']}% de réduction sur votre prochaine course",
+        "discount_percent": promo["discount_percent"]
+    }
+
+@api_router.get("/promo/my-codes")
+async def get_my_promo_codes(current_user: dict = Depends(get_current_user)):
+    """Get user's available promo codes"""
+    promos = await db.user_promos.find(
+        {"user_id": current_user["id"], "used": False},
+        {"_id": 0}
+    ).to_list(20)
+    return {"promos": promos}
+
+@api_router.get("/promo/referral")
+async def get_referral_code(current_user: dict = Depends(get_current_user)):
+    """Get user's referral code"""
+    # Create referral code based on user id
+    referral_code = f"REF{current_user['id'][:8].upper()}"
+    
+    # Check if promo exists, if not create it
+    existing = await db.promo_codes.find_one({"code": referral_code})
+    if not existing:
+        promo = {
+            "id": str(uuid.uuid4()),
+            "code": referral_code,
+            "discount_percent": 10,
+            "max_uses": 100,
+            "used_count": 0,
+            "valid_until": (datetime.now(timezone.utc) + timedelta(days=365)).isoformat(),
+            "created_by": current_user["id"],
+            "is_referral": True,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.promo_codes.insert_one(promo)
+    
+    return {"referral_code": referral_code, "discount_percent": 10}
+
+# ======================== PAYMENT HISTORY ========================
+
+@api_router.get("/payments/history")
+async def get_payment_history(current_user: dict = Depends(get_current_user)):
+    """Get payment history for current user"""
+    transactions = await db.payment_transactions.find(
+        {"user_id": current_user["id"]},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(50)
+    
+    # Enrich with ride info
+    result = []
+    for t in transactions:
+        ride = await db.rides.find_one({"id": t["ride_id"]}, {"_id": 0, "pickup": 1, "destination": 1})
+        result.append({
+            "id": t["id"],
+            "ride_id": t["ride_id"],
+            "amount": t["amount"],
+            "currency": t.get("currency", "eur"),
+            "status": t.get("payment_status", "unknown"),
+            "created_at": t["created_at"],
+            "ride_pickup": ride["pickup"]["address"] if ride else "N/A",
+            "ride_destination": ride["destination"]["address"] if ride else "N/A"
+        })
+    
+    return {"payments": result}
+
+@api_router.get("/payments/summary")
+async def get_payment_summary(current_user: dict = Depends(get_current_user)):
+    """Get payment summary for current user"""
+    transactions = await db.payment_transactions.find(
+        {"user_id": current_user["id"], "payment_status": "paid"},
+        {"_id": 0}
+    ).to_list(1000)
+    
+    total_spent = sum(t.get("amount", 0) for t in transactions)
+    total_rides = len(transactions)
+    
+    return {
+        "total_spent": round(total_spent, 2),
+        "total_rides_paid": total_rides,
+        "currency": "EUR"
+    }
+
 # ======================== NOTIFICATION ROUTES ========================
 
 @api_router.get("/notifications")
