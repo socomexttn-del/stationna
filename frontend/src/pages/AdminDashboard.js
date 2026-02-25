@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button';
 import { 
   Users, Car, DollarSign, TrendingUp, MapPin, Clock, Star,
-  ArrowLeft, RefreshCw, Calendar, Route, FileText, Check, X, Eye
+  ArrowLeft, RefreshCw, Calendar, Route, FileText, Check, X, Eye,
+  Power, UserX, UserCheck
 } from 'lucide-react';
 import { toast } from 'sonner';
 
