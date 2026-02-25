@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useWebSocket } from '../hooks/useWebSocket';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Switch } from '../components/ui/switch';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../components/ui/sheet';
 import { 
   Car, MapPin, Navigation, Star, Clock, DollarSign,
-  Menu, User, History, LogOut, Check, X, Play, Phone
+  Menu, User, History, LogOut, Check, X, Play, Phone, Bell, Wifi, WifiOff
 } from 'lucide-react';
 import { toast } from 'sonner';
 
