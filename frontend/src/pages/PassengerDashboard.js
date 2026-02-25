@@ -1082,6 +1082,31 @@ const PassengerDashboard = () => {
         isOpen={chatOpen}
         onOpenChange={(open) => { setChatOpen(open); if (open) setUnreadMessages(0); }}
       />
+
+      {/* Payment Modal */}
+      {showPaymentModal && paymentData && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-md animate-scale-in">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute -top-2 -right-2 z-10 bg-card rounded-full"
+              onClick={handlePaymentCancel}
+            >
+              <X className="w-5 h-5" />
+            </Button>
+            <PaymentForm
+              clientSecret={paymentData.clientSecret}
+              publishableKey={paymentData.publishableKey}
+              amount={paymentData.amount}
+              rideName={paymentData.rideName}
+              onSuccess={handlePaymentSuccess}
+              onCancel={handlePaymentCancel}
+              onError={handlePaymentError}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
