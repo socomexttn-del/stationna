@@ -11,7 +11,7 @@ import ChatComponent from '../components/ChatComponent';
 import { 
   Car, MapPin, Navigation, Star, Clock, CreditCard, 
   Menu, User, History, LogOut, Phone, X, Route, MessageCircle,
-  Calendar, Gift
+  Calendar, Gift, Users, Truck
 } from 'lucide-react';
 import { toast } from 'sonner';
 
