@@ -51,6 +51,11 @@ Application de taxi complète avec passagers et chauffeurs, géolocalisation, es
 - ✅ **Marqueurs** pickup (vert), destination (jaune), chauffeur (bleu)
 - ✅ **Géolocalisation** du navigateur
 
+- ✅ **Courses planifiées** avec supplément +7€
+- ✅ **Favoris d'adresses** (Maison, Travail, etc.)
+- ✅ **Historique des paiements** avec résumé
+- ✅ **Codes promo et parrainage** (-10% première course)
+- ✅ **Tarification officielle** (prise en charge 4,48€, 1,30€/km, 0,70€/min, minimum 8€)
 - ✅ **Chat in-app** passager/chauffeur pendant la course
 - ✅ **Suivi GPS temps réel** du chauffeur sur la carte
 - ✅ **Tracé d'itinéraire** Mapbox Directions API
