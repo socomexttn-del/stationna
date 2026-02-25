@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useWebSocket } from '../hooks/useWebSocket';
+import { useNotifications } from '../hooks/useNotifications';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Switch } from '../components/ui/switch';
@@ -13,7 +13,7 @@ import {
 import { toast } from 'sonner';
 
 const DriverDashboard = () => {
-  const { user, logout, api, updateUser, token } = useAuth();
+  const { user, logout, api, updateUser } = useAuth();
   
   const [isAvailable, setIsAvailable] = useState(user?.is_available || false);
   const [availableRides, setAvailableRides] = useState([]);
@@ -21,9 +21,9 @@ const DriverDashboard = () => {
   const [stats, setStats] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // WebSocket message handler
-  const handleWebSocketMessage = useCallback((data) => {
-    console.log('WebSocket message received:', data);
+  // Notification handler
+  const handleNotification = useCallback((data) => {
+    console.log('Notification received:', data);
     
     switch (data.type) {
       case 'new_ride':
@@ -31,22 +31,22 @@ const DriverDashboard = () => {
         toast.success(
           <div className="flex flex-col gap-1">
             <span className="font-semibold">Nouvelle course!</span>
-            <span className="text-sm">{data.ride.pickup.address} → {data.ride.destination.address}</span>
-            <span className="text-primary font-bold">{data.ride.estimated_fare}€</span>
+            <span className="text-sm">{data.pickup?.address} → {data.destination?.address}</span>
+            <span className="text-primary font-bold">{data.estimated_fare}€</span>
           </div>,
           { duration: 10000 }
         );
         // Add to available rides
         setAvailableRides(prev => {
-          const exists = prev.some(r => r.id === data.ride.id);
+          const exists = prev.some(r => r.id === data.id);
           if (!exists) {
             return [{
-              id: data.ride.id,
-              passenger_name: data.ride.passenger_name,
-              pickup: data.ride.pickup,
-              destination: data.ride.destination,
-              distance_km: data.ride.distance_km,
-              estimated_fare: data.ride.estimated_fare
+              id: data.id,
+              passenger_name: data.passenger_name,
+              pickup: data.pickup,
+              destination: data.destination,
+              distance_km: data.distance_km,
+              estimated_fare: data.estimated_fare
             }, ...prev];
           }
           return prev;
@@ -65,8 +65,8 @@ const DriverDashboard = () => {
     }
   }, []);
 
-  // Connect to WebSocket
-  const { isConnected } = useWebSocket(token, 'driver', handleWebSocketMessage);
+  // Connect to notification polling
+  const { isConnected } = useNotifications(api, 'driver', handleNotification);
 
   // Play notification sound
   const playNotificationSound = () => {
