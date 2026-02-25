@@ -672,6 +672,24 @@ async def get_driver_stats(current_user: dict = Depends(get_current_user)):
         "rating": current_user.get("rating", 5.0)
     }
 
+# ======================== NOTIFICATION ROUTES ========================
+
+@api_router.get("/notifications")
+async def get_notifications(since: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    """Get unread notifications for the current user"""
+    notifications = await notification_manager.get_notifications(
+        current_user["id"], 
+        current_user["role"],
+        since
+    )
+    return {"notifications": notifications}
+
+@api_router.post("/notifications/read")
+async def mark_notifications_read(notification_ids: List[str], current_user: dict = Depends(get_current_user)):
+    """Mark notifications as read"""
+    await notification_manager.mark_as_read(notification_ids, current_user["id"])
+    return {"status": "ok"}
+
 @api_router.get("/")
 async def root():
     return {"message": "Volt Taxi API", "status": "running"}
@@ -686,13 +704,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# ======================== WEBSOCKET ENDPOINTS ========================
-
-@app.websocket("/ws/driver/{token}")
-async def websocket_driver(websocket: WebSocket, token: str):
-    """WebSocket endpoint for drivers to receive real-time notifications"""
-    try:
         # Decode token to get driver info
         payload = decode_token(token)
         driver_id = payload["user_id"]
