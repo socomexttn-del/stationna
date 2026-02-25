@@ -16,12 +16,33 @@ const AddressAutocomplete = ({
   const [isLoading, setIsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [inputValue, setInputValue] = useState(value?.address || '');
+  const [userLocation, setUserLocation] = useState(null);
   const debounceRef = useRef(null);
   const containerRef = useRef(null);
 
   useEffect(() => {
     setInputValue(value?.address || '');
   }, [value?.address]);
+
+  // Get user location for proximity bias
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        () => {
+          // Default to Paris if geolocation fails
+          setUserLocation({ lat: 48.8566, lng: 2.3522 });
+        }
+      );
+    } else {
+      setUserLocation({ lat: 48.8566, lng: 2.3522 });
+    }
+  }, []);
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -35,30 +56,49 @@ const AddressAutocomplete = ({
   }, []);
 
   const searchAddress = async (query) => {
-    if (!query || query.length < 3) {
+    if (!query || query.length < 2) {
       setSuggestions([]);
       return;
     }
 
     setIsLoading(true);
     try {
+      // Build proximity parameter for better local results
+      const proximityParam = userLocation 
+        ? `&proximity=${userLocation.lng},${userLocation.lat}` 
+        : '&proximity=2.3522,48.8566'; // Default to Paris
+
       const response = await fetch(
         `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
         `access_token=${MAPBOX_TOKEN}&` +
         `country=fr&` +
         `language=fr&` +
-        `types=address,poi&` +
-        `limit=5`
+        `types=address,poi,place,locality,neighborhood&` +
+        `autocomplete=true&` +
+        `fuzzyMatch=true&` +
+        `limit=7` +
+        proximityParam
       );
       const data = await response.json();
       
       if (data.features) {
-        setSuggestions(data.features.map(feature => ({
-          id: feature.id,
-          address: feature.place_name,
-          lat: feature.center[1],
-          lng: feature.center[0]
-        })));
+        setSuggestions(data.features.map(feature => {
+          // Extract context for better display
+          const context = feature.context || [];
+          const city = context.find(c => c.id.startsWith('place'))?.text || '';
+          const postcode = context.find(c => c.id.startsWith('postcode'))?.text || '';
+          
+          return {
+            id: feature.id,
+            address: feature.place_name,
+            shortAddress: feature.text,
+            city,
+            postcode,
+            lat: feature.center[1],
+            lng: feature.center[0],
+            type: feature.place_type?.[0] || 'address'
+          };
+        }));
         setShowSuggestions(true);
       }
     } catch (error) {
