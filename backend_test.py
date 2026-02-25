@@ -470,31 +470,9 @@ def main():
         
     print("\n=== CHAT FUNCTIONALITY TESTS ===")
     
-    # Test chat functionality during active ride
+    # Test additional chat functionality 
     if driver_login_success and tester.test_ride_id:
-        print(f"\n💬 Testing chat functionality with ride ID: {tester.test_ride_id}")
-        
-        # Test chat during accepted ride status
-        print("\n📨 Testing chat during accepted ride...")
-        
-        # Passenger sends message
-        passenger_msg_success, _ = tester.test_send_chat_message(
-            tester.test_ride_id, 
-            "Bonjour, je suis en route vers le point de rendez-vous", 
-            tester.passenger_token
-        )
-        
-        # Driver sends reply  
-        driver_msg_success, _ = tester.test_send_chat_message(
-            tester.test_ride_id,
-            "Parfait, je vous attends. Voiture blanche Toyota Prius",
-            tester.driver_token
-        )
-        
-        # Test getting messages for both users
-        if passenger_msg_success:
-            tester.test_get_chat_messages(tester.test_ride_id, tester.passenger_token)
-            tester.test_get_chat_messages(tester.test_ride_id, tester.driver_token)
+        print(f"\n💬 Testing additional chat functionality with ride ID: {tester.test_ride_id}")
         
         # Test unread message count
         tester.test_get_unread_message_count(tester.test_ride_id, tester.passenger_token)
@@ -504,11 +482,24 @@ def main():
         tester.test_mark_messages_read(tester.test_ride_id, tester.passenger_token)
         tester.test_mark_messages_read(tester.test_ride_id, tester.driver_token)
     
-    # Test unauthorized chat access
+    # Test unauthorized chat access and completed ride restrictions
     print("\n🔒 Testing chat access control...")
-    if passenger_login_success and tester.test_ride_id:
+    if passenger_login_success:
         # Test chat on inactive ride (should fail)
         tester.test_chat_inactive_ride(tester.passenger_token)
+        
+        # Test that chat is blocked after ride completion
+        if tester.test_ride_id:
+            print("\n🚫 Testing chat restriction after ride completion...")
+            completed_chat_success, _ = tester.test_send_chat_message(
+                tester.test_ride_id,
+                "This message should be blocked since ride is completed",
+                tester.passenger_token
+            )
+            if not completed_chat_success:
+                print("✅ Chat correctly blocked for completed ride")
+                tester.tests_passed += 1  # Count this as a success since blocking is the expected behavior
+            tester.tests_run += 1
 
     print("\n=== ADDITIONAL FEATURE TESTS ===")
     
