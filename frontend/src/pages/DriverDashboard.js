@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../hooks/useNotifications';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Switch } from '../components/ui/switch';
@@ -15,6 +16,7 @@ import { toast } from 'sonner';
 
 const DriverDashboard = () => {
   const { user, logout, api, updateUser } = useAuth();
+  const { permission, requestPermission, notifyNewRide, notifyRideAssigned, notifyNewMessage } = usePushNotifications();
   
   const [isAvailable, setIsAvailable] = useState(user?.is_available || false);
   const [availableRides, setAvailableRides] = useState([]);
