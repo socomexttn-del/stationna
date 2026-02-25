@@ -834,6 +834,7 @@ async def create_rating(data: RatingCreate, current_user: dict = Depends(get_cur
         "id": str(uuid.uuid4()),
         "ride_id": data.ride_id,
         "rater_id": current_user["id"],
+        "rater_name": f"{current_user['first_name']} {current_user['last_name']}",
         "rated_user_id": rated_user_id,
         "rating": data.rating,
         "comment": data.comment,
@@ -850,8 +851,34 @@ async def create_rating(data: RatingCreate, current_user: dict = Depends(get_cur
 
 @api_router.get("/ratings/user/{user_id}")
 async def get_user_ratings(user_id: str):
-    ratings = await db.ratings.find({"rated_user_id": user_id}, {"_id": 0}).to_list(100)
+    """Get all ratings for a user with rater names"""
+    ratings = await db.ratings.find(
+        {"rated_user_id": user_id}, 
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
     return ratings
+
+@api_router.get("/ratings/my-ratings")
+async def get_my_ratings(current_user: dict = Depends(get_current_user)):
+    """Get all ratings received by the current user"""
+    ratings = await db.ratings.find(
+        {"rated_user_id": current_user["id"]}, 
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    # Calculate stats
+    total = len(ratings)
+    avg = sum(r["rating"] for r in ratings) / total if total > 0 else 5.0
+    distribution = {i: sum(1 for r in ratings if r["rating"] == i) for i in range(1, 6)}
+    
+    return {
+        "ratings": ratings,
+        "stats": {
+            "total": total,
+            "average": round(avg, 2),
+            "distribution": distribution
+        }
+    }
 
 # ======================== PAYMENT ROUTES ========================
 
