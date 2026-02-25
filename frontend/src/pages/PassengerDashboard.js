@@ -554,6 +554,15 @@ const PassengerDashboard = () => {
           </div>
         )}
       </div>
+
+      {/* Chat Component */}
+      <ChatComponent
+        api={api}
+        rideId={activeRide?.id}
+        currentUserRole="passenger"
+        isOpen={chatOpen}
+        onOpenChange={(open) => { setChatOpen(open); if (open) setUnreadMessages(0); }}
+      />
     </div>
   );
 };
