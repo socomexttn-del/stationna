@@ -433,6 +433,13 @@ async def start_ride(ride_id: str, current_user: dict = Depends(get_current_user
     
     await db.rides.update_one({"id": ride_id}, {"$set": {"status": "in_progress"}})
     updated = await db.rides.find_one({"id": ride_id}, {"_id": 0})
+    
+    # Notify passenger that ride started
+    await manager.notify_passenger(ride["passenger_id"], {
+        "type": "ride_started",
+        "ride_id": ride_id
+    })
+    
     return RideResponse(**updated)
 
 @api_router.post("/rides/{ride_id}/complete", response_model=RideResponse)
