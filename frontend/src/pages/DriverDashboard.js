@@ -586,6 +586,15 @@ const DriverDashboard = () => {
           </Card>
         )}
       </div>
+
+      {/* Chat Component */}
+      <ChatComponent
+        api={api}
+        rideId={activeRide?.id}
+        currentUserRole="driver"
+        isOpen={chatOpen}
+        onOpenChange={(open) => { setChatOpen(open); if (open) setUnreadMessages(0); }}
+      />
     </div>
   );
 };
