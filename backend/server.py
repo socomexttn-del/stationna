@@ -188,6 +188,19 @@ class PaymentCreateRequest(BaseModel):
     ride_id: str
     origin_url: str
 
+class ChatMessage(BaseModel):
+    ride_id: str
+    message: str
+
+class ChatMessageResponse(BaseModel):
+    id: str
+    ride_id: str
+    sender_id: str
+    sender_name: str
+    sender_role: str
+    message: str
+    created_at: str
+
 # ======================== HELPERS ========================
 
 def hash_password(password: str) -> str:
