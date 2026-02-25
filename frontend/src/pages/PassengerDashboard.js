@@ -892,24 +892,32 @@ const PassengerDashboard = () => {
 
             {activeRide.status === 'completed' && activeRide.payment_status === 'paid' && (
               <div className="space-y-3">
-                <p className="text-center text-muted-foreground">Notez votre chauffeur</p>
-                <div className="flex justify-center gap-2">
-                  {[1, 2, 3, 4, 5].map((rating) => (
-                    <button
-                      key={rating}
-                      onClick={() => rateDriver(rating)}
-                      data-testid={`rate-${rating}-btn`}
-                      className="w-12 h-12 rounded-full bg-muted hover:bg-primary/20 flex items-center justify-center transition-colors"
-                    >
-                      <Star className="w-6 h-6 text-primary" />
-                    </button>
-                  ))}
-                </div>
+                <Button 
+                  onClick={() => {
+                    setCompletedRideForRating(activeRide);
+                    setShowRatingModal(true);
+                  }}
+                  data-testid="open-rating-btn"
+                  className="w-full h-14 bg-primary/10 text-primary hover:bg-primary/20 rounded-full font-bold"
+                >
+                  <Star className="w-5 h-5 mr-2" /> Évaluer votre chauffeur
+                </Button>
               </div>
             )}
           </div>
         )}
       </div>
+
+      {/* Rating Modal */}
+      <RatingModal
+        ride={completedRideForRating}
+        isOpen={showRatingModal}
+        onClose={() => {
+          setShowRatingModal(false);
+          setCompletedRideForRating(null);
+        }}
+        onSubmit={submitRating}
+      />
 
       {/* Chat Component */}
       <ChatComponent
