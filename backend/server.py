@@ -856,7 +856,7 @@ async def get_driver_stats(current_user: dict = Depends(get_current_user)):
 
 @api_router.post("/rides/schedule", response_model=RideResponse)
 async def schedule_ride(data: ScheduledRideRequest, current_user: dict = Depends(get_current_user)):
-    """Schedule a ride for a future time"""
+    """Schedule a ride for a future time (with +7€ supplement)"""
     if current_user["role"] != "passenger":
         raise HTTPException(status_code=403, detail="Only passengers can schedule rides")
     
@@ -871,7 +871,9 @@ async def schedule_ride(data: ScheduledRideRequest, current_user: dict = Depends
     pickup = data.pickup.model_dump()
     destination = data.destination.model_dump()
     distance = calculate_distance(pickup, destination)
-    fare = calculate_fare(distance)
+    duration = estimate_duration_minutes(distance)
+    fare_details = calculate_fare(distance, duration, is_scheduled=True, is_immediate=False)
+    fare = fare_details["total"]
     
     ride_id = str(uuid.uuid4())
     ride = {
@@ -883,7 +885,9 @@ async def schedule_ride(data: ScheduledRideRequest, current_user: dict = Depends
         "pickup": pickup,
         "destination": destination,
         "distance_km": distance,
+        "duration_minutes": duration,
         "estimated_fare": fare,
+        "fare_details": fare_details,
         "final_fare": None,
         "status": "scheduled",
         "payment_status": "pending",
