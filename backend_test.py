@@ -580,8 +580,8 @@ def main():
         tester.test_add_favorite_address(tester.passenger_token, "Travail")
         tester.test_get_favorite_addresses(tester.passenger_token)
         if favorite_id:
-            # Note: DELETE method test
-            tester.run_test("Delete favorite address", "DELETE", f"favorites/{favorite_id}", 200, token=tester.passenger_token)
+            # Test DELETE method for favorite address
+            tester.test_delete_favorite_address(favorite_id, tester.passenger_token)
 
     # Test promo codes and referral
     if passenger_login_success:
