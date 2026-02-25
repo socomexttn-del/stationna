@@ -397,6 +397,112 @@ const AdminDashboard = () => {
           </Card>
         )}
       </main>
+
+      {/* Documents Modal */}
+      {selectedDriver && driverDocuments && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div 
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => { setSelectedDriver(null); setDriverDocuments(null); }}
+          />
+          <div className="relative bg-card border border-white/10 rounded-2xl w-full max-w-lg mx-4 p-6 max-h-[80vh] overflow-y-auto">
+            <button 
+              onClick={() => { setSelectedDriver(null); setDriverDocuments(null); }}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <h3 className="text-xl font-semibold mb-2" style={{ fontFamily: 'Space Grotesk' }}>
+              {driverDocuments.name}
+            </h3>
+            
+            {/* Vehicle Info */}
+            {driverDocuments.vehicle_info && (
+              <div className="mb-4 p-3 bg-muted/30 rounded-xl">
+                <p className="text-sm font-medium">
+                  {driverDocuments.vehicle_info.make} {driverDocuments.vehicle_info.model} ({driverDocuments.vehicle_info.year})
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {driverDocuments.vehicle_info.color} • {driverDocuments.vehicle_info.license_plate}
+                </p>
+              </div>
+            )}
+
+            <h4 className="text-sm font-medium text-muted-foreground mb-3">Documents</h4>
+            <div className="space-y-3">
+              {['carte_grise', 'assurance', 'controle_technique', 'permis_conduire', 'carte_vtc'].map((docType) => {
+                const doc = driverDocuments.documents?.[docType];
+                const labels = {
+                  carte_grise: 'Carte Grise',
+                  assurance: 'Assurance',
+                  controle_technique: 'Contrôle Technique',
+                  permis_conduire: 'Permis de Conduire',
+                  carte_vtc: 'Carte VTC'
+                };
+                
+                return (
+                  <div 
+                    key={docType}
+                    className="flex items-center justify-between p-3 bg-muted/30 rounded-xl"
+                  >
+                    <div className="flex items-center gap-3">
+                      <FileText className="w-5 h-5 text-primary" />
+                      <div>
+                        <p className="font-medium text-sm">{labels[docType]}</p>
+                        <p className={`text-xs ${
+                          !doc ? 'text-orange-500' :
+                          doc.status === 'approved' ? 'text-green-500' :
+                          doc.status === 'rejected' ? 'text-red-500' :
+                          'text-yellow-500'
+                        }`}>
+                          {!doc ? 'Non fourni' :
+                           doc.status === 'approved' ? 'Approuvé' :
+                           doc.status === 'rejected' ? 'Rejeté' :
+                           'En attente'}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {doc && (
+                      <div className="flex items-center gap-2">
+                        {doc.url && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(doc.url, '_blank')}
+                            className="text-xs"
+                          >
+                            <Eye className="w-3 h-3" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => updateDocStatus(docType, 'approved')}
+                          className="text-xs text-green-500 hover:text-green-400"
+                          disabled={doc.status === 'approved'}
+                        >
+                          <Check className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => updateDocStatus(docType, 'rejected')}
+                          className="text-xs text-red-500 hover:text-red-400"
+                          disabled={doc.status === 'rejected'}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
