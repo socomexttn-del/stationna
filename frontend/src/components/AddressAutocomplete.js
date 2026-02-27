@@ -64,7 +64,8 @@ function AddressAutocomplete(props) {
       };
     });
 
-    fetch('https://api.mapbox.com/geocoding/v5/mapbox.places/' + encodeURIComponent(query) + '.json?access_token=' + MAPBOX_TOKEN + '&country=fr&language=fr&limit=5&proximity=2.3522,48.8566')
+    // Search with broader parameters - include POIs, addresses, places
+    fetch('https://api.mapbox.com/geocoding/v5/mapbox.places/' + encodeURIComponent(query) + '.json?access_token=' + MAPBOX_TOKEN + '&country=fr&language=fr&limit=7&types=poi,address,place,locality,neighborhood&proximity=2.3522,48.8566')
       .then(function(response) {
         return response.json();
       })
@@ -82,7 +83,7 @@ function AddressAutocomplete(props) {
             };
           });
         }
-        var combined = localMatches.concat(mapboxResults).slice(0, 7);
+        var combined = localMatches.concat(mapboxResults).slice(0, 8);
         setSuggestions(combined);
         setShowSuggestions(true);
         setIsLoading(false);
