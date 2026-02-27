@@ -47,7 +47,7 @@ const BookingReceipt = ({ ride, onClose, isOpen }) => {
         </head>
         <body>
           <div class="header">
-            <div class="logo">VOLT TAXI</div>
+            <div class="logo">ALLOGO</div>
             <div class="reservation-number">Bon de réservation N° ${ride.reservation_number}</div>
           </div>
           

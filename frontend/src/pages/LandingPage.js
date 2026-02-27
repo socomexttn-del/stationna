@@ -85,7 +85,7 @@ const LandingPage = () => {
             Pourquoi choisir <span className="text-primary">Allogo</span> ?
           </h2>
           <p className="text-muted-foreground text-center mb-16 max-w-xl mx-auto">
-            Une expérience de taxi moderne, sécurisée et efficace
+            Une expérience de transport moderne, sécurisée et efficace
           </p>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
