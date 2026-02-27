@@ -985,6 +985,126 @@ async def cancel_ride(ride_id: str, current_user: dict = Depends(get_current_use
     updated = await db.rides.find_one({"id": ride_id}, {"_id": 0})
     return RideResponse(**updated)
 
+@api_router.post("/rides/{ride_id}/reject")
+async def reject_ride(ride_id: str, current_user: dict = Depends(get_current_user)):
+    """Driver rejects a ride - it will be re-dispatched to the next nearest driver"""
+    if current_user["role"] != "driver":
+        raise HTTPException(status_code=403, detail="Only drivers can reject rides")
+    
+    ride = await db.rides.find_one({"id": ride_id}, {"_id": 0})
+    if not ride:
+        raise HTTPException(status_code=404, detail="Ride not found")
+    
+    if ride.get("driver_id") != current_user["id"]:
+        raise HTTPException(status_code=403, detail="This ride is not assigned to you")
+    
+    if ride["status"] not in ["accepted", "pending"]:
+        raise HTTPException(status_code=400, detail="Cannot reject this ride")
+    
+    # Track rejected drivers to avoid re-assigning to them
+    rejected_drivers = ride.get("rejected_drivers", [])
+    rejected_drivers.append(current_user["id"])
+    
+    # Make current driver available again
+    await db.users.update_one({"id": current_user["id"]}, {"$set": {"is_available": True}})
+    
+    # Find next nearest available driver (excluding rejected ones)
+    pickup = ride["pickup"]
+    available_drivers = await db.users.find({
+        "role": "driver", 
+        "is_available": True,
+        "id": {"$nin": rejected_drivers},
+        "location": {"$exists": True},
+        "$or": [{"is_active": True}, {"is_active": {"$exists": False}}]
+    }, {"_id": 0, "password_hash": 0}).to_list(50)
+    
+    nearest_driver_info = None
+    if available_drivers:
+        for driver in available_drivers:
+            if driver.get("location"):
+                dist = haversine_distance(
+                    pickup["lat"], pickup["lng"],
+                    driver["location"]["lat"], driver["location"]["lng"]
+                )
+                eta = max(2, round(dist * 2.5))
+                if nearest_driver_info is None or dist < nearest_driver_info["distance_to_pickup"]:
+                    nearest_driver_info = {
+                        "driver": driver,
+                        "distance_to_pickup": round(dist, 1),
+                        "eta_minutes": eta
+                    }
+    
+    if nearest_driver_info:
+        # Re-assign to new driver
+        new_driver = nearest_driver_info["driver"]
+        vehicle = new_driver.get("vehicle_info", {})
+        
+        await db.rides.update_one(
+            {"id": ride_id},
+            {"$set": {
+                "driver_id": new_driver["id"],
+                "driver_name": f"{new_driver['first_name']} {new_driver['last_name']}",
+                "driver_company": new_driver.get("company_name", "Indépendant"),
+                "driver_phone": new_driver.get("phone"),
+                "driver_license_plate": vehicle.get("license_plate") if vehicle else "Non renseigné",
+                "driver_identification": new_driver["id"][:8].upper(),
+                "status": "accepted",
+                "accepted_at": datetime.now(timezone.utc).isoformat(),
+                "driver_eta_minutes": nearest_driver_info["eta_minutes"],
+                "driver_distance_km": nearest_driver_info["distance_to_pickup"],
+                "rejected_drivers": rejected_drivers
+            }}
+        )
+        
+        # Mark new driver as unavailable
+        await db.users.update_one({"id": new_driver["id"]}, {"$set": {"is_available": False}})
+        
+        # Notify new driver
+        await notification_manager.notify_driver(new_driver["id"], "ride_assigned", {
+            "id": ride_id,
+            "passenger_name": ride["passenger_name"],
+            "pickup": ride["pickup"],
+            "destination": ride["destination"],
+            "estimated_fare": ride["estimated_fare"]
+        })
+        
+        # Notify passenger about new driver
+        await notification_manager.notify_passenger(ride["passenger_id"], "driver_changed", {
+            "ride_id": ride_id,
+            "driver_name": f"{new_driver['first_name']} {new_driver['last_name']}",
+            "eta_minutes": nearest_driver_info["eta_minutes"],
+            "message": "Un nouveau chauffeur a été assigné à votre course"
+        })
+        
+        return {
+            "status": "reassigned",
+            "message": "Course transférée à un autre chauffeur",
+            "new_driver_name": f"{new_driver['first_name']} {new_driver['last_name']}",
+            "eta_minutes": nearest_driver_info["eta_minutes"]
+        }
+    else:
+        # No driver available - put ride back to pending
+        await db.rides.update_one(
+            {"id": ride_id},
+            {"$set": {
+                "driver_id": None,
+                "driver_name": None,
+                "status": "pending",
+                "rejected_drivers": rejected_drivers
+            }}
+        )
+        
+        # Notify passenger
+        await notification_manager.notify_passenger(ride["passenger_id"], "searching_driver", {
+            "ride_id": ride_id,
+            "message": "Recherche d'un nouveau chauffeur en cours..."
+        })
+        
+        return {
+            "status": "pending",
+            "message": "Recherche d'un nouveau chauffeur en cours"
+        }
+
 @api_router.get("/rides/{ride_id}", response_model=RideResponse)
 async def get_ride(ride_id: str, current_user: dict = Depends(get_current_user)):
     ride = await db.rides.find_one({"id": ride_id}, {"_id": 0})
