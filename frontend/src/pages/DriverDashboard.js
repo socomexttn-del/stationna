@@ -756,7 +756,14 @@ const DriverDashboard = () => {
         {/* Available Rides */}
         {!activeRide && isAvailable && (
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold" style={{ fontFamily: 'Space Grotesk' }}>Courses disponibles</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold" style={{ fontFamily: 'Space Grotesk' }}>Courses disponibles</h2>
+              {availableRides.length > 0 && (
+                <span className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">
+                  {availableRides.length} course{availableRides.length > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
             
             {availableRides.length === 0 ? (
               <Card className="bg-card border-border/50">
@@ -768,30 +775,44 @@ const DriverDashboard = () => {
               </Card>
             ) : (
               availableRides.map((ride) => (
-                <Card key={ride.id} className="bg-card border-border/50 hover:border-primary/50 transition-colors">
+                <Card key={ride.id} className="bg-card border-green-500/50 hover:border-green-500 transition-colors shadow-[0_0_15px_rgba(34,197,94,0.2)]">
                   <CardContent className="p-4 space-y-3">
                     <div className="flex items-center justify-between">
-                      <p className="font-semibold">{ride.passenger_name}</p>
-                      <p className="text-xl font-bold text-primary">{ride.estimated_fare}€</p>
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
+                          <User className="w-4 h-4 text-green-500" />
+                        </div>
+                        <p className="font-semibold">{ride.passenger_name}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xl font-bold text-green-500">{ride.driver_earnings || (ride.estimated_fare * 0.82).toFixed(2)}€</p>
+                        <p className="text-xs text-muted-foreground">Vos gains</p>
+                      </div>
                     </div>
                     
-                    <div className="space-y-2">
+                    <div className="space-y-2 bg-muted/30 rounded-lg p-3">
                       <div className="flex items-start gap-2">
-                        <MapPin className="w-4 h-4 text-green-500 mt-0.5" />
+                        <MapPin className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
                         <p className="text-sm">{ride.pickup.address}</p>
                       </div>
                       <div className="flex items-start gap-2">
-                        <Navigation className="w-4 h-4 text-primary mt-0.5" />
+                        <Navigation className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
                         <p className="text-sm">{ride.destination.address}</p>
                       </div>
                     </div>
                     
                     <div className="flex items-center justify-between pt-2">
-                      <span className="text-sm text-muted-foreground">{ride.distance_km} km</span>
+                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                        <span>{ride.distance_km} km</span>
+                        <span>•</span>
+                        <span>{ride.vehicle_type === 'van' ? 'Van' : 'Standard'}</span>
+                        <span>•</span>
+                        <span>{ride.passenger_count || 1} passager{(ride.passenger_count || 1) > 1 ? 's' : ''}</span>
+                      </div>
                       <Button 
                         onClick={() => acceptRide(ride.id)}
                         data-testid={`accept-ride-${ride.id}`}
-                        className="bg-primary text-primary-foreground hover:bg-primary/90"
+                        className="bg-green-600 hover:bg-green-700 text-white font-bold"
                       >
                         <Check className="w-4 h-4 mr-2" /> Accepter
                       </Button>
