@@ -880,9 +880,27 @@ async def accept_ride(ride_id: str, current_user: dict = Depends(get_current_use
     if not ride:
         raise HTTPException(status_code=404, detail="Ride not found or already taken")
     
+    # Get driver's vehicle info and location
+    driver = await db.users.find_one({"id": current_user["id"]}, {"_id": 0})
+    vehicle = driver.get("vehicle_info", {}) if driver else {}
+    driver_location = driver.get("location", {}) if driver else {}
+    
+    # Calculate ETA if driver has location
+    eta_minutes = 5  # Default
+    distance_to_pickup = 0
+    if driver_location and driver_location.get("lat"):
+        distance_to_pickup = calculate_distance(ride["pickup"], driver_location)
+        eta_minutes = max(2, round(distance_to_pickup * 2.5))
+    
     await db.rides.update_one({"id": ride_id}, {"$set": {
         "driver_id": current_user["id"],
         "driver_name": f"{current_user['first_name']} {current_user['last_name']}",
+        "driver_company": current_user.get("company_name", "Indépendant"),
+        "driver_phone": current_user.get("phone"),
+        "driver_license_plate": vehicle.get("license_plate") if vehicle else "Non renseigné",
+        "driver_identification": current_user["id"][:8].upper(),
+        "driver_eta_minutes": eta_minutes,
+        "driver_distance_km": round(distance_to_pickup, 1),
         "status": "accepted",
         "accepted_at": datetime.now(timezone.utc).isoformat()
     }})
@@ -894,6 +912,8 @@ async def accept_ride(ride_id: str, current_user: dict = Depends(get_current_use
     await notification_manager.notify_passenger(ride["passenger_id"], "ride_accepted", {
         "driver_name": f"{current_user['first_name']} {current_user['last_name']}",
         "driver_id": current_user["id"],
+        "driver_phone": current_user.get("phone"),
+        "eta_minutes": eta_minutes,
         "ride_id": ride_id
     })
     
