@@ -914,7 +914,7 @@ const PassengerDashboard = () => {
                       {vehicleType === 'van' ? <Truck className="w-5 h-5 text-primary" /> : <Car className="w-5 h-5 text-primary" />}
                     </div>
                     <div>
-                      <p className="font-semibold">Allogo {vehicleType === 'van' ? 'Van' : 'Taxi'}</p>
+                      <p className="font-semibold">Allogo {vehicleType === 'van' ? 'Van' : 'Chauffeur'}</p>
                       <p className="text-sm text-muted-foreground">
                         {routeInfo?.distance || estimate.distance_km} km • {estimate.duration_minutes || routeInfo?.duration} min • {passengers} passager{passengers > 1 ? 's' : ''}
                       </p>
