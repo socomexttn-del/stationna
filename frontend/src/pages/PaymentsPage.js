@@ -75,8 +75,8 @@ const PaymentsPage = () => {
   const shareReferralCode = () => {
     if (navigator.share) {
       navigator.share({
-        title: 'Volt Taxi - Code parrainage',
-        text: `Utilise mon code ${referralCode} pour obtenir 10% de réduction sur ta première course Volt Taxi!`,
+        title: 'Allogo - Code parrainage',
+        text: `Utilise mon code ${referralCode} pour obtenir 10% de réduction sur ta première course Allogo!`,
       });
     } else {
       copyReferralCode();

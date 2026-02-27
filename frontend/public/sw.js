@@ -1,4 +1,4 @@
-// Volt Taxi Service Worker for Push Notifications
+// Allogo Service Worker for Push Notifications
 
 const CACHE_NAME = 'volt-taxi-v1';
 
@@ -17,7 +17,7 @@ self.addEventListener('activate', (event) => {
 // Push notification event
 self.addEventListener('push', (event) => {
   const options = {
-    body: event.data ? event.data.text() : 'Nouvelle notification Volt Taxi',
+    body: event.data ? event.data.text() : 'Nouvelle notification Allogo',
     icon: '/logo192.png',
     badge: '/logo192.png',
     vibrate: [200, 100, 200],
@@ -48,7 +48,7 @@ self.addEventListener('push', (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification('Volt Taxi', options)
+    self.registration.showNotification('Allogo', options)
   );
 });
 

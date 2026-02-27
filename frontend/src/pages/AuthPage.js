@@ -71,7 +71,7 @@ const AuthPage = () => {
                 {isLogin ? 'Connexion' : 'Inscription'}
               </CardTitle>
               <CardDescription className="text-muted-foreground mt-2">
-                {isLogin ? 'Accédez à votre compte Volt' : 'Créez votre compte Volt'}
+                {isLogin ? 'Accédez à votre compte Allogo' : 'Créez votre compte Allogo'}
               </CardDescription>
             </div>
           </CardHeader>

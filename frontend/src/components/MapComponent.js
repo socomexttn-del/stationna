@@ -413,7 +413,7 @@ const MapComponent = ({
               border-radius: 4px;
               white-space: nowrap;
               font-family: 'Space Grotesk', sans-serif;
-            ">VOLT</div>
+            ">ALLOGO</div>
           </div>
         `;
         

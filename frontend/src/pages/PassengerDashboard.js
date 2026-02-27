@@ -510,7 +510,7 @@ const PassengerDashboard = () => {
             <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
               <Car className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold" style={{ fontFamily: 'Space Grotesk' }}>Volt</span>
+            <span className="text-xl font-bold" style={{ fontFamily: 'Space Grotesk' }}>Allogo</span>
           </div>
           
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>

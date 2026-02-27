@@ -146,7 +146,7 @@ const AdminDashboard = () => {
               <h1 className="text-xl font-bold" style={{ fontFamily: 'Space Grotesk' }}>
                 Admin Dashboard
               </h1>
-              <p className="text-sm text-muted-foreground">Volt Taxi</p>
+              <p className="text-sm text-muted-foreground">Allogo</p>
             </div>
           </div>
           <div className="flex items-center gap-2">

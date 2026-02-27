@@ -83,7 +83,7 @@ const BookingReceipt = ({ ride, onClose, isOpen }) => {
           </div>
           
           <div class="footer">
-            <p>Volt Taxi - Service de transport</p>
+            <p>Allogo - Service de transport</p>
             <p>Document généré le ${new Date().toLocaleDateString('fr-FR')}</p>
           </div>
         </body>
