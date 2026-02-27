@@ -339,6 +339,24 @@ const DriverDashboard = () => {
       await api.post(`/rides/${activeRide.id}/cancel`);
       setActiveRide(null);
       toast.success('Course annulée');
+      fetchAvailableRides();
+    } catch (error) {
+      toast.error('Erreur lors de l\'annulation');
+    }
+  };
+
+  const rejectRide = async () => {
+    if (!activeRide) return;
+    try {
+      const response = await api.post(`/rides/${activeRide.id}/reject`);
+      setActiveRide(null);
+      toast.success(response.data.message || 'Course refusée et transférée');
+      fetchAvailableRides();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erreur lors du refus');
+    }
+  };
+      toast.success('Course annulée');
     } catch (error) {
       toast.error('Erreur lors de l\'annulation');
     }
