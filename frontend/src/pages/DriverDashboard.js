@@ -356,11 +356,6 @@ const DriverDashboard = () => {
       toast.error(error.response?.data?.detail || 'Erreur lors du refus');
     }
   };
-      toast.success('Course annulée');
-    } catch (error) {
-      toast.error('Erreur lors de l\'annulation');
-    }
-  };
 
   const ratePassenger = async (rating) => {
     if (!activeRide) return;
