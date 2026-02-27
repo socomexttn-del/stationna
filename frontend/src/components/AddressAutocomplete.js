@@ -4,34 +4,21 @@ import { Input } from './ui/input';
 
 const MAPBOX_TOKEN = process.env.REACT_APP_MAPBOX_TOKEN;
 
-// Popular locations - Gares et Aéroports
 const POPULAR_LOCATIONS = [
-  // Gares parisiennes
-  { id: 'gare-nord', text: 'Gare du Nord', address: 'Gare du Nord, 75010 Paris', lat: 48.8809, lng: 2.3553, type: 'poi' },
-  { id: 'gare-est', text: 'Gare de l\'Est', address: 'Gare de l\'Est, 75010 Paris', lat: 48.8763, lng: 2.3594, type: 'poi' },
-  { id: 'gare-lyon', text: 'Gare de Lyon', address: 'Gare de Lyon, 75012 Paris', lat: 48.8443, lng: 2.3738, type: 'poi' },
-  { id: 'gare-saint-lazare', text: 'Gare Saint-Lazare', address: 'Gare Saint-Lazare, 75008 Paris', lat: 48.8765, lng: 2.3252, type: 'poi' },
-  { id: 'gare-austerlitz', text: 'Gare d\'Austerlitz', address: 'Gare d\'Austerlitz, 75013 Paris', lat: 48.8424, lng: 2.3656, type: 'poi' },
-  { id: 'gare-montparnasse', text: 'Gare Montparnasse', address: 'Gare Montparnasse, 75015 Paris', lat: 48.8408, lng: 2.3194, type: 'poi' },
-  // Aéroports
-  { id: 'cdg', text: 'Aéroport CDG', address: 'Aéroport Paris-Charles de Gaulle, 95700 Roissy-en-France', lat: 49.0097, lng: 2.5479, type: 'poi' },
-  { id: 'orly', text: 'Aéroport Orly', address: 'Aéroport de Paris-Orly, 94390 Orly', lat: 48.7262, lng: 2.3652, type: 'poi' },
-  { id: 'beauvais', text: 'Aéroport Beauvais', address: 'Aéroport de Beauvais-Tillé, 60000 Beauvais', lat: 49.4544, lng: 2.1128, type: 'poi' },
+  { id: 'gare-nord', text: 'Gare du Nord', address: 'Gare du Nord, 75010 Paris', lat: 48.8809, lng: 2.3553 },
+  { id: 'gare-est', text: 'Gare de l\'Est', address: 'Gare de l\'Est, 75010 Paris', lat: 48.8763, lng: 2.3594 },
+  { id: 'gare-lyon', text: 'Gare de Lyon', address: 'Gare de Lyon, 75012 Paris', lat: 48.8443, lng: 2.3738 },
+  { id: 'gare-saint-lazare', text: 'Gare Saint-Lazare', address: 'Gare Saint-Lazare, 75008 Paris', lat: 48.8765, lng: 2.3252 },
+  { id: 'gare-montparnasse', text: 'Gare Montparnasse', address: 'Gare Montparnasse, 75015 Paris', lat: 48.8408, lng: 2.3194 },
+  { id: 'cdg', text: 'Aéroport CDG', address: 'Aéroport Paris-Charles de Gaulle, Roissy', lat: 49.0097, lng: 2.5479 },
+  { id: 'orly', text: 'Aéroport Orly', address: 'Aéroport de Paris-Orly', lat: 48.7262, lng: 2.3652 },
 ];
 
-const AddressAutocomplete = ({ 
-  value, 
-  onChange, 
-  placeholder, 
-  icon: Icon = MapPin,
-  iconColor = 'text-primary',
-  dataTestId
-}) => {
+const AddressAutocomplete = ({ value, onChange, placeholder, icon: Icon = MapPin, iconColor = 'text-primary', dataTestId }) => {
   const [suggestions, setSuggestions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [inputValue, setInputValue] = useState(value?.address || '');
-  const [userLocation, setUserLocation] = useState(null);
   const debounceRef = useRef(null);
   const containerRef = useRef(null);
 
@@ -39,27 +26,6 @@ const AddressAutocomplete = ({
     setInputValue(value?.address || '');
   }, [value?.address]);
 
-  // Get user location for proximity bias
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          });
-        },
-        () => {
-          // Default to Paris if geolocation fails
-          setUserLocation({ lat: 48.8566, lng: 2.3522 });
-        }
-      );
-    } else {
-      setUserLocation({ lat: 48.8566, lng: 2.3522 });
-    }
-  }, []);
-
-  // Close suggestions when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
@@ -78,69 +44,37 @@ const AddressAutocomplete = ({
 
     setIsLoading(true);
     try {
-      // First, search in popular locations
-      const queryLower = query.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      const localMatches = POPULAR_LOCATIONS.filter(loc => {
-        const textLower = loc.text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        const addressLower = loc.address.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        return textLower.includes(queryLower) || addressLower.includes(queryLower) || queryLower.includes(textLower.split(' ')[0]);
-      }).map(loc => ({
+      const queryLower = query.toLowerCase();
+      const localMatches = POPULAR_LOCATIONS.filter(loc => 
+        loc.text.toLowerCase().includes(queryLower) || 
+        loc.address.toLowerCase().includes(queryLower)
+      ).map(loc => ({
         id: loc.id,
         address: loc.address,
         shortAddress: loc.text,
-        city: 'Paris',
-        postcode: '',
         lat: loc.lat,
         lng: loc.lng,
-        type: loc.type,
         isLocal: true
       }));
 
-      // Build proximity parameter for better local results
-      const proximityParam = userLocation 
-        ? `&proximity=${userLocation.lng},${userLocation.lat}` 
-        : '&proximity=2.3522,48.8566'; // Default to Paris
-
       const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
-        `access_token=${MAPBOX_TOKEN}&` +
-        `country=fr&` +
-        `language=fr&` +
-        `types=address,poi,place,locality,neighborhood&` +
-        `autocomplete=true&` +
-        `fuzzyMatch=true&` +
-        `limit=7` +
-        proximityParam
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&country=fr&language=fr&limit=5&proximity=2.3522,48.8566`
       );
       const data = await response.json();
       
       let mapboxResults = [];
       if (data.features) {
-        mapboxResults = data.features.map(feature => {
-          // Extract context for better display
-          const context = feature.context || [];
-          const city = context.find(c => c.id.startsWith('place'))?.text || '';
-          const postcode = context.find(c => c.id.startsWith('postcode'))?.text || '';
-          
-          return {
-            id: feature.id,
-            address: feature.place_name,
-            shortAddress: feature.text,
-            city,
-            postcode,
-            lat: feature.center[1],
-            lng: feature.center[0],
-            type: feature.place_type?.[0] || 'address',
-            isLocal: false
-          };
-        });
+        mapboxResults = data.features.map(feature => ({
+          id: feature.id,
+          address: feature.place_name,
+          shortAddress: feature.text,
+          lat: feature.center[1],
+          lng: feature.center[0],
+          isLocal: false
+        }));
       }
 
-      // Combine local matches first, then Mapbox results (avoiding duplicates)
-      const seenAddresses = new Set(localMatches.map(m => m.shortAddress.toLowerCase()));
-      const filteredMapbox = mapboxResults.filter(r => !seenAddresses.has(r.shortAddress.toLowerCase()));
-      
-      const combined = [...localMatches, ...filteredMapbox].slice(0, 7);
+      const combined = [...localMatches, ...mapboxResults].slice(0, 7);
       setSuggestions(combined);
       setShowSuggestions(true);
     } catch (error) {
@@ -155,7 +89,6 @@ const AddressAutocomplete = ({
     const newValue = e.target.value;
     setInputValue(newValue);
     
-    // Debounce API calls
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
@@ -186,11 +119,9 @@ const AddressAutocomplete = ({
       async (position) => {
         const { latitude, longitude } = position.coords;
         
-        // Reverse geocode to get address
         try {
           const response = await fetch(
-            `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?` +
-            `access_token=${MAPBOX_TOKEN}&language=fr&limit=1`
+            `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${MAPBOX_TOKEN}&language=fr&limit=1`
           );
           const data = await response.json();
           
@@ -247,26 +178,17 @@ const AddressAutocomplete = ({
               onClick={() => handleSelectSuggestion(suggestion)}
               className="w-full px-4 py-3 text-left hover:bg-muted transition-colors flex items-start gap-3 border-b border-border last:border-0"
             >
-              <MapPin className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
-                suggestion.isLocal ? 'text-yellow-500' :
-                suggestion.type === 'poi' ? 'text-yellow-500' : 
-                suggestion.type === 'place' ? 'text-blue-500' : 'text-primary'
-              }`} />
+              <MapPin className={`w-5 h-5 mt-0.5 flex-shrink-0 ${suggestion.isLocal ? 'text-yellow-500' : 'text-primary'}`} />
               <div className="flex flex-col min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium truncate">{suggestion.shortAddress}</span>
                   {suggestion.isLocal && (
-                    <span className="text-[10px] bg-yellow-500/20 text-yellow-500 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                    <span className="text-xs bg-yellow-500/20 text-yellow-500 px-1.5 py-0.5 rounded-full">
                       Populaire
                     </span>
                   )}
                 </div>
-                {(suggestion.city || suggestion.address) && (
-                  <span className="text-xs text-muted-foreground truncate">
-                    {suggestion.isLocal ? suggestion.address : 
-                      (suggestion.postcode ? `${suggestion.postcode} ` : '') + suggestion.city}
-                  </span>
-                )}
+                <span className="text-xs text-muted-foreground truncate">{suggestion.address}</span>
               </div>
             </button>
           ))}
