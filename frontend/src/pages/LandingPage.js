@@ -46,7 +46,7 @@ const LandingPage = () => {
             <span className="text-primary">en un éclair</span>
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
-            Réservez un chauffeur en quelques secondes. Suivez votre chauffeur en temps réel. Payez en toute sécurité.
+            Réservez un chauffeur en quelques secondes. Suivez votre trajet en temps réel. Payez en toute sécurité.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/auth?role=passenger">
