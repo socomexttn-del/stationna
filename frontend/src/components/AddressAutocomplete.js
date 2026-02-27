@@ -1,0 +1,215 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { MapPin, Navigation, Loader2 } from 'lucide-react';
+import { Input } from './ui/input';
+
+const MAPBOX_TOKEN = process.env.REACT_APP_MAPBOX_TOKEN;
+
+const POPULAR_LOCATIONS = [
+  { id: 'gare-nord', text: 'Gare du Nord', address: 'Gare du Nord, 75010 Paris', lat: 48.8809, lng: 2.3553 },
+  { id: 'gare-est', text: 'Gare de lEst', address: 'Gare de lEst, 75010 Paris', lat: 48.8763, lng: 2.3594 },
+  { id: 'gare-lyon', text: 'Gare de Lyon', address: 'Gare de Lyon, 75012 Paris', lat: 48.8443, lng: 2.3738 },
+  { id: 'cdg', text: 'Aeroport CDG', address: 'Aeroport Paris-Charles de Gaulle, Roissy', lat: 49.0097, lng: 2.5479 },
+  { id: 'orly', text: 'Aeroport Orly', address: 'Aeroport de Paris-Orly', lat: 48.7262, lng: 2.3652 },
+];
+
+function AddressAutocomplete(props) {
+  const { value, onChange, placeholder, icon: Icon, iconColor, dataTestId } = props;
+  const IconComponent = Icon || MapPin;
+  const colorClass = iconColor || 'text-primary';
+  
+  const [suggestions, setSuggestions] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [inputValue, setInputValue] = useState('');
+  const debounceRef = useRef(null);
+  const containerRef = useRef(null);
+
+  useEffect(function() {
+    if (value && value.address) {
+      setInputValue(value.address);
+    }
+  }, [value]);
+
+  useEffect(function() {
+    function handleClickOutside(event) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return function() {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  function searchAddress(query) {
+    if (!query || query.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+
+    setIsLoading(true);
+    
+    var queryLower = query.toLowerCase();
+    var localMatches = POPULAR_LOCATIONS.filter(function(loc) {
+      return loc.text.toLowerCase().includes(queryLower) || loc.address.toLowerCase().includes(queryLower);
+    }).map(function(loc) {
+      return {
+        id: loc.id,
+        address: loc.address,
+        shortAddress: loc.text,
+        lat: loc.lat,
+        lng: loc.lng,
+        isLocal: true
+      };
+    });
+
+    fetch('https://api.mapbox.com/geocoding/v5/mapbox.places/' + encodeURIComponent(query) + '.json?access_token=' + MAPBOX_TOKEN + '&country=fr&language=fr&limit=5&proximity=2.3522,48.8566')
+      .then(function(response) {
+        return response.json();
+      })
+      .then(function(data) {
+        var mapboxResults = [];
+        if (data.features) {
+          mapboxResults = data.features.map(function(feature) {
+            return {
+              id: feature.id,
+              address: feature.place_name,
+              shortAddress: feature.text,
+              lat: feature.center[1],
+              lng: feature.center[0],
+              isLocal: false
+            };
+          });
+        }
+        var combined = localMatches.concat(mapboxResults).slice(0, 7);
+        setSuggestions(combined);
+        setShowSuggestions(true);
+        setIsLoading(false);
+      })
+      .catch(function(error) {
+        console.error('Geocoding error:', error);
+        setSuggestions(localMatches);
+        setShowSuggestions(true);
+        setIsLoading(false);
+      });
+  }
+
+  function handleInputChange(e) {
+    var newValue = e.target.value;
+    setInputValue(newValue);
+    
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    debounceRef.current = setTimeout(function() {
+      searchAddress(newValue);
+    }, 300);
+  }
+
+  function handleSelectSuggestion(suggestion) {
+    setInputValue(suggestion.address);
+    setSuggestions([]);
+    setShowSuggestions(false);
+    onChange({
+      lat: suggestion.lat,
+      lng: suggestion.lng,
+      address: suggestion.address
+    });
+  }
+
+  function handleGetCurrentLocation() {
+    if (!navigator.geolocation) {
+      alert('La geolocalisation nest pas supportee');
+      return;
+    }
+
+    setIsLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      function(position) {
+        var latitude = position.coords.latitude;
+        var longitude = position.coords.longitude;
+        
+        fetch('https://api.mapbox.com/geocoding/v5/mapbox.places/' + longitude + ',' + latitude + '.json?access_token=' + MAPBOX_TOKEN + '&language=fr&limit=1')
+          .then(function(response) {
+            return response.json();
+          })
+          .then(function(data) {
+            if (data.features && data.features.length > 0) {
+              var address = data.features[0].place_name;
+              setInputValue(address);
+              onChange({ lat: latitude, lng: longitude, address: address });
+            }
+            setIsLoading(false);
+          })
+          .catch(function(error) {
+            console.error('Reverse geocoding error:', error);
+            onChange({ lat: latitude, lng: longitude, address: latitude.toFixed(4) + ', ' + longitude.toFixed(4) });
+            setIsLoading(false);
+          });
+      },
+      function(error) {
+        console.error('Geolocation error:', error);
+        setIsLoading(false);
+        alert('Impossible dobtenir votre position');
+      }
+    );
+  }
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div className="relative flex items-center">
+        <IconComponent className={'absolute left-4 w-5 h-5 z-10 ' + colorClass} />
+        <Input
+          data-testid={dataTestId}
+          placeholder={placeholder}
+          value={inputValue}
+          onChange={handleInputChange}
+          onFocus={function() { if (suggestions.length > 0) setShowSuggestions(true); }}
+          className="h-14 pl-12 pr-12 bg-muted border-white/10 rounded-xl text-lg"
+        />
+        {isLoading ? (
+          <Loader2 className="absolute right-4 w-5 h-5 text-muted-foreground animate-spin" />
+        ) : (
+          <button
+            type="button"
+            onClick={handleGetCurrentLocation}
+            className="absolute right-4 p-1 text-muted-foreground hover:text-primary transition-colors"
+            title="Utiliser ma position"
+          >
+            <Navigation className="w-5 h-5" />
+          </button>
+        )}
+      </div>
+      
+      {showSuggestions && suggestions.length > 0 && (
+        <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden max-h-80 overflow-y-auto">
+          {suggestions.map(function(suggestion) {
+            return (
+              <button
+                key={suggestion.id}
+                onClick={function() { handleSelectSuggestion(suggestion); }}
+                className="w-full px-4 py-3 text-left hover:bg-muted transition-colors flex items-start gap-3 border-b border-border last:border-0"
+              >
+                <MapPin className={'w-5 h-5 mt-0.5 flex-shrink-0 ' + (suggestion.isLocal ? 'text-yellow-500' : 'text-primary')} />
+                <div className="flex flex-col min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium truncate">{suggestion.shortAddress}</span>
+                    {suggestion.isLocal && (
+                      <span className="text-xs bg-yellow-500/20 text-yellow-500 px-1.5 py-0.5 rounded-full">
+                        Populaire
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs text-muted-foreground truncate">{suggestion.address}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default AddressAutocomplete;
