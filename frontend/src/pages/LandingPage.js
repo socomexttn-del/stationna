@@ -155,7 +155,7 @@ const LandingPage = () => {
               Devenez chauffeur <span className="text-primary">Allogo</span>
             </h2>
             <p className="text-lg text-muted-foreground mb-8">
-              Gagnez de l'argent en conduisant avec Volt. Choisissez vos horaires, acceptez les courses qui vous conviennent et suivez vos gains en temps réel.
+              Gagnez de l'argent en conduisant avec Allogo. Choisissez vos horaires, acceptez les courses qui vous conviennent et suivez vos gains en temps réel.
             </p>
             <Link to="/auth?role=driver">
               <Button 
