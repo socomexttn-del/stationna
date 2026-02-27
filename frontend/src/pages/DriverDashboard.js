@@ -29,6 +29,9 @@ const DriverDashboard = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [locationError, setLocationError] = useState(null);
+  const [hideEarnings, setHideEarnings] = useState(() => {
+    return localStorage.getItem('allogo_hide_earnings') === 'true';
+  });
 
   // Get current location on mount
   useEffect(() => {
