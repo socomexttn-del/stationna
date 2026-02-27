@@ -145,6 +145,30 @@ const DriverDashboard = () => {
         // Play notification sound
         playNotificationSound();
         break;
+      
+      case 'ride_available':
+        // New ride available - driver must accept
+        toast(
+          <div className="flex flex-col gap-1">
+            <span className="font-semibold text-green-500">🚗 Nouvelle course disponible!</span>
+            <span className="text-sm">{data.pickup?.address}</span>
+            <span className="text-xs text-muted-foreground">→ {data.destination?.address}</span>
+            <div className="flex justify-between mt-1">
+              <span className="text-primary font-bold">{data.driver_earnings}€</span>
+              <span className="text-xs">{data.distance_to_pickup} km • ~{data.eta_minutes} min</span>
+            </div>
+          </div>,
+          { duration: 15000 }
+        );
+        // Push notification
+        notifyNewRide(data.passenger_name, data.pickup?.address, data.driver_earnings);
+        // Refresh available rides
+        fetchAvailableRides();
+        // Play notification sound multiple times to get attention
+        playNotificationSound();
+        setTimeout(() => playNotificationSound(), 500);
+        setTimeout(() => playNotificationSound(), 1000);
+        break;
         
       case 'ride_taken':
         // Remove ride from available list
