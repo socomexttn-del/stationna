@@ -553,6 +553,7 @@ const DriverDashboard = () => {
                   </div>
                 </CardContent>
               </Card>
+            </div>
             <Card className="bg-card border-border/50">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
