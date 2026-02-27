@@ -200,31 +200,56 @@ const DriverDashboard = () => {
   // Connect to notification polling
   const { isConnected } = useNotifications(api, 'driver', handleNotification);
 
-  // Play notification sound
-  const playNotificationSound = () => {
-    try {
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      oscillator.frequency.value = 880;
-      oscillator.type = 'sine';
-      gainNode.gain.value = 0.3;
-      
-      oscillator.start();
-      setTimeout(() => {
-        oscillator.frequency.value = 1100;
-      }, 150);
-      setTimeout(() => {
-        oscillator.stop();
-      }, 300);
-    } catch (e) {
-      console.log('Audio not supported');
+  // Play notification sound - more aggressive for new rides
+  const playNotificationSound = useCallback((repeat = 1) => {
+    const playBeep = () => {
+      try {
+        // Method 1: Web Audio API (works after user interaction)
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Resume context if suspended (needed for Chrome)
+        if (audioContext.state === 'suspended') {
+          audioContext.resume();
+        }
+        
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        // Louder and more attention-grabbing sound pattern
+        oscillator.frequency.value = 880;
+        oscillator.type = 'square'; // More noticeable than sine
+        gainNode.gain.value = 0.5; // Louder
+        
+        oscillator.start();
+        
+        // Rising pitch pattern
+        setTimeout(() => { oscillator.frequency.value = 1100; }, 100);
+        setTimeout(() => { oscillator.frequency.value = 1320; }, 200);
+        setTimeout(() => { oscillator.frequency.value = 880; }, 300);
+        setTimeout(() => { oscillator.frequency.value = 1100; }, 400);
+        setTimeout(() => { 
+          oscillator.stop();
+          audioContext.close();
+        }, 500);
+        
+      } catch (e) {
+        console.log('Web Audio not supported, trying HTML5 Audio');
+      }
+    };
+
+    // Play sound multiple times for urgency
+    for (let i = 0; i < repeat; i++) {
+      setTimeout(playBeep, i * 600);
     }
-  };
+    
+    // Also try to vibrate on mobile
+    if (navigator.vibrate) {
+      navigator.vibrate([200, 100, 200, 100, 200]);
+    }
+  }, []);
 
   // Send GPS location to server
   const sendLocation = useCallback(async () => {
