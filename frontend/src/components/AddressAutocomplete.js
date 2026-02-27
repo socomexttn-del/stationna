@@ -10,6 +10,9 @@ const POPULAR_LOCATIONS = [
   { id: 'gare-lyon', text: 'Gare de Lyon', address: 'Gare de Lyon, 75012 Paris', lat: 48.8443, lng: 2.3738 },
   { id: 'cdg', text: 'Aeroport CDG', address: 'Aeroport Paris-Charles de Gaulle, Roissy', lat: 49.0097, lng: 2.5479 },
   { id: 'orly', text: 'Aeroport Orly', address: 'Aeroport de Paris-Orly', lat: 48.7262, lng: 2.3652 },
+  { id: 'aeroville', text: 'Aeroville', address: 'Centre Commercial Aeroville, Tremblay-en-France', lat: 49.0048, lng: 2.5656 },
+  { id: 'porte-maillot', text: 'Porte Maillot', address: 'Porte Maillot, 75017 Paris', lat: 48.8779, lng: 2.2826 },
+  { id: 'la-defense', text: 'La Defense', address: 'La Defense, 92400 Courbevoie', lat: 48.8918, lng: 2.2362 },
 ];
 
 function AddressAutocomplete(props) {
