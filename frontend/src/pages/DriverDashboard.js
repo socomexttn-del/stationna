@@ -697,11 +697,11 @@ const DriverDashboard = () => {
                   <>
                     <Button 
                       variant="outline" 
-                      className="flex-1"
-                      onClick={cancelRide}
-                      data-testid="driver-cancel-btn"
+                      className="flex-1 border-red-500/50 text-red-500 hover:bg-red-500/10"
+                      onClick={rejectRide}
+                      data-testid="driver-reject-btn"
                     >
-                      <X className="w-4 h-4 mr-2" /> Annuler
+                      <X className="w-4 h-4 mr-2" /> Refuser
                     </Button>
                     <Button 
                       className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
