@@ -1022,10 +1022,7 @@ async def reject_ride(ride_id: str, current_user: dict = Depends(get_current_use
     if available_drivers:
         for driver in available_drivers:
             if driver.get("location"):
-                dist = haversine_distance(
-                    pickup["lat"], pickup["lng"],
-                    driver["location"]["lat"], driver["location"]["lng"]
-                )
+                dist = calculate_distance(pickup, driver["location"])
                 eta = max(2, round(dist * 2.5))
                 if nearest_driver_info is None or dist < nearest_driver_info["distance_to_pickup"]:
                     nearest_driver_info = {
