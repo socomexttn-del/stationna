@@ -474,46 +474,72 @@ const DriverDashboard = () => {
 
         {/* Stats Cards */}
         {stats && (
-          <div className="grid grid-cols-2 gap-4">
-            <Card className="bg-card border-border/50">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">
-                    <DollarSign className="w-5 h-5 text-green-500" />
+          <div className="space-y-3">
+            {/* Toggle earnings visibility */}
+            <div className="flex justify-end">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => {
+                  const newValue = !hideEarnings;
+                  setHideEarnings(newValue);
+                  localStorage.setItem('allogo_hide_earnings', newValue.toString());
+                }}
+                className="text-xs text-muted-foreground hover:text-foreground"
+                data-testid="toggle-earnings-btn"
+              >
+                {hideEarnings ? (
+                  <><Eye className="w-4 h-4 mr-1" /> Afficher les gains</>
+                ) : (
+                  <><EyeOff className="w-4 h-4 mr-1" /> Masquer les gains</>
+                )}
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <Card className="bg-card border-border/50">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">
+                      <DollarSign className="w-5 h-5 text-green-500" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">
+                        {hideEarnings ? '••••' : stats.today_earnings.toFixed(2) + '€'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Aujourd'hui</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-2xl font-bold">{stats.today_earnings.toFixed(2)}€</p>
-                    <p className="text-xs text-muted-foreground">Aujourd'hui</p>
+                </CardContent>
+              </Card>
+              <Card className="bg-card border-border/50">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
+                      <Car className="w-5 h-5 text-blue-500" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{stats.today_rides}</p>
+                      <p className="text-xs text-muted-foreground">Courses</p>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="bg-card border-border/50">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
-                    <Car className="w-5 h-5 text-blue-500" />
+                </CardContent>
+              </Card>
+              <Card className="bg-card border-border/50">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
+                      <DollarSign className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">
+                        {hideEarnings ? '••••' : stats.total_earnings.toFixed(2) + '€'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Total</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-2xl font-bold">{stats.today_rides}</p>
-                    <p className="text-xs text-muted-foreground">Courses</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="bg-card border-border/50">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
-                    <DollarSign className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{stats.total_earnings.toFixed(2)}€</p>
-                    <p className="text-xs text-muted-foreground">Total</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
             <Card className="bg-card border-border/50">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
