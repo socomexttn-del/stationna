@@ -848,28 +848,10 @@ async def create_ride(data: RideRequest, current_user: dict = Depends(get_curren
     await db.rides.update_one({"id": ride_id}, {"$set": {"notified_drivers": notified_driver_ids}})
     
     ride["notified_drivers"] = notified_driver_ids
-    return RideResponse(**{k: v for k, v in ride.items() if k != "notified_drivers" or k in RideResponse.model_fields})
-        
-        # Notify passenger that driver was found
-        await notification_manager.notify_passenger(current_user["id"], "ride_accepted", {
-            "ride_id": ride_id,
-            "driver_name": ride["driver_name"],
-            "driver_id": ride["driver_id"],
-            "eta_minutes": nearest_driver_info["eta_minutes"],
-            "driver_distance_km": nearest_driver_info["distance_to_pickup"]
-        })
-    else:
-        # Notify all drivers about the new ride (fallback)
-        await notification_manager.notify_all_drivers("new_ride", {
-            "id": ride_id,
-            "passenger_name": ride["passenger_name"],
-            "pickup": pickup,
-            "destination": destination,
-            "distance_km": distance,
-            "estimated_fare": fare
-        })
     
-    return RideResponse(**ride)
+    # Return the ride
+    ride_copy = {k: v for k, v in ride.items() if k != "notified_drivers"}
+    return RideResponse(**ride_copy)
 
 @api_router.get("/rides/available", response_model=List[RideResponse])
 async def get_available_rides(current_user: dict = Depends(get_current_user)):
