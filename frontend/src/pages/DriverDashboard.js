@@ -588,6 +588,40 @@ const DriverDashboard = () => {
                 </div>
               </div>
 
+              {/* Navigation Buttons - Waze & Google Maps */}
+              <div className="flex gap-3 py-2">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 h-12 bg-[#33ccff]/10 border-[#33ccff]/30 hover:bg-[#33ccff]/20"
+                  onClick={() => {
+                    const destination = activeRide.status === 'accepted' ? activeRide.pickup : activeRide.destination;
+                    const url = `https://waze.com/ul?ll=${destination.lat},${destination.lng}&navigate=yes`;
+                    window.open(url, '_blank');
+                  }}
+                  data-testid="open-waze-btn"
+                >
+                  <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="#33ccff">
+                    <path d="M12 2C6.48 2 2 6.48 2 12c0 4.54 3.04 8.37 7.2 9.57.14-.78.3-1.98-.06-2.83-.33-.77-2.09-4.89-2.09-4.89s-.53-1.06.37-1.06c.9 0 1.47 1.43 1.47 1.43s.78 1.34 1.83.89c1.05-.45.74-1.78.74-1.78s-.15-1.12.74-1.12c.89 0 1.04 1.12 1.04 1.12s.3 2.68 2.09 2.68c1.79 0 2.68-1.34 2.68-1.34s.89-1.49 1.64-.74c.74.74.15 1.64.15 1.64s-1.49 2.24-.15 3.58c1.34 1.34 3.13.45 3.13.45s1.79-1.04 1.79-2.83c0-1.79-1.04-3.28-1.04-3.28S22 13.54 22 12c0-5.52-4.48-10-10-10z"/>
+                  </svg>
+                  Waze
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="flex-1 h-12 bg-[#4285f4]/10 border-[#4285f4]/30 hover:bg-[#4285f4]/20"
+                  onClick={() => {
+                    const destination = activeRide.status === 'accepted' ? activeRide.pickup : activeRide.destination;
+                    const url = `https://www.google.com/maps/dir/?api=1&destination=${destination.lat},${destination.lng}&travelmode=driving`;
+                    window.open(url, '_blank');
+                  }}
+                  data-testid="open-gmaps-btn"
+                >
+                  <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="#4285f4">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                  </svg>
+                  Google Maps
+                </Button>
+              </div>
+
               <div className="flex items-center justify-between py-2 border-t border-border">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Clock className="w-4 h-4" />
