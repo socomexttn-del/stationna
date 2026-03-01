@@ -200,6 +200,7 @@ const PassengerDashboard = () => {
     setDriverLocation(null);
     setDriverPath([]);
     setDestination({ lat: 48.8738, lng: 2.2950, address: '' });
+    setStops([]); // Reset intermediate stops
     setShowRatingModal(false);
     setCompletedRideForRating(null);
     setChatOpen(false);
