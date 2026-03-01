@@ -1636,6 +1636,27 @@ async def accept_ride(ride_id: str, current_user: dict = Depends(get_current_use
     
     return RideResponse(**updated)
 
+@api_router.post("/rides/{ride_id}/arrived", response_model=RideResponse)
+async def driver_arrived(ride_id: str, current_user: dict = Depends(get_current_user)):
+    """Driver signals arrival at pickup location"""
+    if current_user["role"] != "driver":
+        raise HTTPException(status_code=403, detail="Only drivers can signal arrival")
+    
+    ride = await db.rides.find_one({"id": ride_id, "driver_id": current_user["id"], "status": "accepted"}, {"_id": 0})
+    if not ride:
+        raise HTTPException(status_code=404, detail="Ride not found")
+    
+    await db.rides.update_one({"id": ride_id}, {"$set": {
+        "driver_arrived": True,
+        "driver_arrived_at": datetime.now(timezone.utc).isoformat()
+    }})
+    updated = await db.rides.find_one({"id": ride_id}, {"_id": 0})
+    
+    # Notify passenger that driver has arrived
+    await notification_manager.notify_passenger(ride["passenger_id"], "driver_arrived", {"ride_id": ride_id})
+    
+    return RideResponse(**updated)
+
 @api_router.post("/rides/{ride_id}/start", response_model=RideResponse)
 async def start_ride(ride_id: str, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "driver":
