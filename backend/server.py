@@ -1926,6 +1926,7 @@ async def complete_ride(ride_id: str, data: Optional[MeterPriceRequest] = None, 
     # Notify passenger that ride completed with final price
     await notification_manager.notify_passenger(ride["passenger_id"], "ride_completed", {
         "ride_id": ride_id,
+        "driver_name": f"{current_user['first_name']} {current_user['last_name']}",
         "final_fare": final_fare,
         "is_taxi": ride.get("vehicle_type") == "taxi",
         "meter_price": data.meter_price if data else None
