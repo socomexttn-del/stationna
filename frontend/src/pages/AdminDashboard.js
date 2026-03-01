@@ -151,6 +151,16 @@ const AdminDashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Link to="/admin/clients">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="gap-2"
+                data-testid="admin-clients-link"
+              >
+                <Database className="w-4 h-4" /> Clients
+              </Button>
+            </Link>
             <Button 
               variant="outline" 
               size="sm"
