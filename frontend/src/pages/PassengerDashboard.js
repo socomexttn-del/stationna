@@ -851,27 +851,27 @@ const PassengerDashboard = () => {
                 <label className="text-sm text-muted-foreground flex items-center gap-2">
                   <Car className="w-4 h-4" /> Type de véhicule
                 </label>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   <button
                     onClick={() => {
                       setVehicleType('standard');
                       if (passengers > 4) setPassengers(4);
                     }}
                     data-testid="vehicle-standard"
-                    className={`flex-1 py-3 px-3 rounded-xl border transition-all flex flex-col items-center gap-1 ${
+                    className={`py-3 px-2 rounded-xl border transition-all flex flex-col items-center gap-1 ${
                       vehicleType === 'standard' 
                         ? 'border-primary bg-primary/10 text-primary' 
                         : 'border-white/10 bg-muted/50 hover:border-white/20'
                     }`}
                   >
                     <Car className="w-5 h-5" />
-                    <span className="text-xs font-medium">Standard</span>
+                    <span className="text-xs font-medium">VTC</span>
                     <span className="text-[10px] text-muted-foreground">1-4 places</span>
                   </button>
                   <button
                     onClick={() => setVehicleType('van')}
                     data-testid="vehicle-van"
-                    className={`flex-1 py-3 px-3 rounded-xl border transition-all flex flex-col items-center gap-1 ${
+                    className={`py-3 px-2 rounded-xl border transition-all flex flex-col items-center gap-1 ${
                       vehicleType === 'van' 
                         ? 'border-primary bg-primary/10 text-primary' 
                         : 'border-white/10 bg-muted/50 hover:border-white/20'
@@ -880,6 +880,25 @@ const PassengerDashboard = () => {
                     <Truck className="w-5 h-5" />
                     <span className="text-xs font-medium">Van</span>
                     <span className="text-[10px] text-muted-foreground">1-7 places</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setVehicleType('taxi');
+                      if (passengers > 4) setPassengers(4);
+                    }}
+                    data-testid="vehicle-taxi"
+                    className={`py-3 px-2 rounded-xl border transition-all flex flex-col items-center gap-1 relative ${
+                      vehicleType === 'taxi' 
+                        ? 'border-yellow-500 bg-yellow-500/10 text-yellow-500' 
+                        : 'border-white/10 bg-muted/50 hover:border-white/20'
+                    }`}
+                  >
+                    <div className="absolute -top-2 -right-1 px-1.5 py-0.5 bg-yellow-500 text-[8px] text-black font-bold rounded">
+                      OFFICIEL
+                    </div>
+                    <Car className="w-5 h-5" />
+                    <span className="text-xs font-medium">Taxi</span>
+                    <span className="text-[10px] text-muted-foreground">Tarif réglementé</span>
                   </button>
                 </div>
               </div>
