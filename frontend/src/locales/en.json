@@ -13,12 +13,17 @@
     "yes": "Yes",
     "no": "No",
     "error": "Error",
-    "success": "Success"
+    "success": "Success",
+    "km": "km",
+    "min": "min",
+    "eur": "€",
+    "official": "OFFICIAL"
   },
   "landing": {
     "heroTitle1": "Your ride,",
     "heroTitle2": "in a flash",
     "heroSubtitle": "Book a driver in seconds. Track your trip in real-time. Pay securely.",
+    "bookRide": "Book a ride",
     "becomeDriver": "Become a driver",
     "feature1Title": "Fast & Reliable",
     "feature1Desc": "Find a driver in under 3 minutes",
@@ -45,11 +50,16 @@
     "passenger": "Passenger",
     "driver": "Driver",
     "company": "Company",
-    "companyName": "Company name"
+    "companyName": "Company name",
+    "geolocationDenied": "Please enable geolocation in your browser"
   },
   "ride": {
     "book": "Book",
     "bookRide": "Book a ride",
+    "bookNow": "Book now",
+    "bookTaxi": "Book a Taxi",
+    "immediateSupp": "+4€ immediate",
+    "whereAreYouGoing": "Where are you going?",
     "pickup": "Pickup",
     "destination": "Destination",
     "estimatePrice": "Estimate price",
@@ -59,8 +69,17 @@
     "vehicleType": "Vehicle type",
     "standard": "Standard",
     "van": "Van",
+    "taxi": "Taxi",
+    "vtc": "VTC",
+    "taxiSubtitle": "Regulated rate",
+    "vtcSubtitle": "1-4 seats",
+    "vanSubtitle": "1-7 seats",
     "passengers": "Passengers",
+    "passenger": "passenger",
+    "passengersPlural": "passengers",
     "addStop": "Add a stop",
+    "addStopCount": "Add a stop ({{current}}/{{max}})",
+    "intermediateStops": "Intermediate stops",
     "scheduledRide": "Scheduled ride",
     "scheduleFor": "Schedule for",
     "searchDriver": "Searching for a driver...",
@@ -71,7 +90,51 @@
     "cancelled": "Ride cancelled",
     "cancelRide": "Cancel ride",
     "rateDriver": "Rate driver",
-    "ratePassenger": "Rate passenger"
+    "ratePassenger": "Rate passenger",
+    "fillAddresses": "Please fill in the addresses",
+    "itinerary": "Itinerary",
+    "frequentTrips": "Frequent trips"
+  },
+  "taxi": {
+    "parisianTaxi": "Parisian Taxi",
+    "regulatedRate": "Regulated Rate",
+    "tariffA": "Tariff A (Day)",
+    "tariffB": "Tariff B (Night)",
+    "tariffC": "Tariff C (Suburbs)",
+    "tariffsInfo": "Tariff A (day) / B (night, Sun) / C (suburbs) based on time.",
+    "meterNotice": "The displayed price is an estimate. The final amount will be shown on the taxi meter.",
+    "estimatedMeterPrice": "Estimated price - Metered pricing",
+    "finalMeterPrice": "The final price will be shown on the taxi meter at the end of the ride. This amount may vary based on traffic and actual trip duration.",
+    "enterMeterPrice": "Enter meter price",
+    "meterPrice": "Meter price"
+  },
+  "airport": {
+    "flatRates": "Airport Flat Rates",
+    "fixedPrices": "Fixed Prices Guaranteed",
+    "fixedPrice": "FIXED PRICE",
+    "flatRateGuaranteed": "Airport Flat Rate Guaranteed",
+    "parisToCDG": "Paris ↔ CDG",
+    "parisToOrly": "Paris ↔ Orly",
+    "riveDroite": "Right Bank",
+    "riveGauche": "Left Bank",
+    "officialFlatRate": "Official flat rate",
+    "immediateBooking": "Immediate booking",
+    "advanceBooking": "Advance booking",
+    "regulationText": "Regulated airport flat rate - Paris Police Prefecture 2025",
+    "suppInfo": "+ €4 (immediate booking) or +€7 (advance booking)"
+  },
+  "fare": {
+    "pricePer": "Price per km",
+    "hourlyRate": "Hourly rate",
+    "pickupFee": "Pickup fee",
+    "distanceCost": "Distance",
+    "timeCost": "Time",
+    "supplements": "Supplements",
+    "extraPassengers": "Extra passenger(s)",
+    "intermediateStops": "Intermediate stop(s)",
+    "vanSupplement": "Van (7 seats)",
+    "minimumApplied": "Minimum fare applied",
+    "total": "Total"
   },
   "payment": {
     "pay": "Pay",
@@ -87,23 +150,38 @@
     "topUp": "Top up",
     "topUpWallet": "Top up wallet",
     "bonus": "Bonus",
-    "transactions": "Transactions"
+    "transactions": "Transactions",
+    "payWithWallet": "Pay with wallet",
+    "insufficientBalance": "Insufficient balance"
   },
   "driver": {
     "available": "Available",
     "unavailable": "Unavailable",
+    "goOnline": "Go online",
+    "goOffline": "Go offline",
     "acceptRide": "Accept ride",
     "refuseRide": "Refuse",
     "startRide": "Start ride",
     "endRide": "End ride",
     "navigate": "Navigate",
+    "navigateWaze": "Open Waze",
+    "navigateGoogle": "Open Google Maps",
     "earnings": "Earnings",
     "todayEarnings": "Today's earnings",
     "weekEarnings": "Week's earnings",
+    "monthEarnings": "Month's earnings",
     "documents": "Documents",
     "uploadDocument": "Upload document",
     "vehicle": "Vehicle",
-    "vehicleInfo": "Vehicle info"
+    "vehicleInfo": "Vehicle info",
+    "myDocuments": "My documents",
+    "expiringDocuments": "Expiring documents",
+    "expiredDocuments": "Expired documents",
+    "daysRemaining": "days remaining",
+    "expired": "Expired",
+    "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected"
   },
   "admin": {
     "dashboard": "Dashboard",
@@ -117,7 +195,14 @@
     "expiringDocs": "Expiring documents",
     "sendAlerts": "Send alerts",
     "activate": "Activate",
-    "deactivate": "Deactivate"
+    "deactivate": "Deactivate",
+    "totalUsers": "Total users",
+    "activeDrivers": "Active drivers",
+    "todayRides": "Today's rides",
+    "totalRevenue": "Total revenue",
+    "clientDatabase": "Client database",
+    "rideHistory": "Ride history",
+    "exportPDF": "Export as PDF"
   },
   "nav": {
     "home": "Home",
@@ -127,13 +212,50 @@
     "scheduled": "Scheduled rides",
     "payments": "Payments",
     "wallet": "Wallet",
-    "help": "Help"
+    "help": "Help",
+    "menu": "Menu",
+    "documents": "Documents",
+    "earnings": "Earnings"
   },
   "notifications": {
     "rideAccepted": "Ride accepted",
     "driverArrived": "Driver has arrived",
     "rideStarted": "Ride started",
     "rideCompleted": "Ride completed",
-    "newRideRequest": "New ride request"
+    "newRideRequest": "New ride request",
+    "paymentSuccessful": "Payment successful",
+    "documentExpiring": "Document expiring soon"
+  },
+  "profile": {
+    "myProfile": "My profile",
+    "personalInfo": "Personal information",
+    "language": "Language",
+    "selectLanguage": "Select language",
+    "french": "French",
+    "english": "English",
+    "changePassword": "Change password",
+    "deleteAccount": "Delete my account"
+  },
+  "history": {
+    "rideHistory": "Ride history",
+    "noRides": "No rides",
+    "noRidesYet": "You haven't taken any rides yet",
+    "exportHistory": "Export history",
+    "downloadPDF": "Download PDF"
+  },
+  "status": {
+    "pending": "Pending",
+    "accepted": "Accepted",
+    "inProgress": "In progress",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "scheduled": "Scheduled"
+  },
+  "errors": {
+    "genericError": "An error occurred",
+    "networkError": "Connection error",
+    "unauthorized": "Unauthorized",
+    "notFound": "Not found",
+    "serverError": "Server error"
   }
 }
