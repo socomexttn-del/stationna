@@ -937,9 +937,11 @@ const PassengerDashboard = () => {
                   <Car className="w-4 h-4" />
                   <span>Taxi Parisien - Tarif Réglementé</span>
                 </div>
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground mb-2">
                   Tarif A (jour) / B (nuit, dim) / C (banlieue) selon horaires.
-                  Prise en charge 3€ + prix/km variable.
+                </p>
+                <p className="text-yellow-500/80 font-medium">
+                  💡 Le prix affiché est une estimation. Le montant final sera celui du compteur du taxi.
                 </p>
               </div>
             )}
