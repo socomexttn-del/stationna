@@ -202,7 +202,7 @@ const AuthPage = () => {
                 {loading ? (
                   <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  isLogin ? 'Se connecter' : "S'inscrire"
+                  isLogin ? t('auth.login') : t('auth.register')
                 )}
               </Button>
             </form>
@@ -213,7 +213,7 @@ const AuthPage = () => {
                 data-testid="toggle-auth-mode"
                 className="text-sm text-muted-foreground hover:text-primary transition-colors"
               >
-                {isLogin ? "Pas de compte ? S'inscrire" : 'Déjà un compte ? Se connecter'}
+                {isLogin ? t('auth.noAccount') : t('auth.hasAccount')}
               </button>
             </div>
           </CardContent>
