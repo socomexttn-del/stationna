@@ -15,6 +15,7 @@ import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentCancel from './pages/PaymentCancel';
 import ScheduledRidesPage from './pages/ScheduledRidesPage';
 import PaymentsPage from './pages/PaymentsPage';
+import WalletPage from './pages/WalletPage';
 import './App.css';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
