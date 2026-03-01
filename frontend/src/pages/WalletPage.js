@@ -9,12 +9,25 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { 
   Wallet, ArrowLeft, Plus, Minus, CreditCard, Clock, 
   CheckCircle, XCircle, Loader2, ArrowUpRight, ArrowDownLeft,
-  TrendingUp, History, ChevronRight, ChevronLeft
+  TrendingUp, History, ChevronRight, ChevronLeft, Gift, Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-// Top-up amount buttons
-const TOPUP_AMOUNTS = [10, 20, 50, 100];
+// Top-up amount buttons with bonus info
+const TOPUP_AMOUNTS = [
+  { amount: 10, bonus: 0 },
+  { amount: 20, bonus: 2 },
+  { amount: 50, bonus: 5 },
+  { amount: 100, bonus: 15 }
+];
+
+// Calculate bonus for custom amounts
+const calculateBonus = (amount) => {
+  if (amount >= 100) return 15;
+  if (amount >= 50) return 5;
+  if (amount >= 20) return 2;
+  return 0;
+};
 
 // Payment form component
 const TopUpForm = ({ clientSecret, amount, onSuccess, onCancel }) => {
