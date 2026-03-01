@@ -416,7 +416,7 @@ const PassengerDashboard = () => {
       default:
         break;
     }
-  }, [notifyDriverAccepted, notifyDriverArrived, notifyRideCompleted, notifyNewMessage, chatOpen]);
+  }, [notifyDriverAccepted, notifyDriverArrived, notifyRideCompleted, notifyNewMessage, chatOpen, playAcceptedSound, playArrivedSound, resetBookingState]);
 
   // Connect to notification polling
   useNotifications(api, 'passenger', handleNotification);
