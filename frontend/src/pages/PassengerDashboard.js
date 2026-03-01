@@ -534,48 +534,18 @@ const PassengerDashboard = () => {
 
   const handlePayment = async () => {
     if (!activeRide) return;
-    setLoadingPayment(true);
-    
-    try {
-      const response = await api.post('/payments/create-payment-intent', {
-        ride_id: activeRide.id
-      });
-      
-      setPaymentData({
-        clientSecret: response.data.client_secret,
-        publishableKey: response.data.publishable_key,
-        amount: response.data.amount,
-        paymentIntentId: response.data.payment_intent_id,
-        rideName: `${activeRide.pickup?.address} → ${activeRide.destination?.address}`
-      });
-      setShowPaymentModal(true);
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Erreur lors du paiement');
-    } finally {
-      setLoadingPayment(false);
-    }
+    setShowPaymentModal(true);
   };
 
-  const handlePaymentSuccess = async (paymentIntent) => {
-    try {
-      // Confirm payment on backend
-      await api.post(`/payments/confirm-payment?payment_intent_id=${paymentIntent.id}`);
-      
-      toast.success('Paiement effectué avec succès !');
-      setShowPaymentModal(false);
-      setPaymentData(null);
-      
-      // Refresh ride data
-      fetchActiveRide();
-    } catch (error) {
-      console.error('Error confirming payment:', error);
-      toast.error('Erreur lors de la confirmation');
-    }
+  const handlePaymentSuccess = async () => {
+    toast.success('Paiement effectué avec succès !');
+    setShowPaymentModal(false);
+    // Refresh ride data
+    fetchActiveRide();
   };
 
   const handlePaymentCancel = () => {
     setShowPaymentModal(false);
-    setPaymentData(null);
   };
 
   const handlePaymentError = (errorMsg) => {
