@@ -73,7 +73,7 @@ const AuthPage = () => {
                 {isLogin ? t('auth.login') : t('auth.register')}
               </CardTitle>
               <CardDescription className="text-muted-foreground mt-2">
-                {isLogin ? 'Accédez à votre compte Allogo' : 'Créez votre compte Allogo'}
+                {isLogin ? t('auth.loginSubtitle', 'Accédez à votre compte Allogo') : t('auth.registerSubtitle', 'Créez votre compte Allogo')}
               </CardDescription>
             </div>
           </CardHeader>
@@ -81,7 +81,7 @@ const AuthPage = () => {
           <CardContent>
             {!isLogin && (
               <div className="mb-6">
-                <Label className="text-sm text-muted-foreground mb-3 block">Je suis un(e)</Label>
+                <Label className="text-sm text-muted-foreground mb-3 block">{t('auth.iAm', 'Je suis un(e)')}</Label>
                 <Tabs value={role} onValueChange={setRole}>
                   <TabsList className="grid grid-cols-2 w-full bg-muted">
                     <TabsTrigger 
