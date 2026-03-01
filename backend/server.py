@@ -216,19 +216,19 @@ class VehicleDocuments(BaseModel):
 # Extended driver document types
 DRIVER_DOCUMENT_TYPES = {
     # Vehicle documents
-    "carte_grise": {"name": "Carte Grise", "category": "vehicle", "required": True},
-    "assurance": {"name": "Assurance Véhicule", "category": "vehicle", "required": True},
-    "controle_technique": {"name": "Contrôle Technique", "category": "vehicle", "required": True},
+    "carte_grise": {"name": "Carte Grise", "category": "vehicle", "required": True, "has_expiry": False},
+    "assurance": {"name": "Assurance Véhicule", "category": "vehicle", "required": True, "has_expiry": True},
+    "controle_technique": {"name": "Contrôle Technique", "category": "vehicle", "required": True, "has_expiry": True},
     # Personal documents  
-    "permis_conduire": {"name": "Permis de Conduire", "category": "personal", "required": True},
-    "carte_vtc": {"name": "Carte VTC", "category": "professional", "required": True},
-    "cni": {"name": "Carte Nationale d'Identité", "category": "personal", "required": True},
-    "justificatif_domicile": {"name": "Justificatif de Domicile", "category": "personal", "required": True},
+    "permis_conduire": {"name": "Permis de Conduire", "category": "personal", "required": True, "has_expiry": True},
+    "carte_vtc": {"name": "Carte VTC", "category": "professional", "required": True, "has_expiry": True},
+    "cni": {"name": "Carte Nationale d'Identité", "category": "personal", "required": True, "has_expiry": True},
+    "justificatif_domicile": {"name": "Justificatif de Domicile", "category": "personal", "required": True, "has_expiry": False},
     # Professional documents
-    "rc_pro": {"name": "RC Professionnelle", "category": "professional", "required": True},
-    "kbis": {"name": "Extrait KBIS", "category": "professional", "required": False},
-    "attestation_vigilance": {"name": "Attestation de Vigilance URSSAF", "category": "professional", "required": False},
-    "rib": {"name": "RIB (Relevé d'Identité Bancaire)", "category": "financial", "required": True},
+    "rc_pro": {"name": "RC Professionnelle", "category": "professional", "required": True, "has_expiry": True},
+    "kbis": {"name": "Extrait KBIS", "category": "professional", "required": False, "has_expiry": False},
+    "attestation_vigilance": {"name": "Attestation de Vigilance URSSAF", "category": "professional", "required": False, "has_expiry": True},
+    "rib": {"name": "RIB (Relevé d'Identité Bancaire)", "category": "financial", "required": True, "has_expiry": False},
 }
 
 class DriverDocumentsUpdate(BaseModel):
