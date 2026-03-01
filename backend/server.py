@@ -512,13 +512,154 @@ def get_paris_taxi_tariff(scheduled_time: datetime = None) -> dict:
             "prise_en_charge": 3.00
         }
 
+# Airport coordinates for flat rate detection
+AIRPORTS = {
+    "cdg": {
+        "name": "Charles de Gaulle",
+        "lat": 49.0097,
+        "lng": 2.5479,
+        "radius_km": 5  # Detection radius
+    },
+    "orly": {
+        "name": "Orly",
+        "lat": 48.7262,
+        "lng": 2.3652,
+        "radius_km": 3
+    }
+}
+
+# Seine river approximate latitude in Paris (separates Rive Droite from Rive Gauche)
+SEINE_LATITUDE = 48.8566
+
+# Airport flat rates (forfaits) 2025
+AIRPORT_FLAT_RATES = {
+    "cdg": {
+        "rive_droite": 56.00,  # CDG → Paris Rive Droite
+        "rive_gauche": 65.00   # CDG → Paris Rive Gauche
+    },
+    "orly": {
+        "rive_droite": 45.00,  # Orly → Paris Rive Droite  
+        "rive_gauche": 36.00   # Orly → Paris Rive Gauche
+    }
+}
+
+def calculate_distance_simple(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    """Simple distance calculation in km using Haversine formula"""
+    R = 6371
+    lat1_rad, lng1_rad = math.radians(lat1), math.radians(lng1)
+    lat2_rad, lng2_rad = math.radians(lat2), math.radians(lng2)
+    
+    dlat = lat2_rad - lat1_rad
+    dlng = lng2_rad - lng1_rad
+    
+    a = math.sin(dlat/2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlng/2)**2
+    c = 2 * math.asin(math.sqrt(a))
+    
+    return R * c
+
+def detect_airport_trip(pickup_lat: float, pickup_lng: float, dest_lat: float, dest_lng: float) -> dict:
+    """
+    Detect if the trip is to/from an airport and determine the applicable flat rate.
+    Returns airport info if flat rate applies, None otherwise.
+    """
+    result = {
+        "is_airport_trip": False,
+        "airport": None,
+        "direction": None,  # "to_airport" or "from_airport"
+        "rive": None,       # "rive_droite" or "rive_gauche"
+        "flat_rate": None
+    }
+    
+    for airport_code, airport_info in AIRPORTS.items():
+        airport_lat = airport_info["lat"]
+        airport_lng = airport_info["lng"]
+        radius = airport_info["radius_km"]
+        
+        # Check if pickup is near airport
+        pickup_to_airport = calculate_distance_simple(pickup_lat, pickup_lng, airport_lat, airport_lng)
+        # Check if destination is near airport
+        dest_to_airport = calculate_distance_simple(dest_lat, dest_lng, airport_lat, airport_lng)
+        
+        if pickup_to_airport <= radius:
+            # Trip FROM airport TO Paris
+            result["is_airport_trip"] = True
+            result["airport"] = airport_code
+            result["airport_name"] = airport_info["name"]
+            result["direction"] = "from_airport"
+            # Determine Rive based on destination latitude
+            result["rive"] = "rive_droite" if dest_lat > SEINE_LATITUDE else "rive_gauche"
+            result["flat_rate"] = AIRPORT_FLAT_RATES[airport_code][result["rive"]]
+            return result
+            
+        elif dest_to_airport <= radius:
+            # Trip TO airport FROM Paris
+            result["is_airport_trip"] = True
+            result["airport"] = airport_code
+            result["airport_name"] = airport_info["name"]
+            result["direction"] = "to_airport"
+            # Determine Rive based on pickup latitude
+            result["rive"] = "rive_droite" if pickup_lat > SEINE_LATITUDE else "rive_gauche"
+            result["flat_rate"] = AIRPORT_FLAT_RATES[airport_code][result["rive"]]
+            return result
+    
+    return result
+
 def calculate_taxi_fare(distance_km: float, duration_minutes: int = 0, is_scheduled: bool = False, 
                         passenger_count: int = 1, stops_count: int = 0, scheduled_time: datetime = None,
-                        is_suburban: bool = False) -> dict:
+                        is_suburban: bool = False, pickup_coords: dict = None, dest_coords: dict = None) -> dict:
     """
     Calculate fare for official Paris taxi with regulated pricing
     Tarifs officiels taxis parisiens 2025
+    
+    Special case: Airport flat rates (forfaits) apply for Paris ↔ CDG/Orly trips
     """
+    # Constants for supplements
+    SUPPLEMENT_IMMEDIAT = 4.00
+    SUPPLEMENT_AVANCE = 7.00
+    
+    # Check for airport flat rate
+    airport_trip = {"is_airport_trip": False}
+    if pickup_coords and dest_coords:
+        airport_trip = detect_airport_trip(
+            pickup_coords.get("lat", 0), pickup_coords.get("lng", 0),
+            dest_coords.get("lat", 0), dest_coords.get("lng", 0)
+        )
+    
+    # If airport trip, apply flat rate
+    if airport_trip["is_airport_trip"]:
+        flat_rate = airport_trip["flat_rate"]
+        
+        # Only add booking supplement
+        booking_supplement = SUPPLEMENT_AVANCE if is_scheduled else SUPPLEMENT_IMMEDIAT
+        booking_label = "Réservation à l'avance" if is_scheduled else "Réservation immédiate"
+        
+        total = flat_rate + booking_supplement
+        
+        rive_label = "Rive Droite" if airport_trip["rive"] == "rive_droite" else "Rive Gauche"
+        direction_label = f"Aéroport {airport_trip['airport_name']} → Paris {rive_label}" if airport_trip["direction"] == "from_airport" else f"Paris {rive_label} → Aéroport {airport_trip['airport_name']}"
+        
+        return {
+            "vehicle_type": "taxi",
+            "is_airport_flat_rate": True,
+            "airport": airport_trip["airport"].upper(),
+            "airport_name": airport_trip["airport_name"],
+            "direction": airport_trip["direction"],
+            "direction_label": direction_label,
+            "rive": airport_trip["rive"],
+            "rive_label": rive_label,
+            "flat_rate": flat_rate,
+            "booking_supplement": booking_supplement,
+            "booking_supplement_label": booking_label,
+            "supplement_details": [
+                {"name": f"Forfait {airport_trip['airport_name']} ↔ Paris {rive_label}", "amount": flat_rate},
+                {"name": booking_label, "amount": booking_supplement}
+            ],
+            "total": round(total, 2),
+            "regulated": True,
+            "regulation_text": "Forfait aéroport réglementé - Préfecture de Police de Paris 2025"
+        }
+    
+    # Standard taxi fare calculation (non-airport)
     # Get applicable tariff
     if is_suburban:
         tariff_info = {
