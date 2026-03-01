@@ -4,7 +4,7 @@
 Application de taxi complète nommée Allogo avec rôles passager/chauffeur/admin, authentification JWT, paiements Stripe, cartes Mapbox, et tarification personnalisée.
 
 ## User Language
-French (Français)
+French (Français) + English (Multi-language support)
 
 ## Session Accomplishments (2025-03-01)
 
@@ -16,24 +16,36 @@ French (Français)
 5. ✅ **Notifications d'expiration** - Alertes 30 jours avant
 6. ✅ **UI Courses Planifiées** - Refonte complète
 7. ✅ **Système de Portefeuille Passager** - Rechargement Stripe + bonus
-8. ✅ **Notifications Email** - Alertes expiration documents (Resend) ✨ NEW
-9. ✅ **Export PDF** - Historique des courses ✨ NEW
-10. ✅ **Structure Backend** - Début refactorisation modulaire ✨ NEW
+8. ✅ **Notifications Email** - Alertes expiration documents (Resend)
+9. ✅ **Export PDF** - Historique des courses (ReportLab)
+10. ✅ **Structure Backend** - Refactorisation modulaire
+11. ✅ **UI Admin Codes Promo** - Création/gestion des codes promo ✨ NEW
+12. ✅ **Préparation Mobile** - Capacitor configuré ✨ NEW
+13. ✅ **Support Multi-langues** - i18next FR/EN ✨ NEW
 
-### Email Notifications ✨ (NEW - 2025-03-01)
-- **Alertes d'expiration** : Email automatique aux chauffeurs
-- **Template HTML** : Design professionnel Allogo
-- **Dashboard Admin** : Section "Documents à renouveler" avec bouton envoi
-- **Logs d'envoi** : Historique des emails envoyés
+### Admin Promo Codes UI ✨ (NEW)
+- **Page dédiée** (`/admin/promo-codes`) 
+- **Création de codes** : réduction %, uses max, date expiration
+- **Statistiques** : total, actifs, utilisations
+- **Gestion** : voir stats détaillées, supprimer
 - **API Endpoints** :
-  - `POST /api/admin/notifications/send-expiry-alerts` - Envoyer alertes
-  - `GET /api/admin/notifications/email-logs` - Historique emails
+  - `GET /api/admin/promo-codes` - Liste tous les codes
+  - `POST /api/admin/promo-codes` - Créer un code
+  - `DELETE /api/admin/promo-codes/{id}` - Supprimer
+  - `GET /api/admin/promo-codes/{id}/stats` - Stats détaillées
 
-### PDF Export ✨ (NEW - 2025-03-01)
-- **Export historique** : Bouton PDF dans la page Historique
-- **Contenu** : Statistiques + détail des courses
-- **Format** : PDF A4 avec design Allogo
-- **API** : `GET /api/rides/history/export-pdf`
+### Mobile App Preparation ✨ (NEW)
+- **Capacitor 6** installé et configuré
+- **Configuration** : `capacitor.config.ts`
+- **Guide** : `/frontend/MOBILE_DEPLOYMENT.md`
+- **App ID** : `com.allogo.taxi`
+
+### Multi-language Support ✨ (NEW)
+- **i18next** avec détection automatique
+- **Langues** : Français (FR), English (EN)
+- **Fichiers** : `/src/locales/fr.json`, `/src/locales/en.json`
+- **Sélecteur** : Dans la page Profil
+- **Persistance** : localStorage
 
 ### Wallet System ✨ (NEW - 2025-03-01)
 - **Page Portefeuille** (`/wallet`) accessible depuis le menu passager
