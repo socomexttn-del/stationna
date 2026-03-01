@@ -798,15 +798,25 @@ async def create_ride(data: RideRequest, current_user: dict = Depends(get_curren
     
     pickup = data.pickup.model_dump()
     destination = data.destination.model_dump()
-    distance = calculate_distance(pickup, destination)
+    stops_list = [s.model_dump() for s in data.stops] if data.stops else []
+    stops_count = len(stops_list)
+    
+    # Calculate total distance with stops
+    distance, stop_distances = calculate_total_distance_with_stops(pickup, destination, stops_list)
     duration = estimate_duration_minutes(distance)
+    
+    # Add extra time for stops
+    if stops_count > 0:
+        duration += stops_count * 3
+    
     fare_details = calculate_fare(
         distance, 
         duration, 
         is_scheduled=False, 
         is_immediate=True,
         vehicle_type=data.vehicle_type,
-        passenger_count=data.passenger_count
+        passenger_count=data.passenger_count,
+        stops_count=stops_count
     )
     fare = fare_details["total"]
     
