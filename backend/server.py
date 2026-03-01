@@ -1543,6 +1543,116 @@ async def get_ride_history(current_user: dict = Depends(get_current_user)):
     rides = await db.rides.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
     return [RideResponse(**r) for r in rides]
 
+@api_router.get("/rides/history/export-pdf")
+async def export_ride_history_pdf(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Export ride history as PDF"""
+    # Build query
+    query = {"passenger_id": current_user["id"]} if current_user["role"] == "passenger" else {"driver_id": current_user["id"]}
+    query["status"] = {"$in": ["completed", "cancelled"]}
+    
+    # Date filters
+    if start_date:
+        query["created_at"] = {"$gte": start_date}
+    if end_date:
+        if "created_at" in query:
+            query["created_at"]["$lte"] = end_date
+        else:
+            query["created_at"] = {"$lte": end_date}
+    
+    rides = await db.rides.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
+    
+    # Create PDF
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=20*mm, leftMargin=20*mm, topMargin=20*mm, bottomMargin=20*mm)
+    
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # Custom styles
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=24, textColor=colors.HexColor('#facc15'), alignment=TA_CENTER, spaceAfter=10)
+    subtitle_style = ParagraphStyle('Subtitle', parent=styles['Normal'], fontSize=10, textColor=colors.grey, alignment=TA_CENTER, spaceAfter=20)
+    header_style = ParagraphStyle('Header', parent=styles['Heading2'], fontSize=14, textColor=colors.HexColor('#1a1a1a'), spaceBefore=15, spaceAfter=10)
+    
+    # Title
+    elements.append(Paragraph("🚕 Allogo", title_style))
+    elements.append(Paragraph(f"Historique des courses - {current_user['first_name']} {current_user['last_name']}", subtitle_style))
+    elements.append(Paragraph(f"Généré le {datetime.now().strftime('%d/%m/%Y à %H:%M')}", subtitle_style))
+    elements.append(Spacer(1, 10*mm))
+    
+    # Summary
+    completed_rides = [r for r in rides if r.get("status") == "completed"]
+    total_spent = sum(r.get("final_fare") or r.get("estimated_fare", 0) for r in completed_rides)
+    total_distance = sum(r.get("distance_km", 0) for r in completed_rides)
+    
+    summary_data = [
+        ["Statistiques", ""],
+        ["Courses terminées", str(len(completed_rides))],
+        ["Distance totale", f"{total_distance:.1f} km"],
+        ["Montant total", f"{total_spent:.2f} €"],
+    ]
+    
+    summary_table = Table(summary_data, colWidths=[100*mm, 60*mm])
+    summary_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#facc15')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f5f5f5')),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        ('PADDING', (0, 0), (-1, -1), 8),
+    ]))
+    elements.append(summary_table)
+    elements.append(Spacer(1, 10*mm))
+    
+    # Rides table
+    if rides:
+        elements.append(Paragraph("Détail des courses", header_style))
+        
+        table_data = [["Date", "Départ", "Destination", "Distance", "Montant", "Statut"]]
+        
+        for ride in rides[:50]:  # Limit to 50 rides for PDF
+            date_str = ride.get("created_at", "")[:10] if ride.get("created_at") else "-"
+            pickup = ride.get("pickup", {}).get("address", "-")[:30]
+            dest = ride.get("destination", {}).get("address", "-")[:30]
+            distance = f"{ride.get('distance_km', 0):.1f} km"
+            fare = ride.get("final_fare") or ride.get("estimated_fare", 0)
+            fare_str = f"{fare:.2f} €"
+            status = "✓" if ride.get("status") == "completed" else "✗"
+            
+            table_data.append([date_str, pickup, dest, distance, fare_str, status])
+        
+        rides_table = Table(table_data, colWidths=[25*mm, 45*mm, 45*mm, 20*mm, 20*mm, 15*mm])
+        rides_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1a1a1a')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ('ALIGN', (3, 0), (-1, -1), 'CENTER'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f9f9f9')]),
+            ('PADDING', (0, 0), (-1, -1), 5),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        elements.append(rides_table)
+    
+    # Build PDF
+    doc.build(elements)
+    buffer.seek(0)
+    
+    filename = f"allogo_historique_{current_user['id'][:8]}_{datetime.now().strftime('%Y%m%d')}.pdf"
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
 # ======================== RATING ROUTES ========================
 
 @api_router.post("/ratings")
