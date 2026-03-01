@@ -48,6 +48,55 @@ const PassengerDashboard = () => {
   const [passengers, setPassengers] = useState(1);
   const [vehicleType, setVehicleType] = useState('standard');
 
+  // Sound functions for passenger notifications
+  const playAcceptedSound = useCallback(() => {
+    try {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioContext.state === 'suspended') audioContext.resume();
+      
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      // Happy ascending sound
+      oscillator.frequency.value = 523;
+      oscillator.type = 'sine';
+      gainNode.gain.value = 0.4;
+      oscillator.start();
+      setTimeout(() => { oscillator.frequency.value = 659; }, 150);
+      setTimeout(() => { oscillator.frequency.value = 784; }, 300);
+      setTimeout(() => { oscillator.stop(); audioContext.close(); }, 450);
+    } catch (e) {}
+    
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+  }, []);
+
+  const playArrivedSound = useCallback(() => {
+    try {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioContext.state === 'suspended') audioContext.resume();
+      
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      // More urgent sound - driver is waiting
+      oscillator.frequency.value = 880;
+      oscillator.type = 'square';
+      gainNode.gain.value = 0.5;
+      oscillator.start();
+      setTimeout(() => { oscillator.frequency.value = 1100; }, 100);
+      setTimeout(() => { oscillator.frequency.value = 880; }, 200);
+      setTimeout(() => { oscillator.frequency.value = 1100; }, 300);
+      setTimeout(() => { oscillator.frequency.value = 1320; }, 400);
+      setTimeout(() => { oscillator.stop(); audioContext.close(); }, 500);
+    } catch (e) {}
+    
+    if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
+  }, []);
+
   // Get user's current location on mount
   useEffect(() => {
     const getLocation = () => {
