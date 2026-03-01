@@ -101,6 +101,13 @@ const PassengerDashboard = () => {
   // Get user's current location on mount with permission check
   useEffect(() => {
     const checkPermissionAndGetLocation = async () => {
+      // Check if geolocation is available
+      if (!navigator.geolocation) {
+        setIsLocating(false);
+        toast.error('Votre navigateur ne supporte pas la géolocalisation');
+        return;
+      }
+
       // Check permission status first if API is available
       if (navigator.permissions && navigator.permissions.query) {
         try {
@@ -109,7 +116,7 @@ const PassengerDashboard = () => {
           if (permissionStatus.state === 'denied') {
             setIsLocating(false);
             toast.error(
-              'Géolocalisation refusée. Pour une meilleure expérience, activez-la dans les paramètres de votre navigateur.',
+              'Géolocalisation refusée. Activez-la dans les paramètres de votre navigateur.',
               { duration: 6000 }
             );
             return;
@@ -123,6 +130,7 @@ const PassengerDashboard = () => {
           };
         } catch (e) {
           // Permission API not fully supported, continue with geolocation
+          console.log('Permission API not supported, trying geolocation directly');
         }
       }
       
@@ -130,19 +138,27 @@ const PassengerDashboard = () => {
     };
 
     const getLocation = () => {
-      if (!navigator.geolocation) {
-        setIsLocating(false);
-        toast.error('Votre navigateur ne supporte pas la géolocalisation');
-        return;
-      }
-
+      console.log('Requesting geolocation...');
+      
       navigator.geolocation.getCurrentPosition(
         async (position) => {
+          console.log('Geolocation success:', position.coords);
           const { latitude, longitude } = position.coords;
           
           // Reverse geocode to get address
           try {
             const MAPBOX_TOKEN = process.env.REACT_APP_MAPBOX_TOKEN;
+            if (!MAPBOX_TOKEN) {
+              console.error('MAPBOX_TOKEN not found');
+              setPickup({
+                lat: latitude,
+                lng: longitude,
+                address: 'Position actuelle'
+              });
+              setIsLocating(false);
+              return;
+            }
+            
             const response = await fetch(
               `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${MAPBOX_TOKEN}&language=fr`
             );
@@ -154,8 +170,9 @@ const PassengerDashboard = () => {
               lng: longitude,
               address: address
             });
-            toast.success('Position détectée automatiquement', { duration: 2000 });
+            toast.success('Position détectée', { duration: 2000 });
           } catch (error) {
+            console.error('Reverse geocoding error:', error);
             setPickup({
               lat: latitude,
               lng: longitude,
@@ -165,24 +182,40 @@ const PassengerDashboard = () => {
           setIsLocating(false);
         },
         (error) => {
-          console.error('Geolocation error:', error);
+          console.error('Geolocation error:', error.code, error.message);
           setIsLocating(false);
-          if (error.code === error.PERMISSION_DENIED) {
-            toast.error(
-              'Géolocalisation désactivée. Activez-la dans les paramètres de votre navigateur pour une meilleure expérience.',
-              { duration: 5000 }
-            );
-          } else if (error.code === error.TIMEOUT) {
-            toast.info('Délai de géolocalisation dépassé. Entrez votre adresse manuellement.', { duration: 3000 });
-          } else {
-            toast.info('Entrez votre adresse de départ', { duration: 3000 });
+          
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              toast.error(
+                'Veuillez autoriser la géolocalisation dans votre navigateur',
+                { duration: 5000 }
+              );
+              break;
+            case error.POSITION_UNAVAILABLE:
+              toast.error('Position non disponible. Vérifiez votre GPS.', { duration: 4000 });
+              break;
+            case error.TIMEOUT:
+              toast.info('Délai dépassé. Cliquez sur le bouton de localisation ou entrez votre adresse.', { duration: 4000 });
+              break;
+            default:
+              toast.info('Entrez votre adresse de départ', { duration: 3000 });
           }
         },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+        { 
+          enableHighAccuracy: true, 
+          timeout: 20000,  // Increased timeout to 20 seconds
+          maximumAge: 30000  // Accept cached position up to 30 seconds old
+        }
       );
     };
 
-    checkPermissionAndGetLocation();
+    // Small delay to ensure component is mounted
+    const timer = setTimeout(() => {
+      checkPermissionAndGetLocation();
+    }, 500);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   // Submit rating and reset page after
