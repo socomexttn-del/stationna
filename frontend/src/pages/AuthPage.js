@@ -70,7 +70,7 @@ const AuthPage = () => {
             </div>
             <div>
               <CardTitle className="text-2xl font-bold" style={{ fontFamily: 'Space Grotesk' }}>
-                {isLogin ? 'Connexion' : 'Inscription'}
+                {isLogin ? t('auth.login') : t('auth.register')}
               </CardTitle>
               <CardDescription className="text-muted-foreground mt-2">
                 {isLogin ? 'Accédez à votre compte Allogo' : 'Créez votre compte Allogo'}
@@ -90,7 +90,7 @@ const AuthPage = () => {
                       className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                     >
                       <User className="w-4 h-4 mr-2" />
-                      Passager
+                      {t('auth.passenger')}
                     </TabsTrigger>
                     <TabsTrigger 
                       value="driver" 
@@ -98,7 +98,7 @@ const AuthPage = () => {
                       className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                     >
                       <Car className="w-4 h-4 mr-2" />
-                      Chauffeur
+                      {t('auth.driver')}
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>
@@ -109,7 +109,7 @@ const AuthPage = () => {
               {!isLogin && (
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="first_name">Prénom</Label>
+                    <Label htmlFor="first_name">{t('auth.firstName')}</Label>
                     <Input
                       id="first_name"
                       name="first_name"
@@ -122,7 +122,7 @@ const AuthPage = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="last_name">Nom</Label>
+                    <Label htmlFor="last_name">{t('auth.lastName')}</Label>
                     <Input
                       id="last_name"
                       name="last_name"
