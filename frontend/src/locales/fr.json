@@ -13,12 +13,17 @@
     "yes": "Oui",
     "no": "Non",
     "error": "Erreur",
-    "success": "Succès"
+    "success": "Succès",
+    "km": "km",
+    "min": "min",
+    "eur": "€",
+    "official": "OFFICIEL"
   },
   "landing": {
     "heroTitle1": "Votre course,",
     "heroTitle2": "en un éclair",
     "heroSubtitle": "Réservez un chauffeur en quelques secondes. Suivez votre trajet en temps réel. Payez en toute sécurité.",
+    "bookRide": "Réserver une course",
     "becomeDriver": "Devenir chauffeur",
     "feature1Title": "Rapide & Fiable",
     "feature1Desc": "Trouvez un chauffeur en moins de 3 minutes",
@@ -45,11 +50,16 @@
     "passenger": "Passager",
     "driver": "Chauffeur",
     "company": "Entreprise",
-    "companyName": "Nom de l'entreprise"
+    "companyName": "Nom de l'entreprise",
+    "geolocationDenied": "Veuillez autoriser la géolocalisation dans votre navigateur"
   },
   "ride": {
     "book": "Réserver",
     "bookRide": "Réserver une course",
+    "bookNow": "Réserver maintenant",
+    "bookTaxi": "Réserver un Taxi",
+    "immediateSupp": "+4€ immédiat",
+    "whereAreYouGoing": "Où allez-vous ?",
     "pickup": "Point de départ",
     "destination": "Destination",
     "estimatePrice": "Estimer le prix",
@@ -59,8 +69,17 @@
     "vehicleType": "Type de véhicule",
     "standard": "Standard",
     "van": "Van",
+    "taxi": "Taxi",
+    "vtc": "VTC",
+    "taxiSubtitle": "Tarif réglementé",
+    "vtcSubtitle": "1-4 places",
+    "vanSubtitle": "1-7 places",
     "passengers": "Passagers",
+    "passenger": "passager",
+    "passengersPlural": "passagers",
     "addStop": "Ajouter un arrêt",
+    "addStopCount": "Ajouter un arrêt ({{current}}/{{max}})",
+    "intermediateStops": "Arrêts intermédiaires",
     "scheduledRide": "Course programmée",
     "scheduleFor": "Programmer pour",
     "searchDriver": "Recherche d'un chauffeur...",
@@ -71,7 +90,51 @@
     "cancelled": "Course annulée",
     "cancelRide": "Annuler la course",
     "rateDriver": "Noter le chauffeur",
-    "ratePassenger": "Noter le passager"
+    "ratePassenger": "Noter le passager",
+    "fillAddresses": "Veuillez remplir les adresses",
+    "itinerary": "Itinéraire",
+    "frequentTrips": "Trajets fréquents"
+  },
+  "taxi": {
+    "parisianTaxi": "Taxi Parisien",
+    "regulatedRate": "Tarif Réglementé",
+    "tariffA": "Tarif A (Jour)",
+    "tariffB": "Tarif B (Nuit)",
+    "tariffC": "Tarif C (Banlieue)",
+    "tariffsInfo": "Tarif A (jour) / B (nuit, dim) / C (banlieue) selon horaires.",
+    "meterNotice": "Le prix affiché est une estimation. Le montant final sera celui du compteur du taxi.",
+    "estimatedMeterPrice": "Prix estimatif - Tarification au compteur",
+    "finalMeterPrice": "Le prix final sera celui affiché au compteur du taxi à la fin de la course. Ce montant peut varier selon le trafic et le temps réel du trajet.",
+    "enterMeterPrice": "Saisir le prix du compteur",
+    "meterPrice": "Prix du compteur"
+  },
+  "airport": {
+    "flatRates": "Forfaits Aéroports",
+    "fixedPrices": "Prix Fixes Garantis",
+    "fixedPrice": "PRIX FIXE",
+    "flatRateGuaranteed": "Forfait Aéroport Garanti",
+    "parisToCDG": "Paris ↔ CDG",
+    "parisToOrly": "Paris ↔ Orly",
+    "riveDroite": "Rive Droite",
+    "riveGauche": "Rive Gauche",
+    "officialFlatRate": "Forfait officiel",
+    "immediateBooking": "Réservation immédiate",
+    "advanceBooking": "Réservation à l'avance",
+    "regulationText": "Forfait aéroport réglementé - Préfecture de Police de Paris 2025",
+    "suppInfo": "+ 4€ (réservation immédiate) ou +7€ (réservation à l'avance)"
+  },
+  "fare": {
+    "pricePer": "Prix au km",
+    "hourlyRate": "Horaire",
+    "pickupFee": "Prise en charge",
+    "distanceCost": "Distance",
+    "timeCost": "Temps",
+    "supplements": "Suppléments",
+    "extraPassengers": "Passager(s) supplémentaire(s)",
+    "intermediateStops": "Arrêt(s) intermédiaire(s)",
+    "vanSupplement": "Van (7 places)",
+    "minimumApplied": "Tarif minimum appliqué",
+    "total": "Total"
   },
   "payment": {
     "pay": "Payer",
@@ -87,23 +150,38 @@
     "topUp": "Recharger",
     "topUpWallet": "Recharger le portefeuille",
     "bonus": "Bonus",
-    "transactions": "Transactions"
+    "transactions": "Transactions",
+    "payWithWallet": "Payer avec le portefeuille",
+    "insufficientBalance": "Solde insuffisant"
   },
   "driver": {
     "available": "Disponible",
     "unavailable": "Non disponible",
+    "goOnline": "Passer en ligne",
+    "goOffline": "Passer hors ligne",
     "acceptRide": "Accepter la course",
     "refuseRide": "Refuser",
     "startRide": "Démarrer la course",
     "endRide": "Terminer la course",
     "navigate": "Naviguer",
+    "navigateWaze": "Ouvrir Waze",
+    "navigateGoogle": "Ouvrir Google Maps",
     "earnings": "Gains",
     "todayEarnings": "Gains du jour",
     "weekEarnings": "Gains de la semaine",
+    "monthEarnings": "Gains du mois",
     "documents": "Documents",
     "uploadDocument": "Télécharger un document",
     "vehicle": "Véhicule",
-    "vehicleInfo": "Informations véhicule"
+    "vehicleInfo": "Informations véhicule",
+    "myDocuments": "Mes documents",
+    "expiringDocuments": "Documents à renouveler",
+    "expiredDocuments": "Documents expirés",
+    "daysRemaining": "jours restants",
+    "expired": "Expiré",
+    "pending": "En attente",
+    "approved": "Approuvé",
+    "rejected": "Rejeté"
   },
   "admin": {
     "dashboard": "Tableau de bord",
@@ -117,7 +195,14 @@
     "expiringDocs": "Documents à renouveler",
     "sendAlerts": "Envoyer les alertes",
     "activate": "Activer",
-    "deactivate": "Désactiver"
+    "deactivate": "Désactiver",
+    "totalUsers": "Utilisateurs totaux",
+    "activeDrivers": "Chauffeurs actifs",
+    "todayRides": "Courses aujourd'hui",
+    "totalRevenue": "Revenus totaux",
+    "clientDatabase": "Base de données clients",
+    "rideHistory": "Historique des courses",
+    "exportPDF": "Exporter en PDF"
   },
   "nav": {
     "home": "Accueil",
@@ -127,13 +212,50 @@
     "scheduled": "Courses programmées",
     "payments": "Paiements",
     "wallet": "Portefeuille",
-    "help": "Aide"
+    "help": "Aide",
+    "menu": "Menu",
+    "documents": "Documents",
+    "earnings": "Gains"
   },
   "notifications": {
     "rideAccepted": "Course acceptée",
     "driverArrived": "Le chauffeur est arrivé",
     "rideStarted": "Course démarrée",
     "rideCompleted": "Course terminée",
-    "newRideRequest": "Nouvelle demande de course"
+    "newRideRequest": "Nouvelle demande de course",
+    "paymentSuccessful": "Paiement réussi",
+    "documentExpiring": "Document bientôt expiré"
+  },
+  "profile": {
+    "myProfile": "Mon profil",
+    "personalInfo": "Informations personnelles",
+    "language": "Langue",
+    "selectLanguage": "Choisir la langue",
+    "french": "Français",
+    "english": "Anglais",
+    "changePassword": "Changer le mot de passe",
+    "deleteAccount": "Supprimer mon compte"
+  },
+  "history": {
+    "rideHistory": "Historique des courses",
+    "noRides": "Aucune course",
+    "noRidesYet": "Vous n'avez pas encore effectué de course",
+    "exportHistory": "Exporter l'historique",
+    "downloadPDF": "Télécharger en PDF"
+  },
+  "status": {
+    "pending": "En attente",
+    "accepted": "Acceptée",
+    "inProgress": "En cours",
+    "completed": "Terminée",
+    "cancelled": "Annulée",
+    "scheduled": "Programmée"
+  },
+  "errors": {
+    "genericError": "Une erreur est survenue",
+    "networkError": "Erreur de connexion",
+    "unauthorized": "Non autorisé",
+    "notFound": "Non trouvé",
+    "serverError": "Erreur serveur"
   }
 }
