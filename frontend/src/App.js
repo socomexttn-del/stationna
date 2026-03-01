@@ -8,6 +8,7 @@ import PassengerDashboard from './pages/PassengerDashboard';
 import DriverDashboard from './pages/DriverDashboard';
 import DriverVehiclePage from './pages/DriverVehiclePage';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminClientsPage from './pages/AdminClientsPage';
 import RideHistory from './pages/RideHistory';
 import ProfilePage from './pages/ProfilePage';
 import PaymentSuccess from './pages/PaymentSuccess';
