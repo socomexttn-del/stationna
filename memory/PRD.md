@@ -28,6 +28,24 @@ French (Français) + English (Multi-language support)
 | Orly → Opéra | Droite | 45€ | +4€ | **49€** ✅ |
 | Orly → Saint-Germain | Gauche | 36€ | +4€ | **40€** ✅ |
 
+### ✅ Affichage Forfaits Aéroports dans l'UI - NEW
+
+**Améliorations apportées au `PassengerDashboard.js`:**
+
+1. **Tableau des forfaits** visible quand "Taxi" est sélectionné
+   - Paris ↔ CDG : Rive Droite 56€ | Rive Gauche 65€
+   - Paris ↔ Orly : Rive Droite 45€ | Rive Gauche 36€
+   - Mention des suppléments (+4€ immédiat, +7€ avance)
+
+2. **Détection automatique** des trajets aéroport
+   - Badge "✈️ Forfait Aéroport" affiché
+   - Encadré vert "PRIX FIXE" pour rassurer le client
+   - Affichage clair : direction, rive, forfait officiel
+
+3. **Distinction visuelle** entre:
+   - Forfait aéroport (vert, prix garanti)
+   - Course standard (jaune, estimation compteur)
+
 ### Backend Refactoring - IN PROGRESS
 
 Structure modulaire créée:
@@ -49,7 +67,7 @@ Structure modulaire créée:
 
 ### Taxi Parisien (Tarification Réglementée 2025)
 - ✅ **3 tarifs automatiques** selon horaires (A/B/C)
-- ✅ **Forfaits aéroports** CDG et Orly
+- ✅ **Forfaits aéroports** CDG et Orly avec UI dédiée
 - ✅ **Détection automatique** Rive Droite/Rive Gauche
 - ✅ **Suppléments réglementés** (passagers, arrêts, réservation)
 
@@ -98,6 +116,7 @@ Structure modulaire créée:
 
 ### P0 - Critical (Done this session)
 - ✅ Airport flat rates implementation & testing
+- ✅ Airport flat rates UI display
 
 ### P1 - High Priority (Next)
 1. **Complete Backend Refactoring** - Migrate endpoints from server.py to routers/
@@ -137,5 +156,5 @@ SENDER_EMAIL=noreply@domain.com
 
 ## Status: PRODUCTION READY ✅
 - All features tested and functional
-- Airport flat rates verified
+- Airport flat rates verified with UI
 - Multi-language FR/EN implemented
