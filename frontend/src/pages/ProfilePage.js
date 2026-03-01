@@ -100,6 +100,44 @@ const ProfilePage = () => {
           </CardContent>
         </Card>
 
+        {/* Language Settings */}
+        <Card className="bg-card border-border/50">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Globe className="w-5 h-5" />
+              Langue / Language
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">{i18n.language === 'fr' ? 'Français' : 'English'}</p>
+                <p className="text-sm text-muted-foreground">
+                  {i18n.language === 'fr' ? 'Langue actuelle de l\'application' : 'Current app language'}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant={i18n.language === 'fr' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => i18n.changeLanguage('fr')}
+                  data-testid="lang-fr-btn"
+                >
+                  FR
+                </Button>
+                <Button
+                  variant={i18n.language === 'en' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => i18n.changeLanguage('en')}
+                  data-testid="lang-en-btn"
+                >
+                  EN
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Vehicle Info (Drivers only) */}
         {user?.role === 'driver' && (
           <Card className="bg-card border-border/50">
