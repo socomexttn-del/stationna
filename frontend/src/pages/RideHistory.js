@@ -3,12 +3,14 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
-import { ArrowLeft, MapPin, Navigation, Clock, Star, CreditCard, Check, X } from 'lucide-react';
+import { ArrowLeft, MapPin, Navigation, Clock, Star, CreditCard, Check, X, Download, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 const RideHistory = () => {
   const { user, api } = useAuth();
   const [rides, setRides] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     fetchHistory();
@@ -22,6 +24,33 @@ const RideHistory = () => {
       console.error('Error fetching history:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const exportPDF = async () => {
+    setExporting(true);
+    try {
+      const response = await api.get('/rides/history/export-pdf', {
+        responseType: 'blob'
+      });
+      
+      // Create download link
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `allogo_historique_${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('PDF téléchargé !');
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      toast.error('Erreur lors de l\'export');
+    } finally {
+      setExporting(false);
     }
   };
 
