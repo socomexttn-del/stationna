@@ -1032,6 +1032,61 @@ const DriverDashboard = () => {
         isOpen={chatOpen}
         onOpenChange={(open) => { setChatOpen(open); if (open) setUnreadMessages(0); }}
       />
+
+      {/* Taxi Meter Price Modal */}
+      {showMeterModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+          <Card className="w-full max-w-sm mx-4 bg-card border-yellow-500/30">
+            <CardHeader className="text-center pb-2">
+              <div className="w-16 h-16 mx-auto bg-yellow-500/20 rounded-full flex items-center justify-center mb-3">
+                <DollarSign className="w-8 h-8 text-yellow-500" />
+              </div>
+              <CardTitle className="text-xl">Prix du Compteur</CardTitle>
+              <p className="text-sm text-muted-foreground mt-2">
+                Entrez le montant affiché sur le compteur du taxi
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="relative">
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={meterPrice}
+                  onChange={(e) => setMeterPrice(e.target.value)}
+                  placeholder="Ex: 24.50"
+                  className="h-14 text-2xl text-center font-bold pr-8"
+                  data-testid="meter-price-input"
+                  autoFocus
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xl text-muted-foreground">€</span>
+              </div>
+              
+              <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3">
+                <p className="font-medium text-yellow-500 mb-1">⚠️ Important</p>
+                <p>Ce montant sera débité au client. Assurez-vous qu'il correspond exactement au compteur.</p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => { setShowMeterModal(false); setMeterPrice(''); }}
+                >
+                  Annuler
+                </Button>
+                <Button 
+                  className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-black font-bold"
+                  onClick={submitMeterPrice}
+                  data-testid="submit-meter-btn"
+                >
+                  Valider {meterPrice && `${parseFloat(meterPrice).toFixed(2)}€`}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
