@@ -1402,7 +1402,9 @@ async def estimate_fare(data: FareEstimateRequest):
         is_immediate=True,
         vehicle_type=data.vehicle_type,
         passenger_count=data.passenger_count,
-        stops_count=stops_count
+        stops_count=stops_count,
+        pickup_coords={"lat": data.pickup.lat, "lng": data.pickup.lng},
+        dest_coords={"lat": data.destination.lat, "lng": data.destination.lng}
     )
     
     return {
