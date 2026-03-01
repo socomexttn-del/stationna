@@ -494,11 +494,43 @@ const DriverDashboard = () => {
 
   const completeRide = async () => {
     if (!activeRide) return;
+    
+    // For taxi rides, show meter price modal
+    if (activeRide.vehicle_type === 'taxi') {
+      setMeterPrice(activeRide.estimated_fare?.toString() || '');
+      setShowMeterModal(true);
+      return;
+    }
+    
+    // For VTC rides, complete directly
     try {
       const response = await api.post(`/rides/${activeRide.id}/complete`);
       setActiveRide(null);
       fetchStats();
       toast.success('Course terminée! Paiement en attente.');
+    } catch (error) {
+      toast.error('Erreur lors de la finalisation');
+    }
+  };
+
+  const submitMeterPrice = async () => {
+    if (!activeRide) return;
+    
+    const price = parseFloat(meterPrice);
+    if (isNaN(price) || price <= 0) {
+      toast.error('Veuillez entrer un prix valide');
+      return;
+    }
+    
+    try {
+      const response = await api.post(`/rides/${activeRide.id}/complete`, {
+        meter_price: price
+      });
+      setShowMeterModal(false);
+      setMeterPrice('');
+      setActiveRide(null);
+      fetchStats();
+      toast.success(`Course terminée! Prix compteur: ${price.toFixed(2)}€`);
     } catch (error) {
       toast.error('Erreur lors de la finalisation');
     }
