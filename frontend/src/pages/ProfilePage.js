@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import SavedCardsManager from '../components/SavedCardsManager';
-import { ArrowLeft, User, Star, Car, Phone, Mail, Save, CreditCard } from 'lucide-react';
+import LanguageSelector from '../components/LanguageSelector';
+import { ArrowLeft, User, Star, Car, Phone, Mail, Save, CreditCard, Globe } from 'lucide-react';
 import { toast } from 'sonner';
 
 const ProfilePage = () => {
