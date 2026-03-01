@@ -71,7 +71,7 @@ const LandingPage = () => {
                 variant="outline"
                 className="h-14 px-8 rounded-full font-bold text-lg border-white/20 hover:bg-white/5"
               >
-                Devenir chauffeur
+                {t('landing.becomeDriver')}
               </Button>
             </Link>
           </div>
