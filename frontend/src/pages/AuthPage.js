@@ -40,13 +40,13 @@ const AuthPage = () => {
     try {
       if (isLogin) {
         await login(formData.email, formData.password);
-        toast.success('Connexion réussie!');
+        toast.success(t('common.success'));
       } else {
         await register({ ...formData, role });
-        toast.success('Inscription réussie!');
+        toast.success(t('common.success'));
       }
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Une erreur est survenue');
+      toast.error(error.response?.data?.detail || t('common.error'));
     } finally {
       setLoading(false);
     }
@@ -58,7 +58,7 @@ const AuthPage = () => {
       <header className="p-4">
         <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="w-5 h-5" />
-          <span>Retour</span>
+          <span>{t('common.back')}</span>
         </Link>
       </header>
 
