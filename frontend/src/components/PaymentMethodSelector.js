@@ -4,7 +4,7 @@ import { Elements, CardElement, useStripe, useElements } from '@stripe/react-str
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { 
-  CreditCard, Plus, Check, Loader2, ChevronRight
+  CreditCard, Plus, Check, Loader2, ChevronRight, Wallet
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -36,21 +36,13 @@ const NewCardForm = ({ clientSecret, onSuccess, onError }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!stripe || !elements) {
-      return;
-    }
-
+    if (!stripe || !elements) return;
     setIsProcessing(true);
 
     try {
       const { error, paymentIntent } = await stripe.confirmCardPayment(
         clientSecret,
-        {
-          payment_method: {
-            card: elements.getElement(CardElement),
-          },
-        }
+        { payment_method: { card: elements.getElement(CardElement) } }
       );
 
       if (error) {
@@ -70,15 +62,10 @@ const NewCardForm = ({ clientSecret, onSuccess, onError }) => {
       base: {
         fontSize: '16px',
         color: '#ffffff',
-        '::placeholder': {
-          color: '#6b7280',
-        },
+        '::placeholder': { color: '#6b7280' },
         iconColor: '#facc15',
       },
-      invalid: {
-        color: '#ef4444',
-        iconColor: '#ef4444',
-      },
+      invalid: { color: '#ef4444', iconColor: '#ef4444' },
     },
     hidePostalCode: true,
   };
@@ -88,7 +75,6 @@ const NewCardForm = ({ clientSecret, onSuccess, onError }) => {
       <div className="bg-muted/50 rounded-xl p-4 border border-white/10">
         <CardElement options={cardElementOptions} />
       </div>
-      
       <Button 
         type="submit" 
         disabled={!stripe || isProcessing}
@@ -96,15 +82,9 @@ const NewCardForm = ({ clientSecret, onSuccess, onError }) => {
         data-testid="confirm-payment-btn"
       >
         {isProcessing ? (
-          <>
-            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-            Traitement...
-          </>
+          <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Traitement...</>
         ) : (
-          <>
-            <CreditCard className="w-5 h-5 mr-2" />
-            Payer
-          </>
+          <><CreditCard className="w-5 h-5 mr-2" />Payer</>
         )}
       </Button>
     </form>
@@ -113,46 +93,40 @@ const NewCardForm = ({ clientSecret, onSuccess, onError }) => {
 
 // Main Component
 const PaymentMethodSelector = ({ 
-  api, 
-  rideId, 
-  amount, 
-  rideName,
-  onSuccess, 
-  onCancel,
-  onError 
+  api, rideId, amount, rideName, onSuccess, onCancel, onError 
 }) => {
   const [savedCards, setSavedCards] = useState([]);
-  const [selectedCard, setSelectedCard] = useState(null);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [selectedMethod, setSelectedMethod] = useState(null); // 'wallet', card_id, or null for new
   const [showNewCardForm, setShowNewCardForm] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [stripePromise, setStripePromise] = useState(null);
   const [clientSecret, setClientSecret] = useState(null);
 
-  // Fetch saved cards and initialize Stripe
   useEffect(() => {
     const init = async () => {
       try {
-        // Fetch saved cards
-        const cardsResponse = await api.get('/payments/saved-cards');
-        setSavedCards(cardsResponse.data || []);
+        const [cardsRes, walletRes, intentRes] = await Promise.all([
+          api.get('/payments/saved-cards'),
+          api.get('/wallet/balance'),
+          api.post('/payments/create-payment-intent', { ride_id: rideId })
+        ]);
         
-        // Auto-select default card
-        const defaultCard = cardsResponse.data?.find(c => c.is_default);
-        if (defaultCard) {
-          setSelectedCard(defaultCard.id);
-        } else if (cardsResponse.data?.length === 0) {
-          // No saved cards, show new card form
-          setShowNewCardForm(true);
+        setSavedCards(cardsRes.data || []);
+        setWalletBalance(walletRes.data.balance || 0);
+        setClientSecret(intentRes.data.client_secret);
+        setStripePromise(loadStripe(intentRes.data.publishable_key));
+        
+        // Auto-select best payment method
+        if (walletRes.data.balance >= amount) {
+          setSelectedMethod('wallet');
+        } else {
+          const defaultCard = cardsRes.data?.find(c => c.is_default);
+          if (defaultCard) setSelectedMethod(defaultCard.id);
+          else if (cardsRes.data?.length > 0) setSelectedMethod(cardsRes.data[0].id);
+          else setShowNewCardForm(true);
         }
-        
-        // Get payment intent for new card option
-        const intentResponse = await api.post('/payments/create-payment-intent', {
-          ride_id: rideId
-        });
-        setClientSecret(intentResponse.data.client_secret);
-        setStripePromise(loadStripe(intentResponse.data.publishable_key));
-        
       } catch (error) {
         console.error('Error initializing payment:', error);
         onError?.(error.response?.data?.detail || 'Erreur d\'initialisation');
@@ -160,24 +134,33 @@ const PaymentMethodSelector = ({
         setIsLoading(false);
       }
     };
-    
     init();
-  }, [api, rideId, onError]);
+  }, [api, rideId, amount, onError]);
+
+  // Pay with wallet
+  const handlePayWithWallet = async () => {
+    setIsProcessing(true);
+    try {
+      const response = await api.post('/wallet/pay', { ride_id: rideId });
+      toast.success(response.data.message);
+      onSuccess?.({ id: 'wallet_payment', new_balance: response.data.new_balance });
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erreur de paiement');
+      onError?.(error.response?.data?.detail);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   // Pay with saved card
   const handlePayWithSavedCard = async () => {
-    if (!selectedCard) {
-      toast.error('Sélectionnez une carte');
-      return;
-    }
-
+    if (!selectedMethod || selectedMethod === 'wallet') return;
     setIsProcessing(true);
     try {
       const response = await api.post('/payments/pay-with-saved-card', {
         ride_id: rideId,
-        payment_method_id: selectedCard
+        payment_method_id: selectedMethod
       });
-
       if (response.data.status === 'succeeded') {
         toast.success('Paiement effectué !');
         onSuccess?.({ id: 'saved_card_payment' });
@@ -196,6 +179,13 @@ const PaymentMethodSelector = ({
     toast.success('Paiement effectué !');
     onSuccess?.(paymentIntent);
   };
+
+  const handlePay = () => {
+    if (selectedMethod === 'wallet') handlePayWithWallet();
+    else if (selectedMethod) handlePayWithSavedCard();
+  };
+
+  const canUseWallet = walletBalance >= amount;
 
   if (isLoading) {
     return (
@@ -224,25 +214,63 @@ const PaymentMethodSelector = ({
           <p className="text-3xl font-bold text-primary">{amount}€</p>
         </div>
 
-        {/* Saved Cards */}
-        {savedCards.length > 0 && !showNewCardForm && (
+        {!showNewCardForm && (
           <div className="space-y-3">
-            <p className="text-sm font-medium text-muted-foreground">Cartes enregistrées</p>
+            {/* Wallet Option */}
+            <button
+              onClick={() => setSelectedMethod('wallet')}
+              disabled={!canUseWallet}
+              className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${
+                selectedMethod === 'wallet' 
+                  ? 'border-primary bg-primary/10' 
+                  : canUseWallet 
+                    ? 'border-border/50 bg-muted/30 hover:border-primary/50'
+                    : 'border-border/30 bg-muted/10 opacity-60 cursor-not-allowed'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                  selectedMethod === 'wallet' ? 'border-primary bg-primary' : 'border-muted-foreground'
+                }`}>
+                  {selectedMethod === 'wallet' && <Check className="w-3 h-3 text-primary-foreground" />}
+                </div>
+                <div className="w-10 h-7 rounded bg-primary/20 flex items-center justify-center">
+                  <Wallet className="w-5 h-5 text-primary" />
+                </div>
+                <div className="text-left">
+                  <p className="font-medium">Portefeuille Allogo</p>
+                  <p className="text-xs text-muted-foreground">
+                    Solde: {walletBalance.toFixed(2)}€
+                    {!canUseWallet && <span className="text-red-400 ml-1">(insuffisant)</span>}
+                  </p>
+                </div>
+              </div>
+              {canUseWallet && (
+                <span className="text-xs bg-green-500/20 text-green-500 px-2 py-1 rounded-full">
+                  Recommandé
+                </span>
+              )}
+            </button>
+
+            {/* Saved Cards */}
+            {savedCards.length > 0 && (
+              <p className="text-sm font-medium text-muted-foreground pt-2">Cartes enregistrées</p>
+            )}
             {savedCards.map((card) => (
               <button
                 key={card.id}
-                onClick={() => setSelectedCard(card.id)}
+                onClick={() => setSelectedMethod(card.id)}
                 className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${
-                  selectedCard === card.id 
+                  selectedMethod === card.id 
                     ? 'border-primary bg-primary/10' 
                     : 'border-border/50 bg-muted/30 hover:border-primary/50'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                    selectedCard === card.id ? 'border-primary bg-primary' : 'border-muted-foreground'
+                    selectedMethod === card.id ? 'border-primary bg-primary' : 'border-muted-foreground'
                   }`}>
-                    {selectedCard === card.id && <Check className="w-3 h-3 text-primary-foreground" />}
+                    {selectedMethod === card.id && <Check className="w-3 h-3 text-primary-foreground" />}
                   </div>
                   <CardBrandIcon brand={card.brand} />
                   <div className="text-left">
@@ -260,24 +288,18 @@ const PaymentMethodSelector = ({
               </button>
             ))}
 
-            {/* Pay with saved card button */}
-            {selectedCard && (
+            {/* Pay Button */}
+            {selectedMethod && (
               <Button 
-                onClick={handlePayWithSavedCard}
+                onClick={handlePay}
                 disabled={isProcessing}
                 className="w-full h-14 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full font-bold text-lg"
-                data-testid="pay-saved-card-btn"
+                data-testid="pay-btn"
               >
                 {isProcessing ? (
-                  <>
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Traitement...
-                  </>
+                  <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Traitement...</>
                 ) : (
-                  <>
-                    <Check className="w-5 h-5 mr-2" />
-                    Payer {amount}€
-                  </>
+                  <><Check className="w-5 h-5 mr-2" />Payer {amount}€</>
                 )}
               </Button>
             )}
@@ -299,14 +321,14 @@ const PaymentMethodSelector = ({
         )}
 
         {/* New Card Form */}
-        {(showNewCardForm || savedCards.length === 0) && stripePromise && clientSecret && (
+        {showNewCardForm && stripePromise && clientSecret && (
           <div className="space-y-3">
-            {savedCards.length > 0 && (
+            {(savedCards.length > 0 || canUseWallet) && (
               <button
                 onClick={() => setShowNewCardForm(false)}
                 className="text-sm text-primary hover:underline"
               >
-                ← Retour aux cartes enregistrées
+                ← Retour aux méthodes de paiement
               </button>
             )}
             <Elements stripe={stripePromise} options={{ clientSecret }}>
@@ -320,11 +342,7 @@ const PaymentMethodSelector = ({
         )}
 
         {/* Cancel Button */}
-        <Button 
-          variant="ghost" 
-          onClick={onCancel}
-          className="w-full"
-        >
+        <Button variant="ghost" onClick={onCancel} className="w-full">
           Annuler
         </Button>
       </CardContent>
