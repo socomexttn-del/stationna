@@ -562,10 +562,24 @@ def calculate_distance_simple(lat1: float, lng1: float, lat2: float, lng2: float
     
     return R * c
 
+# Paris city boundaries (approximate bounding box for Paris intra-muros)
+PARIS_BOUNDS = {
+    "lat_min": 48.815,   # South boundary (Porte d'Orléans area)
+    "lat_max": 48.902,   # North boundary (Porte de la Chapelle area)
+    "lng_min": 2.225,    # West boundary (Bois de Boulogne)
+    "lng_max": 2.470     # East boundary (Bois de Vincennes)
+}
+
+def is_in_paris(lat: float, lng: float) -> bool:
+    """Check if coordinates are within Paris intra-muros"""
+    return (PARIS_BOUNDS["lat_min"] <= lat <= PARIS_BOUNDS["lat_max"] and
+            PARIS_BOUNDS["lng_min"] <= lng <= PARIS_BOUNDS["lng_max"])
+
 def detect_airport_trip(pickup_lat: float, pickup_lng: float, dest_lat: float, dest_lng: float) -> dict:
     """
     Detect if the trip is to/from an airport and determine the applicable flat rate.
-    Returns airport info if flat rate applies, None otherwise.
+    IMPORTANT: Flat rate ONLY applies for trips between PARIS INTRA-MUROS and airports.
+    If the non-airport point is outside Paris, regular metered fare applies.
     """
     result = {
         "is_airport_trip": False,
@@ -586,7 +600,11 @@ def detect_airport_trip(pickup_lat: float, pickup_lng: float, dest_lat: float, d
         dest_to_airport = calculate_distance_simple(dest_lat, dest_lng, airport_lat, airport_lng)
         
         if pickup_to_airport <= radius:
-            # Trip FROM airport TO Paris
+            # Trip FROM airport - check if destination is IN PARIS
+            if not is_in_paris(dest_lat, dest_lng):
+                # Destination is NOT in Paris - no flat rate, use metered fare
+                continue
+            
             result["is_airport_trip"] = True
             result["airport"] = airport_code
             result["airport_name"] = airport_info["name"]
@@ -597,7 +615,11 @@ def detect_airport_trip(pickup_lat: float, pickup_lng: float, dest_lat: float, d
             return result
             
         elif dest_to_airport <= radius:
-            # Trip TO airport FROM Paris
+            # Trip TO airport - check if pickup is IN PARIS
+            if not is_in_paris(pickup_lat, pickup_lng):
+                # Pickup is NOT in Paris - no flat rate, use metered fare
+                continue
+            
             result["is_airport_trip"] = True
             result["airport"] = airport_code
             result["airport_name"] = airport_info["name"]
