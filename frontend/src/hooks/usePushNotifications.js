@@ -1,12 +1,21 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Capacitor } from '@capacitor/core';
+import pushNotificationService from '../services/pushNotifications';
 
 export const usePushNotifications = () => {
   const [permission, setPermission] = useState('default');
   const [swRegistration, setSwRegistration] = useState(null);
+  const [isNative, setIsNative] = useState(false);
+  const authTokenRef = useRef(null);
 
-  // Register service worker
+  // Check if running on native platform
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
+    setIsNative(Capacitor.isNativePlatform());
+  }, []);
+
+  // Register service worker for web
+  useEffect(() => {
+    if (!isNative && 'serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js')
         .then((registration) => {
           console.log('Service Worker registered:', registration);
@@ -16,17 +25,44 @@ export const usePushNotifications = () => {
           console.error('Service Worker registration failed:', error);
         });
     }
-  }, []);
+  }, [isNative]);
 
   // Check current permission status
   useEffect(() => {
-    if ('Notification' in window) {
+    if (!isNative && 'Notification' in window) {
       setPermission(Notification.permission);
+    } else if (isNative) {
+      pushNotificationService.isAvailable().then(available => {
+        setPermission(available ? 'granted' : 'default');
+      });
     }
-  }, []);
+  }, [isNative]);
+
+  // Initialize native push notifications
+  const initializeNative = useCallback(async (authToken) => {
+    if (!isNative) return false;
+    
+    authTokenRef.current = authToken;
+    const success = await pushNotificationService.initialize(authToken);
+    if (success) {
+      setPermission('granted');
+    }
+    return success;
+  }, [isNative]);
 
   // Request notification permission
-  const requestPermission = useCallback(async () => {
+  const requestPermission = useCallback(async (authToken = null) => {
+    // For native platform, initialize Firebase push notifications
+    if (isNative) {
+      const token = authToken || authTokenRef.current;
+      if (token) {
+        return await initializeNative(token);
+      }
+      console.warn('Auth token required for native push notifications');
+      return false;
+    }
+
+    // For web platform
     if (!('Notification' in window)) {
       console.log('This browser does not support notifications');
       return false;
@@ -40,10 +76,24 @@ export const usePushNotifications = () => {
       console.error('Error requesting notification permission:', error);
       return false;
     }
-  }, []);
+  }, [isNative, initializeNative]);
 
-  // Show a local notification
+  // Unregister on logout
+  const unregister = useCallback(async (authToken) => {
+    if (isNative) {
+      await pushNotificationService.unregister(authToken);
+    }
+  }, [isNative]);
+
+  // Show a local notification (web only, native handled by system)
   const showNotification = useCallback((title, body, data = {}) => {
+    if (isNative) {
+      // On native, notifications are handled by the system
+      // We can still show local notifications if needed
+      console.log('Native notification:', title, body);
+      return;
+    }
+
     if (permission !== 'granted') {
       console.log('Notification permission not granted');
       return;
@@ -64,11 +114,19 @@ export const usePushNotifications = () => {
         icon: '/logo192.png',
         badge: '/logo192.png',
         vibrate: [200, 100, 200],
-        tag: 'volt-taxi-notification',
+        tag: 'allogo-notification',
         renotify: true
       });
     }
-  }, [permission, swRegistration]);
+  }, [permission, swRegistration, isNative]);
+
+  // Add listener for native push notifications
+  const addPushListener = useCallback((callback) => {
+    if (isNative) {
+      return pushNotificationService.addListener(callback);
+    }
+    return () => {}; // No-op for web
+  }, [isNative]);
 
   // Notification templates for taxi app
   const notifyDriverAccepted = useCallback((driverName, eta) => {
@@ -90,7 +148,7 @@ export const usePushNotifications = () => {
   const notifyRideCompleted = useCallback((fare) => {
     showNotification(
       'Course terminée',
-      `Montant: ${fare}€ - Merci d'avoir voyagé avec Volt`,
+      `Montant: ${fare}€ - Merci d'avoir voyagé avec Allogo`,
       { type: 'ride_completed' }
     );
   }, [showNotification]);
@@ -129,7 +187,11 @@ export const usePushNotifications = () => {
     notifyNewRide,
     notifyRideAssigned,
     notifyNewMessage,
-    isSupported: 'Notification' in window
+    addPushListener,
+    unregister,
+    initializeNative,
+    isSupported: isNative || 'Notification' in window,
+    isNative
   };
 };
 
