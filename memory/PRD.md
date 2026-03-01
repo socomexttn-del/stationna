@@ -14,24 +14,30 @@ French (Français)
 3. ✅ **Base de données clients admin** - Historique et factures
 4. ✅ **Documents chauffeur élargis** - 11 types de documents
 5. ✅ **Notifications d'expiration** - Alertes 30 jours avant
-6. ✅ **UI Courses Planifiées** - Refonte complète ✨ NEW
+6. ✅ **UI Courses Planifiées** - Refonte complète
+7. ✅ **Système de Portefeuille Passager** - Rechargement Stripe + paiement ✨ NEW
 
-### Scheduled Rides UI Improvements ✨
+### Wallet System ✨ (NEW - 2025-03-01)
+- **Page Portefeuille** (`/wallet`) accessible depuis le menu passager
+- **Affichage du solde** en temps réel
+- **Rechargement rapide** : 10€, 20€, 50€, 100€
+- **Montant personnalisé** : 5€ à 500€
+- **Intégration Stripe** : Paiement sécurisé
+- **Historique des transactions** avec pagination
+- **Option de paiement** dans PaymentMethodSelector
+- **API Endpoints** :
+  - `GET /api/wallet/balance` - Solde du portefeuille
+  - `GET /api/wallet/transactions` - Historique des transactions
+  - `POST /api/wallet/top-up` - Créer un paiement Stripe
+  - `POST /api/wallet/confirm-topup` - Confirmer le rechargement
+  - `POST /api/wallet/pay` - Payer une course avec le portefeuille
+
+### Scheduled Rides UI Improvements
 - **Design modernisé** avec cartes détaillées
 - **Statistiques en haut** : total planifiées, imminentes, montant total
-- **Informations complètes** :
-  - Date et heure en français (jeudi 26 février à 12:45)
-  - Adresses de départ et destination
-  - Distance, type de véhicule, nombre de passagers
-  - Tarif estimé en grand
-  - Badge de statut (Passée, Imminente, etc.)
+- **Informations complètes** : date, adresses, distance, tarif
 - **Actions** : Modifier, Annuler, Activer
-- **Modification de course** : nouvelle date/heure, adresses, véhicule, passagers
-- **Indicateurs temporels** : "Dans X jours", "Demain", "Dans Xh", "Dans X min"
-- **Rappels visuels** : Notification 1h avant le départ
-
-### New API Endpoint
-- `PUT /api/rides/{ride_id}/reschedule` - Modifier une course planifiée
+- **Indicateurs temporels** : "Dans X jours", "Demain", etc.
 
 ## Core Features Summary
 
