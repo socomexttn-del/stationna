@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../hooks/useNotifications';
 import { usePushNotifications } from '../hooks/usePushNotifications';
@@ -17,6 +18,7 @@ import {
 import { toast } from 'sonner';
 
 const DriverDashboard = () => {
+  const { t } = useTranslation();
   const { user, logout, api, updateUser } = useAuth();
   const { permission, requestPermission, notifyNewRide, notifyRideAssigned, notifyNewMessage } = usePushNotifications();
   
