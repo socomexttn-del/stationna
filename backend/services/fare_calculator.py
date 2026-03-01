@@ -115,6 +115,8 @@ def get_paris_taxi_tariff(scheduled_time: datetime = None) -> dict:
 def detect_airport_trip(pickup_lat: float, pickup_lng: float, dest_lat: float, dest_lng: float) -> dict:
     """
     Detect if the trip is to/from an airport and determine the applicable flat rate.
+    IMPORTANT: Flat rate ONLY applies for trips between PARIS INTRA-MUROS and airports.
+    If the non-airport point is outside Paris, regular metered fare applies.
     """
     result = {
         "is_airport_trip": False,
@@ -133,6 +135,10 @@ def detect_airport_trip(pickup_lat: float, pickup_lng: float, dest_lat: float, d
         dest_to_airport = calculate_distance_simple(dest_lat, dest_lng, airport_lat, airport_lng)
         
         if pickup_to_airport <= radius:
+            # Trip FROM airport - check if destination is IN PARIS
+            if not is_in_paris(dest_lat, dest_lng):
+                continue
+            
             result["is_airport_trip"] = True
             result["airport"] = airport_code
             result["airport_name"] = airport_info["name"]
@@ -142,6 +148,10 @@ def detect_airport_trip(pickup_lat: float, pickup_lng: float, dest_lat: float, d
             return result
             
         elif dest_to_airport <= radius:
+            # Trip TO airport - check if pickup is IN PARIS
+            if not is_in_paris(pickup_lat, pickup_lng):
+                continue
+            
             result["is_airport_trip"] = True
             result["airport"] = airport_code
             result["airport_name"] = airport_info["name"]
