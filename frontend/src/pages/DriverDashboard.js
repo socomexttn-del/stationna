@@ -20,7 +20,7 @@ import { toast } from 'sonner';
 const DriverDashboard = () => {
   const { t } = useTranslation();
   const { user, logout, api, updateUser } = useAuth();
-  const { permission, requestPermission, notifyNewRide, notifyRideAssigned, notifyNewMessage } = usePushNotifications();
+  const { permission, requestPermission, notifyNewRide, notifyRideAssigned, notifyNewMessage, initializeNative, addPushListener, isNative } = usePushNotifications();
   
   const [isAvailable, setIsAvailable] = useState(user?.is_available || false);
   const [availableRides, setAvailableRides] = useState([]);
