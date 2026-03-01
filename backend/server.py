@@ -871,6 +871,16 @@ async def get_active_ride(current_user: dict = Depends(get_current_user)):
     ride = await db.rides.find_one(query, {"_id": 0})
     return RideResponse(**ride) if ride else None
 
+# Move /rides/scheduled BEFORE /rides/{ride_id} to avoid route conflict
+@api_router.get("/rides/scheduled", response_model=List[RideResponse])
+async def get_scheduled_rides_early(current_user: dict = Depends(get_current_user)):
+    """Get all scheduled rides for the current user"""
+    query = {"status": "scheduled"}
+    if current_user["role"] == "passenger":
+        query["passenger_id"] = current_user["id"]
+    rides = await db.rides.find(query, {"_id": 0}).sort("scheduled_time", 1).to_list(50)
+    return [RideResponse(**r) for r in rides]
+
 @api_router.post("/rides/{ride_id}/accept", response_model=RideResponse)
 async def accept_ride(ride_id: str, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "driver":
