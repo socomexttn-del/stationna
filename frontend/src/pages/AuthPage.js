@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -10,6 +11,7 @@ import { Car, User, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 const AuthPage = () => {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const defaultRole = searchParams.get('role') || 'passenger';
   const { login, register } = useAuth();
