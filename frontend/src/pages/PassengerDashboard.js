@@ -1123,7 +1123,11 @@ const PassengerDashboard = () => {
                     <div>
                       <p className="font-semibold">
                         {vehicleType === 'taxi' ? 'Taxi Parisien' : vehicleType === 'van' ? 'Allogo Van' : 'Allogo VTC'}
-                        {estimate.fare_details?.tariff_label && (
+                        {estimate.fare_details?.is_airport_flat_rate ? (
+                          <span className="ml-2 text-xs px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full">
+                            ✈️ Forfait Aéroport
+                          </span>
+                        ) : estimate.fare_details?.tariff_label && (
                           <span className="ml-2 text-xs px-2 py-0.5 bg-yellow-500/20 text-yellow-500 rounded-full">
                             {estimate.fare_details.tariff_label}
                           </span>
