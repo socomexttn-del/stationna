@@ -502,7 +502,8 @@ const PassengerDashboard = () => {
 
   useEffect(() => {
     fetchActiveRide();
-    const interval = setInterval(fetchActiveRide, 5000);
+    // Poll every 3 seconds for faster notification
+    const interval = setInterval(fetchActiveRide, 3000);
     return () => clearInterval(interval);
   }, []);
 
