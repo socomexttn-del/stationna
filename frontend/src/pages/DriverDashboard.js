@@ -40,6 +40,59 @@ const DriverDashboard = () => {
   const [showMeterModal, setShowMeterModal] = useState(false);
   const [meterPrice, setMeterPrice] = useState('');
 
+  // Audio context kept alive for notifications
+  const audioContextRef = useRef(null);
+  const audioElementRef = useRef(null);
+  const [soundEnabled, setSoundEnabled] = useState(false);
+
+  // Initialize audio system on first user interaction
+  const initAudio = useCallback(() => {
+    if (!audioContextRef.current) {
+      try {
+        audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+        setSoundEnabled(true);
+        console.log('Audio context initialized for driver');
+      } catch (e) {
+        console.log('Audio context error:', e);
+      }
+    }
+    if (audioContextRef.current?.state === 'suspended') {
+      audioContextRef.current.resume();
+    }
+  }, []);
+
+  // Create persistent audio element for notifications
+  useEffect(() => {
+    // Create an audio element that can play notification sounds
+    const audio = new Audio();
+    audio.volume = 1.0;
+    audioElementRef.current = audio;
+    
+    // Add interaction listeners to enable audio
+    const handleInteraction = () => {
+      initAudio();
+      // Try to play a silent sound to unlock audio
+      if (audioElementRef.current) {
+        audioElementRef.current.play().then(() => {
+          audioElementRef.current.pause();
+        }).catch(() => {});
+      }
+    };
+    
+    document.addEventListener('click', handleInteraction);
+    document.addEventListener('touchstart', handleInteraction);
+    
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+    
+    return () => {
+      document.removeEventListener('click', handleInteraction);
+      document.removeEventListener('touchstart', handleInteraction);
+    };
+  }, [initAudio]);
+
   // Get current location on mount with permission check
   useEffect(() => {
     const checkPermissionAndGetLocation = async () => {
