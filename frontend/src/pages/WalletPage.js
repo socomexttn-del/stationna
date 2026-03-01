@@ -275,21 +275,37 @@ const WalletPage = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Bonus Banner */}
+              <div className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 rounded-xl p-3">
+                <div className="flex items-center gap-2 text-green-400">
+                  <Sparkles className="w-4 h-4" />
+                  <span className="text-sm font-medium">Bonus rechargement !</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  20€ → +2€ • 50€ → +5€ • 100€ → +15€
+                </p>
+              </div>
+
               {/* Quick amounts */}
               <div>
                 <p className="text-sm text-muted-foreground mb-3">Montant rapide</p>
-                <div className="grid grid-cols-4 gap-2">
-                  {TOPUP_AMOUNTS.map((amount) => (
+                <div className="grid grid-cols-2 gap-2">
+                  {TOPUP_AMOUNTS.map(({ amount, bonus }) => (
                     <button
                       key={amount}
                       onClick={() => { setTopUpAmount(amount); setCustomAmount(''); }}
-                      className={`p-3 rounded-xl border-2 font-semibold transition-all ${
+                      className={`p-3 rounded-xl border-2 transition-all relative ${
                         topUpAmount === amount && !customAmount
-                          ? 'border-primary bg-primary/10 text-primary'
+                          ? 'border-primary bg-primary/10'
                           : 'border-border/50 hover:border-primary/50'
                       }`}
                     >
-                      {amount}€
+                      <span className="font-bold text-lg">{amount}€</span>
+                      {bonus > 0 && (
+                        <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full font-medium">
+                          +{bonus}€
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -310,7 +326,38 @@ const WalletPage = () => {
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
                 </div>
+                {customAmount && parseFloat(customAmount) >= 20 && (
+                  <p className="text-xs text-green-400 mt-1 flex items-center gap-1">
+                    <Gift className="w-3 h-3" />
+                    +{calculateBonus(parseFloat(customAmount))}€ de bonus inclus
+                  </p>
+                )}
               </div>
+
+              {/* Summary */}
+              {(() => {
+                const amt = customAmount ? parseFloat(customAmount) : topUpAmount;
+                const bonus = calculateBonus(amt);
+                const total = amt + bonus;
+                return amt >= 5 ? (
+                  <div className="bg-muted/30 rounded-xl p-3 space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Paiement</span>
+                      <span>{amt}€</span>
+                    </div>
+                    {bonus > 0 && (
+                      <div className="flex justify-between text-sm text-green-400">
+                        <span className="flex items-center gap-1"><Gift className="w-3 h-3" /> Bonus</span>
+                        <span>+{bonus}€</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between font-bold text-lg pt-1 border-t border-border/30">
+                      <span>Total crédité</span>
+                      <span className="text-primary">{total}€</span>
+                    </div>
+                  </div>
+                ) : null;
+              })()}
               
               {/* Actions */}
               <div className="flex gap-3 pt-2">
