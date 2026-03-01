@@ -253,45 +253,129 @@ const DriverDashboard = () => {
 
   // Send GPS location to server
   const sendLocation = useCallback(async () => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      setLocationError('Géolocalisation non supportée');
+      return;
+    }
     
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
+        setCurrentLocation({ lat: latitude, lng: longitude });
+        setLocationError(null);
+        
         try {
+          // Reverse geocode for address
+          const MAPBOX_TOKEN = process.env.REACT_APP_MAPBOX_TOKEN;
+          let address = 'Position actuelle';
+          try {
+            const geoRes = await fetch(
+              `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${MAPBOX_TOKEN}&language=fr&limit=1`
+            );
+            const geoData = await geoRes.json();
+            if (geoData.features?.[0]) {
+              address = geoData.features[0].place_name;
+            }
+          } catch (e) {}
+          
           await api.put('/drivers/location', {
             lat: latitude,
             lng: longitude,
-            address: 'Position actuelle'
+            address: address
           });
-          console.log('Location sent:', latitude, longitude);
         } catch (error) {
           console.error('Error sending location:', error);
         }
       },
       (error) => {
         console.error('Geolocation error:', error);
+        setLocationError('Activez la géolocalisation');
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
     );
   }, [api]);
 
-  // Start/stop location tracking based on active ride
+  // Play sound when going online/offline
+  const playOnlineSound = useCallback(() => {
+    try {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioContext.state === 'suspended') audioContext.resume();
+      
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      // Rising happy sound for online
+      oscillator.frequency.value = 523; // C5
+      oscillator.type = 'sine';
+      gainNode.gain.value = 0.4;
+      oscillator.start();
+      setTimeout(() => { oscillator.frequency.value = 659; }, 100); // E5
+      setTimeout(() => { oscillator.frequency.value = 784; }, 200); // G5
+      setTimeout(() => { oscillator.stop(); audioContext.close(); }, 350);
+    } catch (e) {}
+  }, []);
+
+  const playOfflineSound = useCallback(() => {
+    try {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioContext.state === 'suspended') audioContext.resume();
+      
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      // Falling sound for offline
+      oscillator.frequency.value = 440; // A4
+      oscillator.type = 'sine';
+      gainNode.gain.value = 0.4;
+      oscillator.start();
+      setTimeout(() => { oscillator.frequency.value = 349; }, 150); // F4
+      setTimeout(() => { oscillator.frequency.value = 294; }, 300); // D4
+      setTimeout(() => { oscillator.stop(); audioContext.close(); }, 450);
+    } catch (e) {}
+  }, []);
+
+  // Start/stop location tracking based on availability
   useEffect(() => {
     let locationInterval;
     
+    if (isAvailable) {
+      // Send location immediately when going online
+      sendLocation();
+      // Then every 30 seconds while online
+      locationInterval = setInterval(sendLocation, 30000);
+    }
+    
+    // Also track more frequently during active ride
     if (activeRide && (activeRide.status === 'accepted' || activeRide.status === 'in_progress')) {
-      // Send location immediately and then every 5 seconds
+      if (locationInterval) clearInterval(locationInterval);
       sendLocation();
       locationInterval = setInterval(sendLocation, 5000);
     }
     
     return () => {
-      if (locationInterval) {
-        clearInterval(locationInterval);
-      }
+      if (locationInterval) clearInterval(locationInterval);
     };
-  }, [activeRide, sendLocation]);
+  }, [isAvailable, activeRide, sendLocation]);
+
+  // Request geolocation permission on mount
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setCurrentLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+          setLocationError(null);
+        },
+        (err) => {
+          setLocationError('Activez la géolocalisation pour recevoir des courses');
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    }
+  }, []);
 
   useEffect(() => {
     fetchStats();
