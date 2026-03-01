@@ -75,8 +75,10 @@ French (Français)
 
 ## Backlog
 
+### P1 - High Priority
+1. **Refactorisation Backend** - server.py > 2700 lignes → routers/, models/, services/
+
 ### P2 - Medium Priority
-1. **Wallet/credit system** for passengers
 2. **Email notifications** for document expiry (SMTP)
 3. **Ride history export** (PDF)
 
@@ -91,4 +93,4 @@ French (Français)
 - CVC: 123
 
 ## Last Updated
-2025-03-01 - Scheduled rides UI enhanced
+2025-03-01 - Wallet system completed
