@@ -194,6 +194,16 @@ const AdminDashboard = () => {
                 <Database className="w-4 h-4" /> Clients
               </Button>
             </Link>
+            <Link to="/admin/promo-codes">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="gap-2"
+                data-testid="admin-promo-link"
+              >
+                <Tag className="w-4 h-4" /> Promos
+              </Button>
+            </Link>
             <Button 
               variant="outline" 
               size="sm"
