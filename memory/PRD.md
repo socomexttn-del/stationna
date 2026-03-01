@@ -1,7 +1,7 @@
 # Allogo - Product Requirements Document
 
 ## Original Problem Statement
-Application de taxi complète nommée Allogo (anciennement Volt Taxi) avec rôles passager/chauffeur/admin, authentification JWT, paiements Stripe, cartes Mapbox interactives, et tarification personnalisée.
+Application de taxi complète nommée Allogo avec rôles passager/chauffeur/admin, authentification JWT, paiements Stripe, cartes Mapbox, et tarification personnalisée.
 
 ## User Language
 French (Français)
@@ -21,65 +21,53 @@ French (Français)
 - [x] Real-time ride status updates
 - [x] Ride cancellation
 - [x] Vehicle type selection (Standard/Van)
-- [x] Passenger count with supplements (>4 passengers)
+- [x] Passenger count with supplements
 - [x] Frequent trips (one-click booking)
-- [x] Ride proposal system (drivers must accept)
-- [x] Re-dispatch to next driver on refusal
-- [x] 18% commission deduction for drivers
+- [x] Ride proposal system
+- [x] 18% commission deduction
 - [x] Page reset after ride completion
 
 ### Maps & Location
 - [x] Mapbox integration with interactive map
-- [x] Address autocomplete with popular locations
+- [x] Address autocomplete
 - [x] Route drawing with ETA/distance
 - [x] Live GPS tracking of driver
-- [x] Available drivers shown with ALLOGO car icons
-- [x] Driver path tracking (blue line on map)
+- [x] Driver path tracking
 
 ### Notifications
-- [x] Real-time in-app notifications (polling)
+- [x] Real-time in-app notifications
 - [x] Push notifications (PWA)
-- [x] Sound notifications for events (Web Audio API)
+- [x] Sound notifications (Web Audio API)
 
-### Payments ✨ ENHANCED
+### Payments
 - [x] Stripe integration (test mode)
-- [x] Fare estimation with detailed breakdown
-- [x] Inline credit card payment form (Stripe Elements)
-- [x] **Saved card management** ✨ RECENT
-- [x] **Pay with saved card (one-click)** ✨ RECENT
-- [x] Payment history tracking
-
-### Communication
-- [x] In-app chat between passenger and driver
+- [x] Fare estimation with breakdown
+- [x] Stripe Elements payment form
+- [x] **Saved card management** ✨ NEW
+- [x] **Pay with saved card** ✨ NEW
+- [x] Payment history
 
 ### Admin Features
 - [x] Admin dashboard with statistics
-- [x] Driver stats (earnings, rides, rating)
-- [x] Recent rides overview
-- [x] Driver document validation
-- [x] Driver account management (activate/deactivate)
+- [x] Driver stats and management
+- [x] Driver account activation/deactivation
+- [x] **Client database with search** ✨ NEW
+- [x] **Client ride history** ✨ NEW
+- [x] **Invoice generation per ride** ✨ NEW
 
 ### Driver Features
 - [x] Driver dashboard with earnings
 - [x] Hide/show earnings toggle
 - [x] Vehicle & document management
-- [x] Waze/Google Maps integration links
+- [x] Waze/Google Maps integration
 
 ### Rating System
 - [x] Star ratings with comments
-- [x] Quick-selection tags
 
 ## Test Accounts
 - Passenger: passenger@test.com / password
 - Driver: driver@test.com / password
 - Admin: admin@volttaxi.com / admin123
-
-## Tech Stack
-- **Frontend**: React 19, Tailwind CSS, Shadcn UI, Stripe Elements
-- **Backend**: FastAPI, MongoDB (motor)
-- **Maps**: Mapbox GL JS, Geocoding API, Directions API
-- **Payments**: Stripe API (Payment Intents, SetupIntents, Customers)
-- **Auth**: JWT tokens with persistent sessions
 
 ## Fare Calculation
 ```
@@ -94,88 +82,67 @@ Supplements:
 - Réservation à l'avance: +7.00€
 - Van (7 places): +10.00€
 - Passager supplémentaire (5e+): +5.50€/passager
-- Arrêt intermédiaire: +3.00€/arrêt ✨ NEW
+- Arrêt intermédiaire: +3.00€/arrêt
 ```
 
-## Latest Updates (2025-03-01)
+## Session Accomplishments (2025-03-01)
 
-### Session Accomplishments
-1. **Intermediate stops feature complete** ✨ NEW
-   - Add up to 3 waypoints in a trip
-   - Distance calculated via all points
-   - +3€ supplement per stop
-   - Route summary in estimation
-   
-2. **Saved cards feature complete**
-   - Full Stripe SetupIntent integration
-   - Card management in profile
-   - One-click payment with saved card
+### 1. Saved Cards Feature ✅
+- Stripe SetupIntent integration
+- Card management in user profile
+- Pay with saved card (one-click)
+- Tests: 100% (13/13)
 
-3. **Sound notifications verified**
-4. **Geolocation improved**
-5. **Page reset after ride**
+### 2. Intermediate Stops Feature ✅
+- Add up to 3 waypoints in trips
+- Distance calculated via all points
+- +3€ supplement per stop
+- Tests: 100% (12/12)
 
-### Test Results (iteration_11)
-- Backend: 100% (12/12 tests)
-- Frontend: 100% (all components verified)
+### 3. Admin Client Database ✅
+- Client list with search/pagination
+- Client details with ride history
+- Invoice generation for each ride
+- Print/PDF export
 
-## New Components Created This Session
-- `/app/frontend/src/components/IntermediateStops.js` - Stop management UI
-- `/app/frontend/src/components/SavedCardsManager.js` - Card management
-- `/app/frontend/src/components/PaymentMethodSelector.js` - Payment modal
+## New Pages & Components
+- `/admin/clients` - Admin client database page
+- `AdminClientsPage.js` - Client management UI
+- `IntermediateStops.js` - Stop management component
+- `SavedCardsManager.js` - Card management component
+- `PaymentMethodSelector.js` - Payment modal
 
-## New API Endpoints This Session
-- `POST /api/payments/setup-intent`
-- `GET /api/payments/saved-cards`
-- `DELETE /api/payments/saved-cards/{id}`
-- `POST /api/payments/set-default-card/{id}`
-- `POST /api/payments/pay-with-saved-card`
-- `POST /api/rides/estimate` - Updated for stops support
-- `POST /api/rides` - Updated for stops support
+## API Endpoints Added
+```
+# Saved Cards
+POST /api/payments/setup-intent
+GET /api/payments/saved-cards
+DELETE /api/payments/saved-cards/{id}
+POST /api/payments/set-default-card/{id}
+POST /api/payments/pay-with-saved-card
 
-## Backlog (Priority Order)
+# Admin Clients
+GET /api/admin/clients
+GET /api/admin/clients/{id}
+GET /api/admin/clients/{id}/rides
+GET /api/admin/rides/{id}/invoice
+```
 
-### P1 - High Priority
-1. ~~**Save credit card details**~~ ✅ COMPLETED
-2. ~~**Intermediate stops**~~ ✅ COMPLETED
-3. **Admin client database** - View all clients, ride history, invoices
+## Backlog
 
 ### P2 - Medium Priority
-4. **Expanded driver documents** - CNI, justificatif domicile, RC-Pro
-5. **Scheduled rides UI** - Enhance with more details
-6. **Wallet/credit system** - For passengers
+1. **Expanded driver documents** - CNI, justificatif domicile, RC-Pro
+2. **Scheduled rides UI enhancement**
+3. **Wallet/credit system** for passengers
 
 ### P3 - Future
-7. **Mobile App Conversion** - Capacitor for iOS/Android
-8. **Export statistics** - CSV/PDF for admin
-
-## Code Architecture
-```
-/app/
-├── backend/
-│   ├── server.py (~2300 lines - consider refactoring)
-│   └── tests/
-│       ├── test_saved_cards_payments.py
-│       └── test_intermediate_stops.py
-├── frontend/
-│   └── src/
-│       ├── components/
-│       │   ├── IntermediateStops.js ✨ NEW
-│       │   ├── SavedCardsManager.js ✨ NEW
-│       │   ├── PaymentMethodSelector.js ✨ NEW
-│       │   └── ...
-│       └── pages/
-│           ├── PassengerDashboard.js (updated for stops)
-│           ├── ProfilePage.js (updated for cards)
-│           └── ...
-└── memory/
-    └── PRD.md
-```
+4. **Mobile App Conversion** - Capacitor for iOS/Android
+5. **Export statistics** - CSV/PDF for admin
 
 ## Stripe Test Card
-- Card Number: 4242 4242 4242 4242
-- Exp: Any future date (12/34)
-- CVC: Any 3 digits (123)
+- Number: 4242 4242 4242 4242
+- Exp: 12/34
+- CVC: 123
 
 ## Last Updated
-2025-03-01 - Intermediate stops feature completed
+2025-03-01 - Admin client database completed
