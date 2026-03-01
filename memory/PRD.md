@@ -80,8 +80,14 @@ French (Français)
 
 ## Backlog
 
-### P1 - High Priority
-1. **Refactorisation Backend** - server.py > 2700 lignes → routers/, models/, services/
+### P1 - High Priority (In Progress)
+1. **Refactorisation Backend** - server.py > 3000 lignes
+   - ✅ Structure créée : `models/`, `routers/`, `services/`, `utils/`
+   - ✅ Modèles Pydantic extraits
+   - ✅ Services métier extraits (auth, fare, notifications)
+   - ✅ Config et database séparés
+   - 🔄 Migration des routes en cours
+   - 📄 Voir `/app/backend/REFACTORING.md` pour le plan détaillé
 
 ### P2 - Medium Priority
 2. **Email notifications** for document expiry (SMTP)
@@ -98,4 +104,4 @@ French (Français)
 - CVC: 123
 
 ## Last Updated
-2025-03-01 - Wallet system completed
+2025-03-01 - Backend refactoring structure created
