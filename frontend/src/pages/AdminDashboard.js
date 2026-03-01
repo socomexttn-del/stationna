@@ -88,6 +88,36 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchExpiringDocuments = async () => {
+    try {
+      const response = await api.get('/admin/documents/expiring?days=30');
+      setExpiringDocs(response.data);
+      setShowExpiringDocs(true);
+    } catch (error) {
+      toast.error('Erreur lors du chargement');
+    }
+  };
+
+  const sendExpiryNotifications = async () => {
+    setSendingEmails(true);
+    try {
+      const response = await api.post('/admin/notifications/send-expiry-alerts', {});
+      toast.success(`${response.data.emails_sent} email(s) envoyé(s)`);
+      if (response.data.errors?.length > 0) {
+        toast.warning(`${response.data.errors.length} erreur(s)`);
+      }
+    } catch (error) {
+      const detail = error.response?.data?.detail;
+      if (detail?.includes('non configuré')) {
+        toast.error('Service email non configuré. Ajoutez RESEND_API_KEY dans .env');
+      } else {
+        toast.error('Erreur lors de l\'envoi');
+      }
+    } finally {
+      setSendingEmails(false);
+    }
+  };
+
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
