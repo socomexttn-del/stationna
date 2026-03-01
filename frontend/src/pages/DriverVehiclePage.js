@@ -652,7 +652,7 @@ const DriverVehiclePage = () => {
         )}
 
         {/* Document Category Tabs */}
-        {activeTab !== 'vehicle' && documentsByCategory[activeTab] && (
+        {activeTab !== 'info' && documentsByCategory[activeTab] && (
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
               {DOCUMENT_CATEGORIES[activeTab] && (
