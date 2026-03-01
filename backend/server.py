@@ -170,6 +170,7 @@ class RideResponse(BaseModel):
     driver_identification: Optional[str] = None
     pickup: Dict
     destination: Dict
+    stops: Optional[List[Dict]] = None  # Intermediate stops
     distance_km: float
     estimated_fare: float
     commission_rate: float = 0.18  # 18% commission
