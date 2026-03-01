@@ -503,6 +503,16 @@ const PassengerDashboard = () => {
       return;
     }
     
+    // Validate that addresses were properly selected (have coordinates)
+    if (!pickup.lat || !pickup.lng || pickup.lat === 48.8566 && pickup.lng === 2.3522 && !pickup.address.includes('Paris')) {
+      toast.error('Veuillez sélectionner une adresse de départ dans la liste');
+      return;
+    }
+    if (!destination.lat || !destination.lng) {
+      toast.error('Veuillez sélectionner une adresse de destination dans la liste');
+      return;
+    }
+    
     // Validate intermediate stops have addresses
     const validStops = stops.filter(s => s.address && s.lat && s.lng);
     if (stops.length > 0 && validStops.length !== stops.length) {
