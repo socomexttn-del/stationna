@@ -1,9 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/button';
+import LanguageSelector from '../components/LanguageSelector';
 import { Car, Shield, CreditCard, Star, MapPin, Clock, ArrowRight } from 'lucide-react';
 
 const LandingPage = () => {
+  const { t } = useTranslation();
+  
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -15,14 +19,17 @@ const LandingPage = () => {
             </div>
             <span className="text-2xl font-bold text-foreground" style={{ fontFamily: 'Space Grotesk' }}>Allogo</span>
           </div>
-          <Link to="/auth">
-            <Button 
-              data-testid="header-login-btn"
-              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full font-bold px-6"
-            >
-              Connexion
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <LanguageSelector />
+            <Link to="/auth">
+              <Button 
+                data-testid="header-login-btn"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full font-bold px-6"
+              >
+                {t('auth.login')}
+              </Button>
+            </Link>
+          </div>
         </div>
       </header>
 
