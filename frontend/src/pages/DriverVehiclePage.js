@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -9,7 +9,8 @@ import { Progress } from '../components/ui/progress';
 import { 
   Car, FileText, Upload, Check, X, Clock, ArrowLeft,
   CreditCard, Shield, Calendar, AlertCircle, Trash2, Eye,
-  User, Home, Briefcase, Building, FileCheck, Wallet, Loader2, CheckCircle2
+  User, Home, Briefcase, Building, FileCheck, Wallet, Loader2, 
+  CheckCircle2, AlertTriangle, Bell
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -39,7 +40,6 @@ const DOC_ICONS = {
 const DriverVehiclePage = () => {
   const { user, api, updateUser } = useAuth();
   const navigate = useNavigate();
-  const fileInputRef = useRef(null);
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -54,9 +54,11 @@ const DriverVehiclePage = () => {
   const [documents, setDocuments] = useState({});
   const [documentTypes, setDocumentTypes] = useState({});
   const [documentStatus, setDocumentStatus] = useState(null);
+  const [expiringDocs, setExpiringDocs] = useState({ expired: [], expiring_soon: [], total_alerts: 0 });
   const [uploadingDoc, setUploadingDoc] = useState(null);
   const [activeTab, setActiveTab] = useState('vehicle');
   const [previewDoc, setPreviewDoc] = useState(null);
+  const [uploadModal, setUploadModal] = useState(null); // { docType, docInfo }
 
   useEffect(() => {
     if (user?.role !== 'driver') {
@@ -68,9 +70,10 @@ const DriverVehiclePage = () => {
 
   const fetchDriverData = async () => {
     try {
-      const [docsResponse, statusResponse] = await Promise.all([
+      const [docsResponse, statusResponse, expiringResponse] = await Promise.all([
         api.get('/drivers/documents'),
-        api.get('/drivers/documents/status')
+        api.get('/drivers/documents/status'),
+        api.get('/drivers/documents/expiring')
       ]);
       
       if (docsResponse.data.vehicle_info) {
@@ -79,6 +82,7 @@ const DriverVehiclePage = () => {
       setDocuments(docsResponse.data.documents || {});
       setDocumentTypes(docsResponse.data.document_types || {});
       setDocumentStatus(statusResponse.data);
+      setExpiringDocs(expiringResponse.data);
     } catch (error) {
       console.error('Error fetching driver data:', error);
       toast.error('Erreur lors du chargement des données');
@@ -101,7 +105,7 @@ const DriverVehiclePage = () => {
     }
   };
 
-  const handleDocumentUpload = async (docType, file) => {
+  const handleDocumentUpload = async (docType, file, expiryDate) => {
     if (!file) return;
     
     // Validate file size (max 5MB)
@@ -120,7 +124,6 @@ const DriverVehiclePage = () => {
     setUploadingDoc(docType);
     
     try {
-      // Convert to base64 for storage (in production, use cloud storage)
       const reader = new FileReader();
       reader.onloadend = async () => {
         const dataUrl = reader.result;
@@ -129,11 +132,12 @@ const DriverVehiclePage = () => {
           await api.put('/drivers/documents', {
             document_type: docType,
             document_url: dataUrl,
-            expiry_date: null
+            expiry_date: expiryDate || null
           });
           
           toast.success('Document téléversé avec succès');
-          fetchDriverData(); // Refresh
+          setUploadModal(null);
+          fetchDriverData();
         } catch (error) {
           toast.error('Erreur lors du téléversement');
         } finally {
@@ -175,6 +179,131 @@ const DriverVehiclePage = () => {
     );
   };
 
+  // Expiry badge component
+  const ExpiryBadge = ({ expiryDate }) => {
+    if (!expiryDate) return null;
+    
+    const today = new Date();
+    const expiry = new Date(expiryDate);
+    const daysUntil = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+    
+    if (daysUntil < 0) {
+      return (
+        <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-500/20 text-red-500 flex items-center gap-1">
+          <AlertCircle className="w-3 h-3" /> Expiré
+        </span>
+      );
+    } else if (daysUntil <= 30) {
+      return (
+        <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-500/20 text-orange-500 flex items-center gap-1">
+          <AlertTriangle className="w-3 h-3" /> Expire dans {daysUntil}j
+        </span>
+      );
+    }
+    return (
+      <span className="text-xs text-muted-foreground">
+        Expire le {expiry.toLocaleDateString('fr-FR')}
+      </span>
+    );
+  };
+
+  // Upload Modal Component
+  const UploadModal = ({ docType, docInfo, onClose }) => {
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [expiryDate, setExpiryDate] = useState('');
+    const hasExpiry = docInfo?.has_expiry;
+    
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      if (!selectedFile) {
+        toast.error('Veuillez sélectionner un fichier');
+        return;
+      }
+      if (hasExpiry && !expiryDate) {
+        toast.error('Veuillez indiquer la date d\'expiration');
+        return;
+      }
+      handleDocumentUpload(docType, selectedFile, expiryDate || null);
+    };
+    
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <Card className="w-full max-w-md bg-card border-border/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Upload className="w-5 h-5 text-primary" />
+              Téléverser {docInfo?.name}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* File Input */}
+              <div>
+                <Label>Fichier (JPG, PNG, PDF - max 5Mo)</Label>
+                <Input
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={(e) => setSelectedFile(e.target.files[0])}
+                  className="mt-1"
+                />
+                {selectedFile && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} Mo)
+                  </p>
+                )}
+              </div>
+              
+              {/* Expiry Date (if applicable) */}
+              {hasExpiry && (
+                <div>
+                  <Label className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Date d'expiration
+                  </Label>
+                  <Input
+                    type="date"
+                    value={expiryDate}
+                    onChange={(e) => setExpiryDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="mt-1"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Vous serez notifié 30 jours avant l'expiration
+                  </p>
+                </div>
+              )}
+              
+              {/* Actions */}
+              <div className="flex gap-3 pt-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={onClose}
+                  className="flex-1"
+                >
+                  Annuler
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={uploadingDoc === docType}
+                  className="flex-1 bg-primary text-primary-foreground"
+                >
+                  {uploadingDoc === docType ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 mr-2" /> Téléverser
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
   // Document card component
   const DocumentCard = ({ docType, docInfo, uploadedDoc }) => {
     const Icon = DOC_ICONS[docType] || FileText;
@@ -194,21 +323,27 @@ const DriverVehiclePage = () => {
             </div>
             
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <h4 className="font-medium truncate">{docInfo.name}</h4>
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <h4 className="font-medium">{docInfo.name}</h4>
                 {docInfo.required && (
                   <span className="text-xs text-red-500 bg-red-500/10 px-2 py-0.5 rounded">Requis</span>
+                )}
+                {docInfo.has_expiry && (
+                  <span className="text-xs text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded">
+                    <Calendar className="w-3 h-3 inline mr-1" />Expiration
+                  </span>
                 )}
               </div>
               
               {isUploaded ? (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <StatusBadge status={uploadedDoc.status} />
-                    <span className="text-xs text-muted-foreground">
-                      Ajouté le {uploadedDoc.uploaded_at?.slice(0, 10)}
-                    </span>
+                    <ExpiryBadge expiryDate={uploadedDoc.expiry_date} />
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    Ajouté le {uploadedDoc.uploaded_at?.slice(0, 10)}
+                  </p>
                   
                   <div className="flex items-center gap-2">
                     <Button
@@ -222,44 +357,41 @@ const DriverVehiclePage = () => {
                     <Button
                       variant="outline"
                       size="sm"
+                      onClick={() => setUploadModal({ docType, docInfo })}
+                      className="h-8"
+                    >
+                      <Upload className="w-4 h-4 mr-1" /> Remplacer
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => handleDeleteDocument(docType)}
                       className="h-8 text-red-500 hover:text-red-600"
                     >
-                      <Trash2 className="w-4 h-4 mr-1" /> Supprimer
+                      <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
               ) : (
                 <div>
                   <p className="text-sm text-muted-foreground mb-2">Non téléversé</p>
-                  <label className="cursor-pointer">
-                    <input
-                      type="file"
-                      accept="image/*,.pdf"
-                      className="hidden"
-                      onChange={(e) => handleDocumentUpload(docType, e.target.files[0])}
-                      disabled={isUploading}
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8"
-                      disabled={isUploading}
-                      asChild
-                    >
-                      <span>
-                        {isUploading ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-1 animate-spin" /> Envoi...
-                          </>
-                        ) : (
-                          <>
-                            <Upload className="w-4 h-4 mr-1" /> Téléverser
-                          </>
-                        )}
-                      </span>
-                    </Button>
-                  </label>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    disabled={isUploading}
+                    onClick={() => setUploadModal({ docType, docInfo })}
+                  >
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-1 animate-spin" /> Envoi...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 mr-1" /> Téléverser
+                      </>
+                    )}
+                  </Button>
                 </div>
               )}
             </div>
@@ -309,6 +441,39 @@ const DriverVehiclePage = () => {
             </p>
           </div>
         </div>
+
+        {/* Expiry Alerts */}
+        {expiringDocs.total_alerts > 0 && (
+          <Card className="bg-gradient-to-br from-orange-500/20 to-red-500/10 border-orange-500/50">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center shrink-0">
+                  <Bell className="w-5 h-5 text-orange-500" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-orange-500 flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4" />
+                    {expiringDocs.total_alerts} document{expiringDocs.total_alerts > 1 ? 's' : ''} à renouveler
+                  </h3>
+                  <div className="mt-2 space-y-1">
+                    {expiringDocs.expired.map((doc) => (
+                      <p key={doc.doc_type} className="text-sm text-red-400 flex items-center gap-2">
+                        <X className="w-4 h-4" />
+                        <span className="font-medium">{doc.doc_name}</span> - Expiré depuis {Math.abs(doc.days_until_expiry)} jour{Math.abs(doc.days_until_expiry) > 1 ? 's' : ''}
+                      </p>
+                    ))}
+                    {expiringDocs.expiring_soon.map((doc) => (
+                      <p key={doc.doc_type} className="text-sm text-orange-400 flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        <span className="font-medium">{doc.doc_name}</span> - Expire dans {doc.days_until_expiry} jour{doc.days_until_expiry > 1 ? 's' : ''}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Progress Card */}
         {documentStatus && (
@@ -479,11 +644,7 @@ const DriverVehiclePage = () => {
                   disabled={saving}
                   className="w-full h-12 bg-primary text-primary-foreground"
                 >
-                  {saving ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    'Enregistrer'
-                  )}
+                  {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Enregistrer'}
                 </Button>
               </form>
             </CardContent>
@@ -517,6 +678,15 @@ const DriverVehiclePage = () => {
           </div>
         )}
 
+        {/* Upload Modal */}
+        {uploadModal && (
+          <UploadModal 
+            docType={uploadModal.docType}
+            docInfo={uploadModal.docInfo}
+            onClose={() => setUploadModal(null)}
+          />
+        )}
+
         {/* Document Preview Modal */}
         {previewDoc && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
@@ -534,9 +704,9 @@ const DriverVehiclePage = () => {
                 <h3 className="font-semibold">
                   {documentTypes[previewDoc.type]?.name || previewDoc.type}
                 </h3>
-                <div className="flex items-center gap-3 mt-2 text-sm text-muted-foreground">
+                <div className="flex items-center gap-3 mt-2 text-sm">
                   <StatusBadge status={previewDoc.status} />
-                  <span>Ajouté le {previewDoc.uploaded_at?.slice(0, 10)}</span>
+                  <ExpiryBadge expiryDate={previewDoc.expiry_date} />
                 </div>
               </div>
               
