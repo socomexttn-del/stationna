@@ -1089,8 +1089,12 @@ const PassengerDashboard = () => {
                 {/* Taxi regulation notice */}
                 {vehicleType === 'taxi' && estimate.fare_details?.regulated && (
                   <div className="mb-4 px-3 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                    <p className="text-xs text-yellow-500">
-                      {estimate.fare_details.regulation_text}
+                    <p className="text-xs text-yellow-500 font-medium mb-1">
+                      ⚠️ Prix estimatif - Tarification au compteur
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Le prix final sera celui affiché au compteur du taxi à la fin de la course. 
+                      Ce montant peut varier selon le trafic et le temps réel du trajet.
                     </p>
                   </div>
                 )}
