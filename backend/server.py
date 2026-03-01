@@ -213,8 +213,26 @@ class VehicleDocuments(BaseModel):
     permis_conduire: Optional[str] = None
     carte_vtc: Optional[str] = None  # Carte professionnelle VTC
 
+# Extended driver document types
+DRIVER_DOCUMENT_TYPES = {
+    # Vehicle documents
+    "carte_grise": {"name": "Carte Grise", "category": "vehicle", "required": True},
+    "assurance": {"name": "Assurance Véhicule", "category": "vehicle", "required": True},
+    "controle_technique": {"name": "Contrôle Technique", "category": "vehicle", "required": True},
+    # Personal documents  
+    "permis_conduire": {"name": "Permis de Conduire", "category": "personal", "required": True},
+    "carte_vtc": {"name": "Carte VTC", "category": "professional", "required": True},
+    "cni": {"name": "Carte Nationale d'Identité", "category": "personal", "required": True},
+    "justificatif_domicile": {"name": "Justificatif de Domicile", "category": "personal", "required": True},
+    # Professional documents
+    "rc_pro": {"name": "RC Professionnelle", "category": "professional", "required": True},
+    "kbis": {"name": "Extrait KBIS", "category": "professional", "required": False},
+    "attestation_vigilance": {"name": "Attestation de Vigilance URSSAF", "category": "professional", "required": False},
+    "rib": {"name": "RIB (Relevé d'Identité Bancaire)", "category": "financial", "required": True},
+}
+
 class DriverDocumentsUpdate(BaseModel):
-    document_type: str  # carte_grise, assurance, controle_technique, permis_conduire, carte_vtc
+    document_type: str
     document_url: str
     expiry_date: Optional[str] = None  # Date d'expiration
 
