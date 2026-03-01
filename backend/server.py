@@ -1479,20 +1479,6 @@ async def schedule_ride(data: ScheduledRideRequest, current_user: dict = Depends
     await db.rides.insert_one(ride)
     return RideResponse(**ride)
 
-@api_router.get("/rides/scheduled", response_model=List[RideResponse])
-async def get_scheduled_rides(current_user: dict = Depends(get_current_user)):
-    """Get all scheduled rides for the current user"""
-    query = {"status": "scheduled"}
-    if current_user["role"] == "passenger":
-        query["passenger_id"] = current_user["id"]
-    rides = await db.rides.find(query, {"_id": 0}).sort("scheduled_time", 1).to_list(50)
-    
-    if not rides:
-        # Return empty list instead of raising 404
-        return []
-    
-    return [RideResponse(**r) for r in rides]
-
 @api_router.post("/rides/{ride_id}/activate", response_model=RideResponse)
 async def activate_scheduled_ride(ride_id: str, current_user: dict = Depends(get_current_user)):
     """Activate a scheduled ride (change status to pending)"""
