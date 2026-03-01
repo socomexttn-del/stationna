@@ -15,6 +15,18 @@
     "error": "Error",
     "success": "Success"
   },
+  "landing": {
+    "heroTitle1": "Your ride,",
+    "heroTitle2": "in a flash",
+    "heroSubtitle": "Book a driver in seconds. Track your trip in real-time. Pay securely.",
+    "becomeDriver": "Become a driver",
+    "feature1Title": "Fast & Reliable",
+    "feature1Desc": "Find a driver in under 3 minutes",
+    "feature2Title": "Secure Payment",
+    "feature2Desc": "Pay by card or wallet",
+    "feature3Title": "Real-Time Tracking",
+    "feature3Desc": "Track your driver on the map"
+  },
   "auth": {
     "login": "Login",
     "logout": "Logout",
