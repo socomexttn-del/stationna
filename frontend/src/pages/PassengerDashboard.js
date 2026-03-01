@@ -476,8 +476,8 @@ const PassengerDashboard = () => {
     }
     
     // Validate passengers for vehicle type
-    if (vehicleType === 'standard' && passengers > 4) {
-      toast.error('Maximum 4 passagers pour un véhicule standard. Choisissez un Van.');
+    if ((vehicleType === 'standard' || vehicleType === 'taxi') && passengers > 4) {
+      toast.error('Maximum 4 passagers pour ce type de véhicule. Choisissez un Van.');
       return;
     }
     if (vehicleType === 'van' && passengers > 7) {
