@@ -665,6 +665,11 @@ const PassengerDashboard = () => {
                     <Gift className="w-5 h-5 mr-3" /> Paiements & Promos
                   </Button>
                 </Link>
+                <Link to="/wallet" onClick={() => setMenuOpen(false)}>
+                  <Button variant="ghost" className="w-full justify-start h-12" data-testid="nav-wallet">
+                    <Wallet className="w-5 h-5 mr-3" /> Mon Portefeuille
+                  </Button>
+                </Link>
                 <Button 
                   variant="ghost" 
                   className="w-full justify-start h-12 text-destructive hover:text-destructive"
