@@ -185,12 +185,8 @@ const DriverDashboard = () => {
     
     const unsubscribe = addPushListener((event) => {
       console.log('Native push notification received:', event);
-      if (event.notification?.data) {
-        // Refresh available rides when a new ride notification arrives
-        if (event.notification.data.type === 'new_ride' || event.notification.data.type === 'ride_available') {
-          fetchAvailableRides();
-        }
-      }
+      // The push notification will trigger a UI refresh via the notification polling system
+      // The native notification is handled by the OS when app is in background
     });
     
     return unsubscribe;
