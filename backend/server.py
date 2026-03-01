@@ -1848,6 +1848,195 @@ async def pay_with_saved_card(data: PayWithSavedCardRequest, current_user: dict 
         logger.error(f"Stripe error: {e}")
         raise HTTPException(status_code=500, detail=f"Erreur de paiement: {str(e)}")
 
+# ======================== WALLET SYSTEM ========================
+
+class WalletTopUpRequest(BaseModel):
+    amount: float  # Amount in euros
+
+class WalletPaymentRequest(BaseModel):
+    ride_id: str
+
+@api_router.get("/wallet/balance")
+async def get_wallet_balance(current_user: dict = Depends(get_current_user)):
+    """Get current wallet balance"""
+    user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0, "wallet_balance": 1})
+    balance = user.get("wallet_balance", 0.0)
+    return {"balance": round(balance, 2), "currency": "EUR"}
+
+@api_router.get("/wallet/transactions")
+async def get_wallet_transactions(
+    page: int = 1, 
+    limit: int = 20,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get wallet transaction history"""
+    total = await db.wallet_transactions.count_documents({"user_id": current_user["id"]})
+    transactions = await db.wallet_transactions.find(
+        {"user_id": current_user["id"]},
+        {"_id": 0}
+    ).sort("created_at", -1).skip((page - 1) * limit).limit(limit).to_list(limit)
+    
+    return {
+        "transactions": transactions,
+        "total": total,
+        "page": page,
+        "pages": (total + limit - 1) // limit
+    }
+
+@api_router.post("/wallet/top-up")
+async def create_wallet_topup(data: WalletTopUpRequest, current_user: dict = Depends(get_current_user)):
+    """Create a payment intent to top up wallet"""
+    if data.amount < 5:
+        raise HTTPException(status_code=400, detail="Montant minimum: 5€")
+    if data.amount > 500:
+        raise HTTPException(status_code=400, detail="Montant maximum: 500€")
+    
+    try:
+        customer_id = await get_or_create_stripe_customer(current_user)
+        amount_cents = int(data.amount * 100)
+        
+        intent = stripe.PaymentIntent.create(
+            amount=amount_cents,
+            currency="eur",
+            customer=customer_id,
+            metadata={
+                "type": "wallet_topup",
+                "user_id": current_user["id"],
+                "user_email": current_user["email"]
+            }
+        )
+        
+        # Create pending transaction record
+        transaction = {
+            "id": str(uuid.uuid4()),
+            "user_id": current_user["id"],
+            "type": "topup",
+            "amount": data.amount,
+            "status": "pending",
+            "payment_intent_id": intent.id,
+            "description": f"Rechargement portefeuille +{data.amount}€",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.wallet_transactions.insert_one(transaction)
+        
+        return {
+            "client_secret": intent.client_secret,
+            "publishable_key": STRIPE_PUBLISHABLE_KEY,
+            "payment_intent_id": intent.id,
+            "amount": data.amount
+        }
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe error: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
+@api_router.post("/wallet/confirm-topup")
+async def confirm_wallet_topup(payment_intent_id: str, current_user: dict = Depends(get_current_user)):
+    """Confirm wallet top-up after successful payment"""
+    try:
+        intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+        
+        if intent.status != "succeeded":
+            return {"status": intent.status, "message": "Paiement en attente"}
+        
+        # Find the transaction
+        transaction = await db.wallet_transactions.find_one(
+            {"payment_intent_id": payment_intent_id, "user_id": current_user["id"]},
+            {"_id": 0}
+        )
+        
+        if not transaction:
+            raise HTTPException(status_code=404, detail="Transaction non trouvée")
+        
+        if transaction["status"] == "completed":
+            return {"status": "already_processed", "message": "Déjà traité"}
+        
+        # Update wallet balance
+        amount = transaction["amount"]
+        await db.users.update_one(
+            {"id": current_user["id"]},
+            {"$inc": {"wallet_balance": amount}}
+        )
+        
+        # Update transaction status
+        await db.wallet_transactions.update_one(
+            {"id": transaction["id"]},
+            {"$set": {"status": "completed", "completed_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        
+        # Get new balance
+        user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0, "wallet_balance": 1})
+        new_balance = user.get("wallet_balance", 0.0)
+        
+        return {
+            "status": "succeeded",
+            "message": f"Portefeuille rechargé de {amount}€",
+            "new_balance": round(new_balance, 2)
+        }
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe error: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
+@api_router.post("/wallet/pay")
+async def pay_with_wallet(data: WalletPaymentRequest, current_user: dict = Depends(get_current_user)):
+    """Pay for a ride using wallet balance"""
+    ride = await db.rides.find_one({"id": data.ride_id, "status": "completed"}, {"_id": 0})
+    if not ride:
+        raise HTTPException(status_code=404, detail="Course non trouvée ou non terminée")
+    
+    if ride["passenger_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Ce n'est pas votre course")
+    
+    if ride.get("payment_status") == "paid":
+        raise HTTPException(status_code=400, detail="Course déjà payée")
+    
+    # Get wallet balance
+    user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0, "wallet_balance": 1})
+    balance = user.get("wallet_balance", 0.0)
+    
+    amount = float(ride.get("final_fare") or ride.get("estimated_fare", 0))
+    
+    if balance < amount:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Solde insuffisant. Solde: {balance:.2f}€, Montant: {amount:.2f}€"
+        )
+    
+    # Deduct from wallet
+    await db.users.update_one(
+        {"id": current_user["id"]},
+        {"$inc": {"wallet_balance": -amount}}
+    )
+    
+    # Update ride
+    await db.rides.update_one(
+        {"id": data.ride_id},
+        {"$set": {"payment_status": "paid", "payment_method": "wallet"}}
+    )
+    
+    # Create wallet transaction
+    transaction = {
+        "id": str(uuid.uuid4()),
+        "user_id": current_user["id"],
+        "type": "payment",
+        "amount": -amount,
+        "status": "completed",
+        "ride_id": data.ride_id,
+        "description": f"Paiement course #{ride.get('reservation_number', data.ride_id[:8])}",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.wallet_transactions.insert_one(transaction)
+    
+    # Get new balance
+    user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0, "wallet_balance": 1})
+    new_balance = user.get("wallet_balance", 0.0)
+    
+    return {
+        "status": "succeeded",
+        "message": "Paiement effectué avec le portefeuille",
+        "amount_paid": amount,
+        "new_balance": round(new_balance, 2)
+    }
+
 # ======================== STATS ROUTES ========================
 
 @api_router.get("/stats/driver")
