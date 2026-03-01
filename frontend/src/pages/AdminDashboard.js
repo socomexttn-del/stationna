@@ -304,6 +304,84 @@ const AdminDashboard = () => {
           </Card>
         )}
 
+        {/* Document Expiry Alerts */}
+        <Card className="border-orange-500/30 bg-gradient-to-br from-orange-500/10 to-transparent">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-orange-500" />
+                Documents à renouveler
+              </CardTitle>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={fetchExpiringDocuments}
+                  className="gap-2"
+                  data-testid="view-expiring-docs-btn"
+                >
+                  <Eye className="w-4 h-4" /> Voir
+                </Button>
+                <Button 
+                  size="sm"
+                  onClick={sendExpiryNotifications}
+                  disabled={sendingEmails}
+                  className="gap-2 bg-orange-500 hover:bg-orange-600"
+                  data-testid="send-notifications-btn"
+                >
+                  {sendingEmails ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Mail className="w-4 h-4" />
+                  )}
+                  Envoyer alertes
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          {showExpiringDocs && expiringDocs && (
+            <CardContent>
+              <div className="space-y-2">
+                <div className="flex gap-4 text-sm mb-4">
+                  <span className="px-3 py-1 bg-red-500/20 text-red-400 rounded-full">
+                    {expiringDocs.expired_count} expirés
+                  </span>
+                  <span className="px-3 py-1 bg-orange-500/20 text-orange-400 rounded-full">
+                    {expiringDocs.expiring_count} à renouveler
+                  </span>
+                </div>
+                {expiringDocs.documents.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Aucun document à renouveler</p>
+                ) : (
+                  <div className="max-h-60 overflow-y-auto space-y-2">
+                    {expiringDocs.documents.slice(0, 10).map((doc, idx) => (
+                      <div 
+                        key={idx} 
+                        className={`flex items-center justify-between p-3 rounded-lg ${
+                          doc.is_expired ? 'bg-red-500/10' : 'bg-orange-500/10'
+                        }`}
+                      >
+                        <div>
+                          <p className="font-medium text-sm">{doc.driver_name}</p>
+                          <p className="text-xs text-muted-foreground">{doc.doc_name}</p>
+                        </div>
+                        <span className={`text-xs font-medium ${
+                          doc.is_expired ? 'text-red-400' : 'text-orange-400'
+                        }`}>
+                          {doc.is_expired 
+                            ? `Expiré (${Math.abs(doc.days_until_expiry)}j)` 
+                            : `${doc.days_until_expiry}j restants`
+                          }
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          )}
+        </Card>
+
         {/* Driver Stats */}
         <Card className="border-white/10">
           <CardHeader>
