@@ -1,137 +1,89 @@
-# Allogo - Product Requirements Document
+# Allogo - Application Taxi PRD
 
-## Original Problem Statement
-Application de taxi complète nommée Allogo avec rôles passager/chauffeur/admin, authentification JWT, paiements Stripe, cartes Mapbox, tarification réglementée pour taxis parisiens incluant les forfaits aéroports.
+## Problème Original
+Application taxi complète "Allogo" avec support multi-rôles (Passager, Chauffeur, Admin), fonctionnalités temps réel, cycle de vie complet des courses, GPS, chat in-app, paiements Stripe, et tarifs réglementés parisiens.
 
-## User Language
-French (Français) + English (Multi-language support)
+## Architecture Technique
+- **Backend**: FastAPI + MongoDB (motor) + JWT
+- **Frontend**: React 19 + Tailwind CSS + Shadcn UI + i18next
+- **Mobile**: Capacitor (Android/iOS)
+- **Paiements**: Stripe
+- **Cartes**: Mapbox
+- **Emails**: Resend
+- **Push Notifications**: Firebase Cloud Messaging (FCM)
 
----
+## Fonctionnalités Implémentées
 
-## Session Update - Complete (2025-12-XX)
+### ✅ Authentification
+- JWT-based login/register pour passagers, chauffeurs, admin
+- Gestion des sessions
 
-### ✅ Task 1: Backend Refactoring - COMPLETED
+### ✅ Courses (Rides)
+- Réservation immédiate et programmée
+- Types: VTC (Standard/Van) et Taxis réglementés
+- Calcul de tarifs avec tarifs aéroport forfaitaires
+- Arrêts intermédiaires
+- Cycle complet: pending → accepted → arrived → in_progress → completed
 
-**Nouvelle architecture modulaire (76 routes):**
-```
-/app/backend/
-├── server.py              # Original (88 routes) - ACTIF
-├── main.py                # ✅ Refactoré (76 routes) - PRÊT
-├── core/
-│   ├── __init__.py
-│   └── deps.py            # Auth, DB, helpers partagés
-├── models/
-│   └── base.py            # Tous les modèles Pydantic
-├── services/
-│   ├── shared.py          # Services partagés
-│   └── fare_calculator.py # Calcul tarifs VTC + Taxi
-├── routers/
-│   ├── auth_router.py     # Authentification
-│   ├── users_router.py    # Utilisateurs
-│   ├── drivers_router.py  # Chauffeurs + Documents
-│   ├── rides_router.py    # Courses
-│   ├── wallet_router.py   # Portefeuille
-│   ├── admin_router.py    # Administration
-│   ├── payments_router.py # Paiements Stripe
-│   ├── chat_router.py     # Messagerie in-ride
-│   ├── favorites_router.py # Adresses favorites
-│   ├── scheduled_router.py # Courses programmées
-│   ├── ratings_router.py  # Notes
-│   └── promo_router.py    # Codes promo (user)
-└── tests/
-```
+### ✅ Chauffeurs
+- Dashboard avec gestion disponibilité
+- Système de documents avec expiration
+- Localisation GPS temps réel
+- Notification de nouvelles courses
 
-### ✅ Task 2: Firebase - SKIPPED (non essentiel)
-L'application fonctionne parfaitement sans notifications push.
+### ✅ Passagers
+- Dashboard de réservation
+- Suivi en temps réel du chauffeur
+- Historique des courses
+- Export PDF
 
-### ✅ Task 3: Traductions i18n - COMPLETED
+### ✅ Admin
+- Statistiques
+- Gestion des codes promo
+- Alertes documents expirés
+- Base clients
 
-**Fichiers enrichis avec ~250 clés:**
-- `/app/frontend/src/locales/fr.json`
-- `/app/frontend/src/locales/en.json`
+### ✅ Paiements (Stripe)
+- Paiement one-time
+- Cartes sauvegardées
+- Portefeuille avec bonus
 
-**Hook `useTranslation` ajouté aux composants:**
-- PassengerDashboard.js
-- DriverDashboard.js
-- AdminDashboard.js
-- RideHistory.js
-- WalletPage.js
+### ✅ Push Notifications (Firebase) - NOUVEAU 01/03/2026
+- Firebase Admin SDK intégré au backend
+- Endpoints FCM pour enregistrement tokens
+- Notifications automatiques lors des événements de course
+- Support Capacitor pour notifications natives Android/iOS
 
-**Nouvelles sections de traduction:**
-- `taxi` : Tarifs parisiens, compteur
-- `airport` : Forfaits aéroports
-- `fare` : Détails tarification
-- `profile`, `history`, `status`, `errors`
+## Fichiers Clés
+- `/app/backend/server.py` - Backend principal (monolithe actif)
+- `/app/backend/services/firebase_service.py` - Service FCM
+- `/app/backend/firebase-credentials.json` - Credentials Firebase
+- `/app/frontend/src/services/pushNotifications.js` - Service push frontend
+- `/app/frontend/src/hooks/usePushNotifications.js` - Hook notifications
+- `/app/frontend/capacitor.config.ts` - Config Capacitor
+- `/app/frontend/android/app/google-services.json` - Config Firebase Android
 
----
+## Credentials Test
+- Admin: admin@volttaxi.com / admin123
+- Passager: passenger@test.com / password
+- Chauffeur: driver@test.com / password
 
-## Complete Features Summary
+## Backlog Priorité
 
-### Taxi Parisien (Tarification Réglementée 2025)
-- ✅ 3 tarifs automatiques (A/B/C)
-- ✅ Forfaits aéroports CDG/Orly avec UI
-- ✅ Détection Rive Droite/Gauche
-- ✅ Suppléments réglementés
+### P0 - Critique
+- [x] Intégration Firebase Push Notifications
 
-### Core Features
-- ✅ Authentication (JWT) - Passager/Chauffeur/Admin
-- ✅ Ride booking (immediate & scheduled)
-- ✅ Intermediate stops (up to 3)
-- ✅ Vehicle types (VTC/Van/Taxi)
-- ✅ Real-time status updates
-- ✅ Stripe payments + saved cards
-- ✅ Passenger wallet + bonuses
-- ✅ Driver documents (11 types)
-- ✅ In-ride chat
-- ✅ Ratings system
-- ✅ Admin dashboard + stats
-- ✅ Promo codes
-- ✅ Multi-language (FR/EN)
-- ✅ PDF export ride history
-- ✅ Email notifications (Resend)
+### P1 - Important
+- [ ] Tester APK Android avec vraies notifications
+- [ ] Finaliser refactoring backend (activer main.py)
+- [ ] Vérifier estimation tarifs aéroport
 
----
+### P2 - Normal
+- [ ] Stabilité build frontend
+- [ ] Tests automatisés Pytest
+- [ ] Couverture i18n complète
 
-## Test Accounts
-- Passenger: `passenger@test.com` / `password`
-- Driver: `driver@test.com` / `password`
-- Admin: `admin@volttaxi.com` / `admin123`
-
----
-
-## Architecture Status
-
-### Backend
-- **server.py**: 3725 lignes, 88 routes - ACTIF (production)
-- **main.py**: Architecture modulaire, 76 routes - PRÊT (migration)
-
-### Frontend
-- React avec Tailwind CSS + Shadcn UI
-- i18next configuré avec FR/EN
-- Mapbox pour les cartes
-- Stripe Elements pour les paiements
-
----
-
-## Remaining Tasks (Backlog)
-
-### P1 - When Time Permits
-1. **Complete Migration** - Switch supervisor from server.py to main.py
-2. **Add remaining 12 routes** to main.py (mostly edge cases)
-3. **Apply t() function** to remaining UI text
-
-### P2 - Future Enhancements
-4. **Mobile App Build** (Capacitor) - Config ready
-5. **Automated Test Suite** expansion
-6. **Frontend Build Stability** investigation
-
----
-
-## Test Reports
-- `/app/test_reports/iteration_14.json` - 24/24 passed
-
-## Status: PRODUCTION READY ✅
-- All core features functional
-- Airport flat rates verified
-- Multi-language support active
-- Modular backend ready for migration
+## Notes Techniques
+- AppId Capacitor: `com.allogo.app`
+- Firebase Project: `allogo-43fd4`
+- Sender ID: `1003171734817`
