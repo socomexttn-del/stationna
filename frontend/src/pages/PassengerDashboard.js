@@ -21,6 +21,7 @@ import {
 import { toast } from 'sonner';
 
 const PassengerDashboard = () => {
+  const { t } = useTranslation();
   const { user, logout, api } = useAuth();
   const navigate = useNavigate();
   const { permission, requestPermission, notifyDriverAccepted, notifyDriverArrived, notifyRideCompleted, notifyNewMessage } = usePushNotifications();
