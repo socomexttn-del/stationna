@@ -529,7 +529,10 @@ AIRPORTS = {
 }
 
 # Seine river approximate latitude in Paris (separates Rive Droite from Rive Gauche)
-SEINE_LATITUDE = 48.8566
+# The Seine curves through Paris - using 48.86 as a practical dividing line
+# North of 48.86 = Rive Droite (1er, 2e, 3e, 4e, 8e, 9e, 10e, 11e, 12e, 17e, 18e, 19e, 20e)
+# South of 48.86 = Rive Gauche (5e, 6e, 7e, 13e, 14e, 15e)
+SEINE_LATITUDE = 48.86
 
 # Airport flat rates (forfaits) 2025
 AIRPORT_FLAT_RATES = {
