@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
@@ -7,6 +8,7 @@ import { ArrowLeft, MapPin, Navigation, Clock, Star, CreditCard, Check, X, Downl
 import { toast } from 'sonner';
 
 const RideHistory = () => {
+  const { t } = useTranslation();
   const { user, api } = useAuth();
   const [rides, setRides] = useState([]);
   const [loading, setLoading] = useState(true);
