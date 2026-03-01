@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1003171734817",
+    "project_id": "allogo-43fd4",
+    "storage_bucket": "allogo-43fd4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1003171734817:android:00e7a2512c1f5c5e3b0a60",
+        "android_client_info": {
+          "package_name": "com.allogo.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD5JWiBwUK-RTKMjP5idrlbR_k2mX5wE0E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
