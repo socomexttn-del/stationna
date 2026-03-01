@@ -184,6 +184,20 @@ const ProfilePage = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Saved Cards (Passengers only) */}
+        {user?.role === 'passenger' && (
+          <Card className="bg-card border-border/50">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <CreditCard className="w-5 h-5" /> Mes cartes bancaires
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <SavedCardsManager />
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
