@@ -98,23 +98,26 @@ French (Français)
 
 ## Backlog
 
-### P1 - High Priority (In Progress)
-1. **Refactorisation Backend** - server.py > 3000 lignes
-   - ✅ Structure créée : `models/`, `routers/`, `services/`, `utils/`
-   - ✅ Modèles Pydantic extraits
-   - ✅ Services métier extraits (auth, fare, notifications)
-   - ✅ Config et database séparés
-   - 🔄 Migration des routes en cours
-   - 📄 Voir `/app/backend/REFACTORING.md` pour le plan détaillé
+### P1 - Completed ✅
+1. ~~**Refactorisation Backend**~~ - Structure créée
+2. ~~**Email notifications**~~ - Implémenté avec Resend
+3. ~~**Export PDF**~~ - Implémenté avec ReportLab
 
 ### P2 - Medium Priority
-2. **Email notifications** for document expiry (SMTP)
-3. **Ride history export** (PDF)
+1. **Compléter migration routes** vers modules backend
+2. **Système de codes promo avancé** - UI admin pour créer/gérer
 
 ### P3 - Future
-4. **Mobile App** - Capacitor for iOS/Android
-5. **Multi-language support**
-6. **Promo codes system**
+3. **Mobile App** - Capacitor for iOS/Android
+4. **Multi-language support**
+5. **Notifications push** - Firebase
+
+## Configuration Email (Resend)
+Pour activer les notifications email :
+```
+RESEND_API_KEY=re_your_api_key
+SENDER_EMAIL=noreply@yourdomain.com
+```
 
 ## Stripe Test Card
 - Number: 4242 4242 4242 4242
@@ -122,4 +125,4 @@ French (Français)
 - CVC: 123
 
 ## Last Updated
-2025-03-01 - Backend refactoring structure created
+2025-03-01 - Email notifications & PDF export added
