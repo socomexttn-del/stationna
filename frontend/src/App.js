@@ -78,6 +78,7 @@ function AppRoutes() {
       <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
       <Route path="/scheduled" element={<ProtectedRoute allowedRoles={['passenger']}><ScheduledRidesPage /></ProtectedRoute>} />
       <Route path="/payments" element={<ProtectedRoute allowedRoles={['passenger']}><PaymentsPage /></ProtectedRoute>} />
+      <Route path="/wallet" element={<ProtectedRoute allowedRoles={['passenger']}><WalletPage /></ProtectedRoute>} />
       <Route path="/payment/success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
       <Route path="/payment/cancel" element={<ProtectedRoute><PaymentCancel /></ProtectedRoute>} />
     </Routes>
