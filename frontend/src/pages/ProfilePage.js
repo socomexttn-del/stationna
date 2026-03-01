@@ -5,7 +5,8 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { ArrowLeft, User, Star, Car, Phone, Mail, Save } from 'lucide-react';
+import SavedCardsManager from '../components/SavedCardsManager';
+import { ArrowLeft, User, Star, Car, Phone, Mail, Save, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 
 const ProfilePage = () => {
