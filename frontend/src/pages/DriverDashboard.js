@@ -163,6 +163,31 @@ const DriverDashboard = () => {
     checkPermissionAndGetLocation();
   }, [api]);
 
+  // Initialize native push notifications
+  useEffect(() => {
+    const initPushNotifications = async () => {
+      const authToken = localStorage.getItem('volt_token');
+      if (authToken) {
+        const { initializeNative, addPushListener, isNative } = require('../hooks/usePushNotifications').default();
+        
+        // Only initialize on native platforms
+        if (isNative) {
+          await initializeNative(authToken);
+          
+          // Add listener for push notifications
+          addPushListener((event) => {
+            console.log('Push notification received:', event);
+            if (event.notification?.data?.type) {
+              handleNotification(event.notification.data);
+            }
+          });
+        }
+      }
+    };
+    
+    initPushNotifications();
+  }, []);
+
   // Continuous location tracking when available
   useEffect(() => {
     if (!isAvailable || !navigator.geolocation) return;
