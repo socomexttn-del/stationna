@@ -152,10 +152,27 @@ const PassengerDashboard = () => {
     getLocation();
   }, []);
 
-  // Submit rating
+  // Submit rating and reset page after
   const submitRating = async (ratingData) => {
     await api.post('/ratings', ratingData);
+    // Reset page state for new booking
+    resetBookingState();
   };
+
+  // Reset page to initial booking state
+  const resetBookingState = useCallback(() => {
+    setActiveRide(null);
+    setStep('idle');
+    setEstimate(null);
+    setDriverLocation(null);
+    setDriverPath([]);
+    setDestination({ lat: 48.8738, lng: 2.2950, address: '' });
+    setShowRatingModal(false);
+    setCompletedRideForRating(null);
+    setChatOpen(false);
+    setUnreadMessages(0);
+    toast.success('Prêt pour une nouvelle course!', { duration: 2000 });
+  }, []);
 
   // Fetch available drivers for map display
   const fetchAvailableDrivers = useCallback(async () => {
