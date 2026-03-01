@@ -263,36 +263,44 @@ const DriverDashboard = () => {
         oscillator.connect(gainNode);
         gainNode.connect(audioContext.destination);
         
-        // Louder and more attention-grabbing sound pattern
+        // LOUD and urgent notification sound
         oscillator.frequency.value = 880;
         oscillator.type = 'square'; // More noticeable than sine
-        gainNode.gain.value = 0.5; // Louder
+        gainNode.gain.value = 0.8; // Maximum loudness
         
         oscillator.start();
         
-        // Rising pitch pattern
-        setTimeout(() => { oscillator.frequency.value = 1100; }, 100);
-        setTimeout(() => { oscillator.frequency.value = 1320; }, 200);
-        setTimeout(() => { oscillator.frequency.value = 880; }, 300);
-        setTimeout(() => { oscillator.frequency.value = 1100; }, 400);
+        // Rising pitch pattern - urgent taxi alert
+        setTimeout(() => { oscillator.frequency.value = 1047; }, 80);  // C6
+        setTimeout(() => { oscillator.frequency.value = 1319; }, 160); // E6
+        setTimeout(() => { oscillator.frequency.value = 1568; }, 240); // G6
+        setTimeout(() => { oscillator.frequency.value = 1047; }, 320); // Back to C6
+        setTimeout(() => { oscillator.frequency.value = 1319; }, 400); // E6
+        setTimeout(() => { oscillator.frequency.value = 1568; }, 480); // G6
         setTimeout(() => { 
           oscillator.stop();
           audioContext.close();
-        }, 500);
+        }, 560);
         
       } catch (e) {
-        console.log('Web Audio not supported, trying HTML5 Audio');
+        console.log('Web Audio not supported:', e);
+        // Fallback: Try HTML5 Audio with a beep
+        try {
+          const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleC8RAGiV4+K9ihgAAWB33/XZuHITAABJY+Hy27qCHgAAKUBo6OG9iSQAAA9RbuLfxI4pAAAMWHnm5M2ZOQAAFl937OXGX8d5mAsAAEV/2OS9h4cbAABdm+bZspZxHwAAaKHo4L2TYAAA');
+          audio.volume = 1;
+          audio.play().catch(e => {});
+        } catch (e2) {}
       }
     };
 
     // Play sound multiple times for urgency
     for (let i = 0; i < repeat; i++) {
-      setTimeout(playBeep, i * 600);
+      setTimeout(playBeep, i * 700);
     }
     
     // Also try to vibrate on mobile
     if (navigator.vibrate) {
-      navigator.vibrate([200, 100, 200, 100, 200]);
+      navigator.vibrate([300, 100, 300, 100, 300]);
     }
   }, []);
 
