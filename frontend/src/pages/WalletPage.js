@@ -111,6 +111,7 @@ const TopUpForm = ({ clientSecret, amount, onSuccess, onCancel }) => {
 };
 
 const WalletPage = () => {
+  const { t } = useTranslation();
   const { api } = useAuth();
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState([]);
