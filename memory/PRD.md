@@ -12,11 +12,12 @@ French (Français)
 - [x] JWT authentication
 - [x] Passenger, Driver, and Admin roles
 - [x] User profiles with ratings
-- [x] Automatic geolocation on login with permission handling
-- [x] Session persistence (refactored AuthContext.js)
+- [x] Automatic geolocation with permission handling
+- [x] Session persistence
 
 ### Ride Management
 - [x] Ride booking flow (immediate & scheduled)
+- [x] **Intermediate stops (up to 3)** ✨ NEW
 - [x] Real-time ride status updates
 - [x] Ride cancellation
 - [x] Vehicle type selection (Standard/Van)
@@ -25,39 +26,28 @@ French (Français)
 - [x] Ride proposal system (drivers must accept)
 - [x] Re-dispatch to next driver on refusal
 - [x] 18% commission deduction for drivers
-- [x] Detailed booking receipt for drivers
-- [x] Page reset after ride completion and rating
+- [x] Page reset after ride completion
 
 ### Maps & Location
 - [x] Mapbox integration with interactive map
-- [x] Address autocomplete with popular locations (gares, aéroports)
+- [x] Address autocomplete with popular locations
 - [x] Route drawing with ETA/distance
 - [x] Live GPS tracking of driver
 - [x] Available drivers shown with ALLOGO car icons
 - [x] Driver path tracking (blue line on map)
-- [x] Improved geolocation permission handling
 
 ### Notifications
 - [x] Real-time in-app notifications (polling)
 - [x] Push notifications (PWA)
-- [x] Driver/passenger notifications with ETA
 - [x] Sound notifications for events (Web Audio API)
-  - Online/offline sounds for drivers
-  - New ride proposal sounds (3x repeat)
-  - Ride accepted sound for passengers
-  - Driver arrived sound for passengers
 
 ### Payments ✨ ENHANCED
 - [x] Stripe integration (test mode)
 - [x] Fare estimation with detailed breakdown
 - [x] Inline credit card payment form (Stripe Elements)
-- [x] **Saved card management** ✨ NEW
-  - Save cards via Stripe SetupIntent
-  - View/delete saved cards in profile
-  - Set default payment method
-  - Pay with saved card (one-click)
+- [x] **Saved card management** ✨ RECENT
+- [x] **Pay with saved card (one-click)** ✨ RECENT
 - [x] Payment history tracking
-- [x] User's Stripe API keys configured
 
 ### Communication
 - [x] In-app chat between passenger and driver
@@ -73,7 +63,6 @@ French (Français)
 - [x] Driver dashboard with earnings
 - [x] Hide/show earnings toggle
 - [x] Vehicle & document management
-- [x] Booking receipt with commission
 - [x] Waze/Google Maps integration links
 
 ### Rating System
@@ -92,43 +81,63 @@ French (Français)
 - **Payments**: Stripe API (Payment Intents, SetupIntents, Customers)
 - **Auth**: JWT tokens with persistent sessions
 
-## API Keys Configured
-- Mapbox: User's key
-- Stripe Secret Key: sk_test_51J5B0a...
-- Stripe Publishable Key: pk_test_51J5B0a...
+## Fare Calculation
+```
+Base Rates:
+- Prise en charge: 4.48€
+- Prix/km: 1.30€
+- Tarif/minute: 0.70€
+- Tarif minimum: 8.00€
+
+Supplements:
+- Réservation immédiate: +4.00€
+- Réservation à l'avance: +7.00€
+- Van (7 places): +10.00€
+- Passager supplémentaire (5e+): +5.50€/passager
+- Arrêt intermédiaire: +3.00€/arrêt ✨ NEW
+```
 
 ## Latest Updates (2025-03-01)
 
 ### Session Accomplishments
-1. **Saved cards feature complete**: Full Stripe SetupIntent integration
-   - Backend: 6 new endpoints for card management
-   - Frontend: SavedCardsManager + PaymentMethodSelector components
-   - Tests: 100% pass rate (13/13 backend, all UI verified)
-2. **Sound notifications verified**: Web Audio API sounds working
-3. **Geolocation improved**: Permission query API for better UX
-4. **Page reset after ride**: Passenger dashboard resets after rating
-5. **Bug fix**: /api/rides/scheduled route order corrected
+1. **Intermediate stops feature complete** ✨ NEW
+   - Add up to 3 waypoints in a trip
+   - Distance calculated via all points
+   - +3€ supplement per stop
+   - Route summary in estimation
+   
+2. **Saved cards feature complete**
+   - Full Stripe SetupIntent integration
+   - Card management in profile
+   - One-click payment with saved card
 
-### Test Results (iteration_10)
-- Backend: 100% (13/13 tests)
+3. **Sound notifications verified**
+4. **Geolocation improved**
+5. **Page reset after ride**
+
+### Test Results (iteration_11)
+- Backend: 100% (12/12 tests)
 - Frontend: 100% (all components verified)
 
-## New Components Created
-- `/app/frontend/src/components/SavedCardsManager.js` - Card management in profile
-- `/app/frontend/src/components/PaymentMethodSelector.js` - Payment modal with saved cards option
+## New Components Created This Session
+- `/app/frontend/src/components/IntermediateStops.js` - Stop management UI
+- `/app/frontend/src/components/SavedCardsManager.js` - Card management
+- `/app/frontend/src/components/PaymentMethodSelector.js` - Payment modal
 
-## New API Endpoints
-- `POST /api/payments/setup-intent` - Create SetupIntent for card saving
-- `GET /api/payments/saved-cards` - List user's saved cards
-- `DELETE /api/payments/saved-cards/{id}` - Remove saved card
-- `POST /api/payments/set-default-card/{id}` - Set default payment method
-- `POST /api/payments/pay-with-saved-card` - Pay with saved card
+## New API Endpoints This Session
+- `POST /api/payments/setup-intent`
+- `GET /api/payments/saved-cards`
+- `DELETE /api/payments/saved-cards/{id}`
+- `POST /api/payments/set-default-card/{id}`
+- `POST /api/payments/pay-with-saved-card`
+- `POST /api/rides/estimate` - Updated for stops support
+- `POST /api/rides` - Updated for stops support
 
 ## Backlog (Priority Order)
 
 ### P1 - High Priority
 1. ~~**Save credit card details**~~ ✅ COMPLETED
-2. **Intermediate stops** - Add waypoints to trips
+2. ~~**Intermediate stops**~~ ✅ COMPLETED
 3. **Admin client database** - View all clients, ride history, invoices
 
 ### P2 - Medium Priority
@@ -140,50 +149,28 @@ French (Français)
 7. **Mobile App Conversion** - Capacitor for iOS/Android
 8. **Export statistics** - CSV/PDF for admin
 
-## Known Issues Resolved
-- ~~Session persistence intermittent issues~~ ✅ FIXED
-- ~~Testing agent Bad Gateway~~ ✅ FIXED
-- ~~Stripe API key invalid~~ ✅ FIXED
-- ~~Frontend build instability~~ ✅ STABLE
-- ~~/api/rides/scheduled 404 error~~ ✅ FIXED
-
 ## Code Architecture
 ```
 /app/
 ├── backend/
-│   ├── .env (MONGO_URL, DB_NAME, JWT_SECRET, STRIPE_API_KEY)
-│   ├── requirements.txt
-│   ├── server.py (~2200 lines - needs refactoring)
+│   ├── server.py (~2300 lines - consider refactoring)
 │   └── tests/
-│       └── test_saved_cards_payments.py ✨ NEW
+│       ├── test_saved_cards_payments.py
+│       └── test_intermediate_stops.py
 ├── frontend/
-│   ├── .env (REACT_APP_BACKEND_URL, REACT_APP_MAPBOX_TOKEN)
-│   ├── package.json
 │   └── src/
-│       ├── App.js
-│       ├── context/AuthContext.js
 │       ├── components/
-│       │   ├── AddressAutocomplete.js
-│       │   ├── MapComponent.js
-│       │   ├── PaymentForm.js
-│       │   ├── PaymentMethodSelector.js ✨ NEW
-│       │   ├── RatingModal.js
+│       │   ├── IntermediateStops.js ✨ NEW
 │       │   ├── SavedCardsManager.js ✨ NEW
-│       │   └── ui/ (Shadcn components)
+│       │   ├── PaymentMethodSelector.js ✨ NEW
+│       │   └── ...
 │       └── pages/
-│           ├── AdminDashboard.js
-│           ├── AuthPage.js
-│           ├── DriverDashboard.js
-│           ├── PassengerDashboard.js
-│           ├── ProfilePage.js (updated with cards section)
-│           └── ScheduledRidesPage.js
+│           ├── PassengerDashboard.js (updated for stops)
+│           ├── ProfilePage.js (updated for cards)
+│           └── ...
 └── memory/
     └── PRD.md
 ```
-
-## Refactoring Recommendations
-- **Backend server.py**: Split into routes/, models/, services/
-- **API routes order**: Static paths before dynamic {id} paths
 
 ## Stripe Test Card
 - Card Number: 4242 4242 4242 4242
@@ -191,4 +178,4 @@ French (Français)
 - CVC: Any 3 digits (123)
 
 ## Last Updated
-2025-03-01 - Saved cards feature completed
+2025-03-01 - Intermediate stops feature completed
