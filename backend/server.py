@@ -792,10 +792,10 @@ def calculate_vtc_fare(distance_km: float, duration_minutes: int = 0, is_schedul
         "regulated": False
     }
 
-def calculate_fare(distance_km: float, duration_minutes: int = 0, is_scheduled: bool = False, is_immediate: bool = True, vehicle_type: str = "standard", passenger_count: int = 1, stops_count: int = 0, scheduled_time: datetime = None) -> dict:
+def calculate_fare(distance_km: float, duration_minutes: int = 0, is_scheduled: bool = False, is_immediate: bool = True, vehicle_type: str = "standard", passenger_count: int = 1, stops_count: int = 0, scheduled_time: datetime = None, pickup_coords: dict = None, dest_coords: dict = None) -> dict:
     """
     Calculate fare based on vehicle type:
-    - taxi: Official Paris taxi rates (regulated)
+    - taxi: Official Paris taxi rates (regulated) with airport flat rates
     - standard: VTC standard rates
     - van: VTC van rates
     """
@@ -806,7 +806,9 @@ def calculate_fare(distance_km: float, duration_minutes: int = 0, is_scheduled: 
             is_scheduled=is_scheduled,
             passenger_count=passenger_count,
             stops_count=stops_count,
-            scheduled_time=scheduled_time
+            scheduled_time=scheduled_time,
+            pickup_coords=pickup_coords,
+            dest_coords=dest_coords
         )
     else:
         return calculate_vtc_fare(
