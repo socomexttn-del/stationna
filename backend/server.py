@@ -705,6 +705,100 @@ async def update_document_status(
     
     return {"status": "ok", "document_status": status}
 
+@api_router.get("/drivers/documents/expiring")
+async def get_expiring_documents(current_user: dict = Depends(get_current_user)):
+    """Get documents that are expiring soon for the current driver"""
+    if current_user["role"] != "driver":
+        raise HTTPException(status_code=403, detail="Only drivers can view their documents")
+    
+    user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0, "documents": 1})
+    documents = user.get("documents", {})
+    
+    today = datetime.now(timezone.utc).date()
+    expiring_soon = []  # Within 30 days
+    expired = []
+    
+    for doc_type, doc_data in documents.items():
+        if not doc_data or not doc_data.get("expiry_date"):
+            continue
+        
+        try:
+            expiry_date = datetime.fromisoformat(doc_data["expiry_date"].replace("Z", "+00:00")).date()
+            days_until_expiry = (expiry_date - today).days
+            
+            doc_info = {
+                "doc_type": doc_type,
+                "doc_name": DRIVER_DOCUMENT_TYPES.get(doc_type, {}).get("name", doc_type),
+                "expiry_date": doc_data["expiry_date"],
+                "days_until_expiry": days_until_expiry,
+                "status": doc_data.get("status", "pending")
+            }
+            
+            if days_until_expiry < 0:
+                expired.append(doc_info)
+            elif days_until_expiry <= 30:
+                expiring_soon.append(doc_info)
+        except (ValueError, TypeError):
+            continue
+    
+    # Sort by days until expiry
+    expired.sort(key=lambda x: x["days_until_expiry"])
+    expiring_soon.sort(key=lambda x: x["days_until_expiry"])
+    
+    return {
+        "expired": expired,
+        "expiring_soon": expiring_soon,
+        "total_alerts": len(expired) + len(expiring_soon)
+    }
+
+@api_router.get("/admin/documents/expiring")
+async def get_all_expiring_documents(
+    days: int = 30,
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Get all documents expiring within X days across all drivers (admin only)"""
+    drivers = await db.users.find(
+        {"role": "driver"},
+        {"_id": 0, "id": 1, "first_name": 1, "last_name": 1, "email": 1, "documents": 1}
+    ).to_list(1000)
+    
+    today = datetime.now(timezone.utc).date()
+    expiring_docs = []
+    
+    for driver in drivers:
+        documents = driver.get("documents", {})
+        for doc_type, doc_data in documents.items():
+            if not doc_data or not doc_data.get("expiry_date"):
+                continue
+            
+            try:
+                expiry_date = datetime.fromisoformat(doc_data["expiry_date"].replace("Z", "+00:00")).date()
+                days_until_expiry = (expiry_date - today).days
+                
+                if days_until_expiry <= days:
+                    expiring_docs.append({
+                        "driver_id": driver["id"],
+                        "driver_name": f"{driver['first_name']} {driver['last_name']}",
+                        "driver_email": driver["email"],
+                        "doc_type": doc_type,
+                        "doc_name": DRIVER_DOCUMENT_TYPES.get(doc_type, {}).get("name", doc_type),
+                        "expiry_date": doc_data["expiry_date"],
+                        "days_until_expiry": days_until_expiry,
+                        "is_expired": days_until_expiry < 0
+                    })
+            except (ValueError, TypeError):
+                continue
+    
+    # Sort by days until expiry
+    expiring_docs.sort(key=lambda x: x["days_until_expiry"])
+    
+    return {
+        "documents": expiring_docs,
+        "total": len(expiring_docs),
+        "expired_count": len([d for d in expiring_docs if d["is_expired"]]),
+        "expiring_count": len([d for d in expiring_docs if not d["is_expired"]])
+    }
+
 class DriverStatusUpdate(BaseModel):
     is_active: bool
 
