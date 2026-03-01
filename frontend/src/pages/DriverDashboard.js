@@ -33,9 +33,40 @@ const DriverDashboard = () => {
     return localStorage.getItem('allogo_hide_earnings') === 'true';
   });
 
-  // Get current location on mount
+  // Get current location on mount with permission check
   useEffect(() => {
-    if (navigator.geolocation) {
+    const checkPermissionAndGetLocation = async () => {
+      // Check permission status first if API is available
+      if (navigator.permissions && navigator.permissions.query) {
+        try {
+          const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
+          
+          if (permissionStatus.state === 'denied') {
+            setLocationError('Géolocalisation refusée - Activez-la dans les paramètres pour recevoir des courses');
+            toast.error('Activez la géolocalisation dans les paramètres de votre navigateur', { duration: 6000 });
+            return;
+          }
+          
+          // Listen for permission changes
+          permissionStatus.onchange = () => {
+            if (permissionStatus.state === 'granted') {
+              getLocation();
+            }
+          };
+        } catch (e) {
+          // Permission API not fully supported
+        }
+      }
+      
+      getLocation();
+    };
+
+    const getLocation = () => {
+      if (!navigator.geolocation) {
+        setLocationError('Géolocalisation non supportée');
+        return;
+      }
+
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const location = {
@@ -44,6 +75,7 @@ const DriverDashboard = () => {
             address: 'Position actuelle'
           };
           setCurrentLocation(location);
+          setLocationError(null);
           
           // Update driver location in database
           try {
@@ -55,14 +87,20 @@ const DriverDashboard = () => {
         },
         (error) => {
           console.error('Geolocation error:', error);
-          setLocationError('Impossible d\'obtenir votre position');
-          toast.error('Activez la géolocalisation pour recevoir des courses');
+          if (error.code === error.PERMISSION_DENIED) {
+            setLocationError('Géolocalisation refusée - Activez-la dans les paramètres');
+            toast.error('Activez la géolocalisation pour recevoir des courses', { duration: 5000 });
+          } else if (error.code === error.TIMEOUT) {
+            setLocationError('Délai de géolocalisation dépassé');
+          } else {
+            setLocationError('Impossible d\'obtenir votre position');
+          }
         },
-        { enableHighAccuracy: true, timeout: 10000 }
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
       );
-    } else {
-      setLocationError('Géolocalisation non supportée');
-    }
+    };
+
+    checkPermissionAndGetLocation();
   }, [api]);
 
   // Continuous location tracking when available
