@@ -754,15 +754,29 @@ async def get_driver_location(ride_id: str, current_user: dict = Depends(get_cur
 
 @api_router.post("/rides/estimate")
 async def estimate_fare(data: FareEstimateRequest):
-    distance = calculate_distance(data.pickup.model_dump(), data.destination.model_dump())
+    # Calculate distance with stops if provided
+    stops_list = [s.model_dump() for s in data.stops] if data.stops else []
+    stops_count = len(stops_list)
+    
+    distance, stop_distances = calculate_total_distance_with_stops(
+        data.pickup.model_dump(), 
+        data.destination.model_dump(),
+        stops_list
+    )
     duration = estimate_duration_minutes(distance)
+    
+    # Add extra time for stops (3 min per stop for pickup)
+    if stops_count > 0:
+        duration += stops_count * 3
+    
     fare_details = calculate_fare(
         distance, 
         duration, 
         is_scheduled=False, 
         is_immediate=True,
         vehicle_type=data.vehicle_type,
-        passenger_count=data.passenger_count
+        passenger_count=data.passenger_count,
+        stops_count=stops_count
     )
     
     return {
@@ -770,6 +784,8 @@ async def estimate_fare(data: FareEstimateRequest):
         "duration_minutes": duration,
         "vehicle_type": data.vehicle_type,
         "passenger_count": data.passenger_count,
+        "stops_count": stops_count,
+        "stop_distances": stop_distances,
         "fare_details": fare_details,
         "estimated_fare": fare_details["total"],
         "currency": "EUR"
