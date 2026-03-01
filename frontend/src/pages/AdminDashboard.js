@@ -6,7 +6,7 @@ import { Button } from '../components/ui/button';
 import { 
   Users, Car, DollarSign, TrendingUp, MapPin, Clock, Star,
   ArrowLeft, RefreshCw, Calendar, Route, FileText, Check, X, Eye,
-  Power, UserX, UserCheck, Database
+  Power, UserX, UserCheck, Database, Mail, AlertTriangle, Bell, Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
@@ -22,6 +22,9 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [selectedDriver, setSelectedDriver] = useState(null);
   const [driverDocuments, setDriverDocuments] = useState(null);
+  const [expiringDocs, setExpiringDocs] = useState(null);
+  const [sendingEmails, setSendingEmails] = useState(false);
+  const [showExpiringDocs, setShowExpiringDocs] = useState(false);
 
   useEffect(() => {
     if (user?.role !== 'admin') {
