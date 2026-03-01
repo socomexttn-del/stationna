@@ -1212,7 +1212,7 @@ const PassengerDashboard = () => {
                 )}
                 
                 {/* Fare breakdown */}
-                {estimate.fare_details && (
+                {estimate.fare_details && !estimate.fare_details.is_airport_flat_rate && (
                   <div className="space-y-2 pt-3 border-t border-white/10 text-sm">
                     {/* Taxi specific: show tariff rates */}
                     {vehicleType === 'taxi' && estimate.fare_details.price_per_km && (
@@ -1244,6 +1244,22 @@ const PassengerDashboard = () => {
                         <span>8,00€</span>
                       </div>
                     )}
+                  </div>
+                )}
+                
+                {/* Airport flat rate - simplified breakdown */}
+                {estimate.fare_details?.is_airport_flat_rate && (
+                  <div className="space-y-2 pt-3 border-t border-white/10 text-sm">
+                    {estimate.fare_details.supplement_details?.map((sup, idx) => (
+                      <div key={idx} className={`flex justify-between ${idx === 0 ? 'text-green-400' : 'text-yellow-500'}`}>
+                        <span>{sup.name}</span>
+                        <span>{idx === 0 ? '' : '+'}{sup.amount}€</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between font-bold text-white pt-2 border-t border-white/10">
+                      <span>Total</span>
+                      <span>{estimate.fare_details.total}€</span>
+                    </div>
                   </div>
                 )}
               </CardContent>
