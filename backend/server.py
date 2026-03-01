@@ -426,7 +426,7 @@ def estimate_duration_minutes(distance_km: float) -> int:
     AVG_SPEED_KMH = 25
     return max(5, round((distance_km / AVG_SPEED_KMH) * 60))
 
-def calculate_fare(distance_km: float, duration_minutes: int = 0, is_scheduled: bool = False, is_immediate: bool = True, vehicle_type: str = "standard", passenger_count: int = 1) -> dict:
+def calculate_fare(distance_km: float, duration_minutes: int = 0, is_scheduled: bool = False, is_immediate: bool = True, vehicle_type: str = "standard", passenger_count: int = 1, stops_count: int = 0) -> dict:
     """
     Calculate fare based on official taxi rates:
     - Prise en charge: 4.48€
@@ -437,6 +437,7 @@ def calculate_fare(distance_km: float, duration_minutes: int = 0, is_scheduled: 
     - Supplément réservation à l'avance: +7€
     - Supplément 5ème passager+: +5.50€ par passager
     - Van: +10€ de base
+    - Supplément arrêt intermédiaire: +3€ par arrêt (temps d'attente)
     """
     # Base rates
     PRISE_EN_CHARGE = 4.48
@@ -449,6 +450,7 @@ def calculate_fare(distance_km: float, duration_minutes: int = 0, is_scheduled: 
     SUPPLEMENT_AVANCE = 7.00
     SUPPLEMENT_PASSAGER = 5.50
     SUPPLEMENT_VAN = 10.00
+    SUPPLEMENT_ARRET = 3.00  # Per intermediate stop
     
     # Calculate base fare
     base = PRISE_EN_CHARGE
@@ -477,6 +479,12 @@ def calculate_fare(distance_km: float, duration_minutes: int = 0, is_scheduled: 
         passenger_supplement = SUPPLEMENT_PASSAGER * extra_passengers
         supplements += passenger_supplement
         supplement_details.append({"name": f"Supplément {extra_passengers} passager(s) sup.", "amount": round(passenger_supplement, 2)})
+    
+    # Intermediate stops supplement
+    if stops_count > 0:
+        stops_supplement = SUPPLEMENT_ARRET * stops_count
+        supplements += stops_supplement
+        supplement_details.append({"name": f"Arrêt(s) intermédiaire(s) ({stops_count})", "amount": round(stops_supplement, 2)})
     
     # Total before minimum
     subtotal = base + distance_cost + time_cost + supplements
