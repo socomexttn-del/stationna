@@ -1503,8 +1503,11 @@ async def start_ride(ride_id: str, current_user: dict = Depends(get_current_user
     
     return RideResponse(**updated)
 
+class MeterPriceRequest(BaseModel):
+    meter_price: Optional[float] = None
+
 @api_router.post("/rides/{ride_id}/complete", response_model=RideResponse)
-async def complete_ride(ride_id: str, current_user: dict = Depends(get_current_user)):
+async def complete_ride(ride_id: str, data: Optional[MeterPriceRequest] = None, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "driver":
         raise HTTPException(status_code=403, detail="Only drivers can complete rides")
     
@@ -1512,9 +1515,15 @@ async def complete_ride(ride_id: str, current_user: dict = Depends(get_current_u
     if not ride:
         raise HTTPException(status_code=404, detail="Ride not found")
     
+    # For taxi rides, use meter price if provided
+    final_fare = ride["estimated_fare"]
+    if ride.get("vehicle_type") == "taxi" and data and data.meter_price:
+        final_fare = data.meter_price
+    
     await db.rides.update_one({"id": ride_id}, {"$set": {
         "status": "completed",
-        "final_fare": ride["estimated_fare"],
+        "final_fare": final_fare,
+        "meter_price": data.meter_price if data else None,
         "completed_at": datetime.now(timezone.utc).isoformat()
     }})
     
@@ -1524,10 +1533,12 @@ async def complete_ride(ride_id: str, current_user: dict = Depends(get_current_u
     
     updated = await db.rides.find_one({"id": ride_id}, {"_id": 0})
     
-    # Notify passenger that ride completed
+    # Notify passenger that ride completed with final price
     await notification_manager.notify_passenger(ride["passenger_id"], "ride_completed", {
         "ride_id": ride_id,
-        "final_fare": ride["estimated_fare"]
+        "final_fare": final_fare,
+        "is_taxi": ride.get("vehicle_type") == "taxi",
+        "meter_price": data.meter_price if data else None
     })
     
     return RideResponse(**updated)
