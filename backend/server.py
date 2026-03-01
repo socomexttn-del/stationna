@@ -1883,6 +1883,25 @@ async def get_wallet_transactions(
         "pages": (total + limit - 1) // limit
     }
 
+# Wallet bonus tiers
+WALLET_BONUS_TIERS = [
+    {"min_amount": 100, "bonus": 15, "label": "+15€ offerts"},
+    {"min_amount": 50, "bonus": 5, "label": "+5€ offerts"},
+    {"min_amount": 20, "bonus": 2, "label": "+2€ offerts"},
+]
+
+def calculate_wallet_bonus(amount: float) -> dict:
+    """Calculate bonus based on top-up amount"""
+    for tier in WALLET_BONUS_TIERS:
+        if amount >= tier["min_amount"]:
+            return {"bonus": tier["bonus"], "label": tier["label"], "total": amount + tier["bonus"]}
+    return {"bonus": 0, "label": None, "total": amount}
+
+@api_router.get("/wallet/bonus-tiers")
+async def get_wallet_bonus_tiers():
+    """Get wallet bonus tiers for display"""
+    return {"tiers": WALLET_BONUS_TIERS}
+
 @api_router.post("/wallet/top-up")
 async def create_wallet_topup(data: WalletTopUpRequest, current_user: dict = Depends(get_current_user)):
     """Create a payment intent to top up wallet"""
@@ -1890,6 +1909,9 @@ async def create_wallet_topup(data: WalletTopUpRequest, current_user: dict = Dep
         raise HTTPException(status_code=400, detail="Montant minimum: 5€")
     if data.amount > 500:
         raise HTTPException(status_code=400, detail="Montant maximum: 500€")
+    
+    # Calculate bonus
+    bonus_info = calculate_wallet_bonus(data.amount)
     
     try:
         customer_id = await get_or_create_stripe_customer(current_user)
@@ -1902,19 +1924,22 @@ async def create_wallet_topup(data: WalletTopUpRequest, current_user: dict = Dep
             metadata={
                 "type": "wallet_topup",
                 "user_id": current_user["id"],
-                "user_email": current_user["email"]
+                "user_email": current_user["email"],
+                "bonus_amount": str(bonus_info["bonus"])
             }
         )
         
-        # Create pending transaction record
+        # Create pending transaction record with bonus info
         transaction = {
             "id": str(uuid.uuid4()),
             "user_id": current_user["id"],
             "type": "topup",
             "amount": data.amount,
+            "bonus": bonus_info["bonus"],
+            "total_credit": bonus_info["total"],
             "status": "pending",
             "payment_intent_id": intent.id,
-            "description": f"Rechargement portefeuille +{data.amount}€",
+            "description": f"Rechargement +{data.amount}€" + (f" (bonus +{bonus_info['bonus']}€)" if bonus_info["bonus"] > 0 else ""),
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.wallet_transactions.insert_one(transaction)
@@ -1923,7 +1948,9 @@ async def create_wallet_topup(data: WalletTopUpRequest, current_user: dict = Dep
             "client_secret": intent.client_secret,
             "publishable_key": STRIPE_PUBLISHABLE_KEY,
             "payment_intent_id": intent.id,
-            "amount": data.amount
+            "amount": data.amount,
+            "bonus": bonus_info["bonus"],
+            "total_credit": bonus_info["total"]
         }
     except stripe.error.StripeError as e:
         logger.error(f"Stripe error: {e}")
