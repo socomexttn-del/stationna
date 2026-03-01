@@ -1024,11 +1024,35 @@ const PassengerDashboard = () => {
                       <p className="font-semibold">Allogo {vehicleType === 'van' ? 'Van' : 'Chauffeur'}</p>
                       <p className="text-sm text-muted-foreground">
                         {routeInfo?.distance || estimate.distance_km} km • {estimate.duration_minutes || routeInfo?.duration} min • {passengers} passager{passengers > 1 ? 's' : ''}
+                        {estimate.stops_count > 0 && ` • ${estimate.stops_count} arrêt${estimate.stops_count > 1 ? 's' : ''}`}
                       </p>
                     </div>
                   </div>
                   <p className="text-2xl font-bold text-primary">{estimate.estimated_fare}€</p>
                 </div>
+                
+                {/* Route with stops */}
+                {stops.length > 0 && (
+                  <div className="mb-4 pb-3 border-b border-white/10">
+                    <p className="text-xs text-muted-foreground mb-2">Itinéraire</p>
+                    <div className="space-y-1 text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-green-500" />
+                        <span className="truncate">{pickup.address}</span>
+                      </div>
+                      {stops.map((stop, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-amber-500">
+                          <div className="w-2 h-2 rounded-full bg-amber-500" />
+                          <span className="truncate">{stop.address}</span>
+                        </div>
+                      ))}
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-primary" />
+                        <span className="truncate">{destination.address}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 
                 {/* Fare breakdown */}
                 {estimate.fare_details && (
