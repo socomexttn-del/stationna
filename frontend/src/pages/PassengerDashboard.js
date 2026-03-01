@@ -498,6 +498,7 @@ const PassengerDashboard = () => {
 
   // Track previous ride status to detect changes
   const [prevRideStatus, setPrevRideStatus] = useState(null);
+  const [prevDriverArrived, setPrevDriverArrived] = useState(false);
 
   useEffect(() => {
     fetchActiveRide();
@@ -511,6 +512,7 @@ const PassengerDashboard = () => {
       if (response.data) {
         const newRide = response.data;
         const newStatus = newRide.status;
+        const driverArrived = newRide.driver_arrived;
         
         // Detect status changes and play sounds
         if (prevRideStatus && prevRideStatus !== newStatus) {
@@ -526,27 +528,33 @@ const PassengerDashboard = () => {
               { duration: 8000 }
             );
           } else if (newStatus === 'in_progress' && prevRideStatus === 'accepted') {
-            // Driver arrived and ride started
-            console.log('Ride started - driver arrived');
-            playArrivedSound();
-            toast.success(
-              <div className="flex flex-col gap-1">
-                <span className="font-semibold">🚗 Course démarrée!</span>
-                <span className="text-sm">Bon voyage!</span>
-              </div>,
-              { duration: 5000 }
-            );
+            // Ride started
+            console.log('Ride started');
+            toast.success('🚗 Course démarrée! Bon voyage!', { duration: 5000 });
           }
-        } else if (!prevRideStatus && newStatus === 'accepted') {
-          // Page loaded with already accepted ride - still notify
-          console.log('Ride already accepted on page load');
+        }
+        
+        // Detect driver arrived
+        if (driverArrived && !prevDriverArrived && newStatus === 'accepted') {
+          console.log('Driver arrived - playing URGENT sound');
+          playArrivedSound();
+          toast.success(
+            <div className="flex flex-col gap-1">
+              <span className="font-semibold text-lg">🚗 Votre chauffeur est arrivé!</span>
+              <span className="text-sm">{newRide.driver_name} vous attend</span>
+              <span className="text-xs text-yellow-500">Rejoignez-le rapidement</span>
+            </div>,
+            { duration: 15000 }
+          );
         }
         
         setPrevRideStatus(newStatus);
+        setPrevDriverArrived(driverArrived || false);
         setActiveRide(newRide);
         setStep('ride_active');
       } else {
         setPrevRideStatus(null);
+        setPrevDriverArrived(false);
         setActiveRide(null);
         if (step === 'ride_active') setStep('idle');
       }
