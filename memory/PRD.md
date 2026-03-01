@@ -26,7 +26,7 @@ French (Français)
 - [x] Re-dispatch to next driver on refusal
 - [x] 18% commission deduction for drivers
 - [x] Detailed booking receipt for drivers
-- [x] **Page reset after ride completion and rating** ✨ NEW
+- [x] Page reset after ride completion and rating
 
 ### Maps & Location
 - [x] Mapbox integration with interactive map
@@ -35,22 +35,27 @@ French (Français)
 - [x] Live GPS tracking of driver
 - [x] Available drivers shown with ALLOGO car icons
 - [x] Driver path tracking (blue line on map)
-- [x] **Improved geolocation permission handling** ✨ IMPROVED
+- [x] Improved geolocation permission handling
 
 ### Notifications
 - [x] Real-time in-app notifications (polling)
 - [x] Push notifications (PWA)
 - [x] Driver/passenger notifications with ETA
-- [x] **Sound notifications for events** ✨ VERIFIED
+- [x] Sound notifications for events (Web Audio API)
   - Online/offline sounds for drivers
   - New ride proposal sounds (3x repeat)
   - Ride accepted sound for passengers
   - Driver arrived sound for passengers
 
-### Payments
+### Payments ✨ ENHANCED
 - [x] Stripe integration (test mode)
 - [x] Fare estimation with detailed breakdown
 - [x] Inline credit card payment form (Stripe Elements)
+- [x] **Saved card management** ✨ NEW
+  - Save cards via Stripe SetupIntent
+  - View/delete saved cards in profile
+  - Set default payment method
+  - Pay with saved card (one-click)
 - [x] Payment history tracking
 - [x] User's Stripe API keys configured
 
@@ -84,7 +89,7 @@ French (Français)
 - **Frontend**: React 19, Tailwind CSS, Shadcn UI, Stripe Elements
 - **Backend**: FastAPI, MongoDB (motor)
 - **Maps**: Mapbox GL JS, Geocoding API, Directions API
-- **Payments**: Stripe API (Payment Intents)
+- **Payments**: Stripe API (Payment Intents, SetupIntents, Customers)
 - **Auth**: JWT tokens with persistent sessions
 
 ## API Keys Configured
@@ -95,19 +100,34 @@ French (Français)
 ## Latest Updates (2025-03-01)
 
 ### Session Accomplishments
-1. **Sound notifications verified**: Web Audio API sounds working for all events
-2. **Geolocation improved**: Added permission query API for better UX
-3. **Page reset after ride**: Passenger dashboard resets after rating
-4. **Bug fix**: /api/rides/scheduled route order corrected (returned 404 before)
+1. **Saved cards feature complete**: Full Stripe SetupIntent integration
+   - Backend: 6 new endpoints for card management
+   - Frontend: SavedCardsManager + PaymentMethodSelector components
+   - Tests: 100% pass rate (13/13 backend, all UI verified)
+2. **Sound notifications verified**: Web Audio API sounds working
+3. **Geolocation improved**: Permission query API for better UX
+4. **Page reset after ride**: Passenger dashboard resets after rating
+5. **Bug fix**: /api/rides/scheduled route order corrected
 
-### Test Results (iteration_9)
-- Backend: 95.8% → 100% (scheduled rides bug fixed)
-- Frontend: 100% (all P1 features working)
+### Test Results (iteration_10)
+- Backend: 100% (13/13 tests)
+- Frontend: 100% (all components verified)
+
+## New Components Created
+- `/app/frontend/src/components/SavedCardsManager.js` - Card management in profile
+- `/app/frontend/src/components/PaymentMethodSelector.js` - Payment modal with saved cards option
+
+## New API Endpoints
+- `POST /api/payments/setup-intent` - Create SetupIntent for card saving
+- `GET /api/payments/saved-cards` - List user's saved cards
+- `DELETE /api/payments/saved-cards/{id}` - Remove saved card
+- `POST /api/payments/set-default-card/{id}` - Set default payment method
+- `POST /api/payments/pay-with-saved-card` - Pay with saved card
 
 ## Backlog (Priority Order)
 
 ### P1 - High Priority
-1. **Save credit card details** - Allow users to save CC for future rides
+1. ~~**Save credit card details**~~ ✅ COMPLETED
 2. **Intermediate stops** - Add waypoints to trips
 3. **Admin client database** - View all clients, ride history, invoices
 
@@ -133,9 +153,9 @@ French (Français)
 ├── backend/
 │   ├── .env (MONGO_URL, DB_NAME, JWT_SECRET, STRIPE_API_KEY)
 │   ├── requirements.txt
-│   ├── server.py (~2000 lines - needs refactoring)
+│   ├── server.py (~2200 lines - needs refactoring)
 │   └── tests/
-│       └── test_allogo_core.py
+│       └── test_saved_cards_payments.py ✨ NEW
 ├── frontend/
 │   ├── .env (REACT_APP_BACKEND_URL, REACT_APP_MAPBOX_TOKEN)
 │   ├── package.json
@@ -146,13 +166,16 @@ French (Français)
 │       │   ├── AddressAutocomplete.js
 │       │   ├── MapComponent.js
 │       │   ├── PaymentForm.js
+│       │   ├── PaymentMethodSelector.js ✨ NEW
 │       │   ├── RatingModal.js
+│       │   ├── SavedCardsManager.js ✨ NEW
 │       │   └── ui/ (Shadcn components)
 │       └── pages/
 │           ├── AdminDashboard.js
 │           ├── AuthPage.js
 │           ├── DriverDashboard.js
 │           ├── PassengerDashboard.js
+│           ├── ProfilePage.js (updated with cards section)
 │           └── ScheduledRidesPage.js
 └── memory/
     └── PRD.md
@@ -162,5 +185,10 @@ French (Français)
 - **Backend server.py**: Split into routes/, models/, services/
 - **API routes order**: Static paths before dynamic {id} paths
 
+## Stripe Test Card
+- Card Number: 4242 4242 4242 4242
+- Exp: Any future date (12/34)
+- CVC: Any 3 digits (123)
+
 ## Last Updated
-2025-03-01 - Bug fixes and improvements
+2025-03-01 - Saved cards feature completed
