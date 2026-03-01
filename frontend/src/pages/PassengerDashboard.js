@@ -984,17 +984,42 @@ const PassengerDashboard = () => {
 
             {/* Taxi tariff info */}
             {vehicleType === 'taxi' && (
-              <div className="text-xs bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-3 py-2">
-                <div className="flex items-center gap-2 text-yellow-500 font-medium mb-1">
-                  <Car className="w-4 h-4" />
-                  <span>Taxi Parisien - Tarif Réglementé</span>
+              <div className="space-y-2">
+                <div className="text-xs bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-3 py-2">
+                  <div className="flex items-center gap-2 text-yellow-500 font-medium mb-1">
+                    <Car className="w-4 h-4" />
+                    <span>Taxi Parisien - Tarif Réglementé</span>
+                  </div>
+                  <p className="text-muted-foreground mb-2">
+                    Tarif A (jour) / B (nuit, dim) / C (banlieue) selon horaires.
+                  </p>
+                  <p className="text-yellow-500/80 font-medium">
+                    💡 Le prix affiché est une estimation. Le montant final sera celui du compteur du taxi.
+                  </p>
                 </div>
-                <p className="text-muted-foreground mb-2">
-                  Tarif A (jour) / B (nuit, dim) / C (banlieue) selon horaires.
-                </p>
-                <p className="text-yellow-500/80 font-medium">
-                  💡 Le prix affiché est une estimation. Le montant final sera celui du compteur du taxi.
-                </p>
+                
+                {/* Airport flat rates info */}
+                <div className="text-xs bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-3">
+                  <div className="flex items-center gap-2 text-green-400 font-medium mb-2">
+                    <span className="text-base">✈️</span>
+                    <span>Forfaits Aéroports - Prix Fixes Garantis</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-muted-foreground">
+                    <div className="bg-black/20 rounded px-2 py-1.5">
+                      <p className="text-green-400 font-medium text-[11px] mb-1">Paris ↔ CDG</p>
+                      <p>Rive Droite: <span className="text-white font-medium">56€</span></p>
+                      <p>Rive Gauche: <span className="text-white font-medium">65€</span></p>
+                    </div>
+                    <div className="bg-black/20 rounded px-2 py-1.5">
+                      <p className="text-green-400 font-medium text-[11px] mb-1">Paris ↔ Orly</p>
+                      <p>Rive Droite: <span className="text-white font-medium">45€</span></p>
+                      <p>Rive Gauche: <span className="text-white font-medium">36€</span></p>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-2 italic">
+                    + 4€ (réservation immédiate) ou +7€ (réservation à l'avance)
+                  </p>
+                </div>
               </div>
             )}
 
