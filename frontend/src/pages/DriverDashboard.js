@@ -399,22 +399,6 @@ const DriverDashboard = () => {
     };
   }, [isAvailable, activeRide, sendLocation]);
 
-  // Request geolocation permission on mount
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setCurrentLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-          setLocationError(null);
-        },
-        (err) => {
-          setLocationError('Activez la géolocalisation pour recevoir des courses');
-        },
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
-    }
-  }, []);
-
   useEffect(() => {
     fetchStats();
     fetchActiveRide();
