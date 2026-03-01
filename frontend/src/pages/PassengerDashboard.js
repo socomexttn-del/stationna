@@ -1140,8 +1140,39 @@ const PassengerDashboard = () => {
                   </p>
                 </div>
                 
-                {/* Taxi regulation notice */}
-                {vehicleType === 'taxi' && estimate.fare_details?.regulated && (
+                {/* Taxi airport flat rate notice */}
+                {vehicleType === 'taxi' && estimate.fare_details?.is_airport_flat_rate && (
+                  <div className="mb-4 px-3 py-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg">✈️</span>
+                      <p className="text-sm text-green-400 font-bold">
+                        Forfait Aéroport Garanti
+                      </p>
+                      <span className="ml-auto px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full font-medium">
+                        PRIX FIXE
+                      </span>
+                    </div>
+                    <p className="text-xs text-green-300 mb-2">
+                      {estimate.fare_details.direction_label}
+                    </p>
+                    <div className="flex items-center justify-between bg-black/20 rounded px-3 py-2">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Forfait officiel {estimate.fare_details.rive_label}</p>
+                        <p className="text-lg font-bold text-green-400">{estimate.fare_details.flat_rate}€</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">+ {estimate.fare_details.booking_supplement_label}</p>
+                        <p className="text-lg font-bold text-yellow-500">+{estimate.fare_details.booking_supplement}€</p>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-2 italic">
+                      {estimate.fare_details.regulation_text}
+                    </p>
+                  </div>
+                )}
+                
+                {/* Taxi regulation notice (non-airport) */}
+                {vehicleType === 'taxi' && estimate.fare_details?.regulated && !estimate.fare_details?.is_airport_flat_rate && (
                   <div className="mb-4 px-3 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
                     <p className="text-xs text-yellow-500 font-medium mb-1">
                       ⚠️ Prix estimatif - Tarification au compteur
