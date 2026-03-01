@@ -190,6 +190,35 @@ const PassengerDashboard = () => {
     }
   }, []);
 
+  // Initialize native push notifications
+  useEffect(() => {
+    const initPushNotifications = async () => {
+      const authToken = localStorage.getItem('volt_token');
+      if (authToken && isNative && initializeNative) {
+        console.log('Initializing native push notifications for passenger...');
+        const success = await initializeNative(authToken);
+        if (success) {
+          console.log('Native push notifications initialized successfully');
+        }
+      }
+    };
+    
+    initPushNotifications();
+  }, [isNative, initializeNative]);
+
+  // Listen for native push notifications
+  useEffect(() => {
+    if (!isNative || !addPushListener) return;
+    
+    const unsubscribe = addPushListener((event) => {
+      console.log('Native push notification received (passenger):', event);
+      // Native notifications are handled by the OS when app is in background
+      // When user taps, the app will open and refresh the active ride state
+    });
+    
+    return unsubscribe;
+  }, [isNative, addPushListener]);
+
   // Get user's current location on mount with permission check
   useEffect(() => {
     const checkPermissionAndGetLocation = async () => {
