@@ -15,7 +15,7 @@ import PaymentMethodSelector from '../components/PaymentMethodSelector';
 import { 
   Car, MapPin, Navigation, Star, Clock, CreditCard, 
   Menu, User, History, LogOut, Phone, X, Route, MessageCircle,
-  Calendar, Gift, Users, Truck, Bookmark, Plus, Trash2, Zap, Bell, Crosshair, Loader2
+  Calendar, Gift, Users, Truck, Bookmark, Plus, Trash2, Zap, Bell, Crosshair, Loader2, Wallet
 } from 'lucide-react';
 import { toast } from 'sonner';
 
