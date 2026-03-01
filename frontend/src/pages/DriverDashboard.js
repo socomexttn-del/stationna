@@ -419,13 +419,24 @@ const DriverDashboard = () => {
 
   const toggleAvailability = async (checked) => {
     try {
+      // Use current location if available
+      const location = currentLocation || { lat: 48.8566, lng: 2.3522, address: 'Paris Centre' };
+      
       const response = await api.put('/users/availability', { 
         is_available: checked,
-        location: { lat: 48.8566, lng: 2.3522, address: 'Paris Centre' }
+        location: location
       });
       setIsAvailable(checked);
       updateUser(response.data);
-      toast.success(checked ? 'Vous êtes maintenant disponible' : 'Vous êtes hors ligne');
+      
+      // Play appropriate sound
+      if (checked) {
+        playOnlineSound();
+        toast.success('Vous êtes maintenant en ligne');
+      } else {
+        playOfflineSound();
+        toast.success('Vous êtes hors ligne');
+      }
     } catch (error) {
       toast.error('Erreur lors du changement de statut');
     }
