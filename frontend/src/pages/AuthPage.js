@@ -138,7 +138,7 @@ const AuthPage = () => {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t('auth.email')}</Label>
                 <Input
                   id="email"
                   name="email"
@@ -154,7 +154,7 @@ const AuthPage = () => {
 
               {!isLogin && (
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Téléphone</Label>
+                  <Label htmlFor="phone">{t('auth.phone')}</Label>
                   <Input
                     id="phone"
                     name="phone"
@@ -170,7 +170,7 @@ const AuthPage = () => {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="password">Mot de passe</Label>
+                <Label htmlFor="password">{t('auth.password')}</Label>
                 <div className="relative">
                   <Input
                     id="password"
