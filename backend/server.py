@@ -595,8 +595,9 @@ async def update_driver_document(data: DriverDocumentsUpdate, current_user: dict
     if current_user["role"] != "driver":
         raise HTTPException(status_code=403, detail="Only drivers can update documents")
     
-    valid_types = ["carte_grise", "assurance", "controle_technique", "permis_conduire", "carte_vtc"]
-    if data.document_type not in valid_types:
+    # Use extended document types
+    if data.document_type not in DRIVER_DOCUMENT_TYPES:
+        valid_types = list(DRIVER_DOCUMENT_TYPES.keys())
         raise HTTPException(status_code=400, detail=f"Invalid document type. Must be one of: {valid_types}")
     
     doc_data = {
@@ -613,6 +614,22 @@ async def update_driver_document(data: DriverDocumentsUpdate, current_user: dict
     
     return {"status": "ok", "document_type": data.document_type}
 
+@api_router.delete("/drivers/documents/{doc_type}")
+async def delete_driver_document(doc_type: str, current_user: dict = Depends(get_current_user)):
+    """Delete a specific driver document"""
+    if current_user["role"] != "driver":
+        raise HTTPException(status_code=403, detail="Only drivers can delete documents")
+    
+    if doc_type not in DRIVER_DOCUMENT_TYPES:
+        raise HTTPException(status_code=400, detail="Invalid document type")
+    
+    await db.users.update_one(
+        {"id": current_user["id"]},
+        {"$unset": {f"documents.{doc_type}": ""}}
+    )
+    
+    return {"status": "ok", "deleted": doc_type}
+
 @api_router.get("/drivers/documents")
 async def get_driver_documents(current_user: dict = Depends(get_current_user)):
     """Get all documents for current driver"""
@@ -620,9 +637,37 @@ async def get_driver_documents(current_user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Only drivers can view their documents")
     
     user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0, "documents": 1, "vehicle_info": 1})
+    
+    # Return document types info along with uploaded documents
     return {
         "documents": user.get("documents", {}),
-        "vehicle_info": user.get("vehicle_info")
+        "vehicle_info": user.get("vehicle_info"),
+        "document_types": DRIVER_DOCUMENT_TYPES
+    }
+
+@api_router.get("/drivers/documents/status")
+async def get_driver_documents_status(current_user: dict = Depends(get_current_user)):
+    """Get document completion status for current driver"""
+    if current_user["role"] != "driver":
+        raise HTTPException(status_code=403, detail="Only drivers can view their documents")
+    
+    user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0, "documents": 1})
+    documents = user.get("documents", {})
+    
+    # Count required and uploaded documents
+    required_docs = [k for k, v in DRIVER_DOCUMENT_TYPES.items() if v["required"]]
+    uploaded_docs = [k for k in required_docs if k in documents and documents[k].get("url")]
+    approved_docs = [k for k in uploaded_docs if documents.get(k, {}).get("status") == "approved"]
+    
+    return {
+        "total_required": len(required_docs),
+        "total_uploaded": len(uploaded_docs),
+        "total_approved": len(approved_docs),
+        "completion_percentage": round((len(uploaded_docs) / len(required_docs)) * 100) if required_docs else 100,
+        "approval_percentage": round((len(approved_docs) / len(required_docs)) * 100) if required_docs else 100,
+        "missing_documents": [k for k in required_docs if k not in uploaded_docs],
+        "pending_documents": [k for k in uploaded_docs if documents.get(k, {}).get("status") == "pending"],
+        "rejected_documents": [k for k in uploaded_docs if documents.get(k, {}).get("status") == "rejected"]
     }
 
 @api_router.get("/admin/drivers/{driver_id}/documents")
