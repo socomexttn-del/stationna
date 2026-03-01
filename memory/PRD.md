@@ -6,138 +6,78 @@ Application de taxi complète nommée Allogo avec rôles passager/chauffeur/admi
 ## User Language
 French (Français)
 
-## Core Features Implemented
+## Session Accomplishments (2025-03-01)
 
-### Authentication & Users
-- [x] JWT authentication
-- [x] Passenger, Driver, and Admin roles
-- [x] User profiles with ratings
-- [x] Automatic geolocation with permission handling
-- [x] Session persistence
+### Features Completed This Session:
+1. ✅ **Sauvegarde des cartes bancaires** - Stripe SetupIntent
+2. ✅ **Arrêts intermédiaires** - Jusqu'à 3 waypoints
+3. ✅ **Base de données clients admin** - Historique et factures
+4. ✅ **Documents chauffeur élargis** - 11 types de documents
+5. ✅ **Notifications d'expiration** - Alertes 30 jours avant
+6. ✅ **UI Courses Planifiées** - Refonte complète ✨ NEW
+
+### Scheduled Rides UI Improvements ✨
+- **Design modernisé** avec cartes détaillées
+- **Statistiques en haut** : total planifiées, imminentes, montant total
+- **Informations complètes** :
+  - Date et heure en français (jeudi 26 février à 12:45)
+  - Adresses de départ et destination
+  - Distance, type de véhicule, nombre de passagers
+  - Tarif estimé en grand
+  - Badge de statut (Passée, Imminente, etc.)
+- **Actions** : Modifier, Annuler, Activer
+- **Modification de course** : nouvelle date/heure, adresses, véhicule, passagers
+- **Indicateurs temporels** : "Dans X jours", "Demain", "Dans Xh", "Dans X min"
+- **Rappels visuels** : Notification 1h avant le départ
+
+### New API Endpoint
+- `PUT /api/rides/{ride_id}/reschedule` - Modifier une course planifiée
+
+## Core Features Summary
 
 ### Ride Management
-- [x] Ride booking flow (immediate & scheduled)
-- [x] **Intermediate stops (up to 3)** ✅
-- [x] Real-time ride status updates
-- [x] Ride cancellation
+- [x] Booking flow (immediate & scheduled)
+- [x] Intermediate stops (up to 3)
+- [x] Real-time status updates
 - [x] Vehicle type selection (Standard/Van)
 - [x] Passenger count with supplements
-- [x] Frequent trips (one-click booking)
 - [x] Ride proposal system
-- [x] 18% commission deduction
-- [x] Page reset after ride completion
-
-### Maps & Location
-- [x] Mapbox integration with interactive map
-- [x] Address autocomplete
-- [x] Route drawing with ETA/distance
-- [x] Live GPS tracking of driver
-- [x] Driver path tracking
-
-### Notifications
-- [x] Real-time in-app notifications
-- [x] Push notifications (PWA)
-- [x] Sound notifications (Web Audio API)
+- [x] **Enhanced scheduled rides UI** ✨
 
 ### Payments
-- [x] Stripe integration (test mode)
-- [x] Fare estimation with breakdown
-- [x] Stripe Elements payment form
-- [x] **Saved card management** ✅
-- [x] **Pay with saved card** ✅
-- [x] Payment history
+- [x] Stripe integration
+- [x] Saved card management
+- [x] Pay with saved card
+- [x] Invoice generation
 
 ### Admin Features
-- [x] Admin dashboard with statistics
-- [x] Driver stats and management
-- [x] Driver account activation/deactivation
-- [x] **Client database with search** ✅
-- [x] **Client ride history** ✅
-- [x] **Invoice generation per ride** ✅
-- [x] **Expiring documents overview** ✅ NEW
+- [x] Dashboard with statistics
+- [x] Client database with search
+- [x] Driver management
+- [x] Document expiry tracking
 
 ### Driver Features
-- [x] Driver dashboard with earnings
-- [x] Hide/show earnings toggle
-- [x] Vehicle & document management
-- [x] Waze/Google Maps integration
-- [x] **Expanded document system (11 types)** ✅
-- [x] **Document progress tracking** ✅
-- [x] **Document expiry date tracking** ✅ NEW
-- [x] **Expiry notifications and alerts** ✅ NEW
-
-### Rating System
-- [x] Star ratings with comments
+- [x] Earnings dashboard
+- [x] 11 document types
+- [x] Expiry notifications
+- [x] Waze/Google Maps links
 
 ## Test Accounts
 - Passenger: passenger@test.com / password
 - Driver: driver@test.com / password
 - Admin: admin@volttaxi.com / admin123
 
-## Session Accomplishments (2025-03-01)
-
-### 1. Saved Cards Feature ✅
-- Stripe SetupIntent integration
-- Card management in user profile
-- Pay with saved card (one-click)
-
-### 2. Intermediate Stops Feature ✅
-- Add up to 3 waypoints in trips
-- Distance calculated via all points
-- +3€ supplement per stop
-
-### 3. Admin Client Database ✅
-- Client list with search/pagination
-- Client details with ride history
-- Invoice generation for each ride
-
-### 4. Expanded Driver Documents ✅
-- 11 document types across 4 categories
-- Upload with validation
-
-### 5. Document Expiry Notifications ✅ NEW
-- Expiry date input when uploading documents
-- Visual badges for expiring/expired documents
-- Alert banner showing documents to renew
-- API endpoints for expiry tracking:
-  - `GET /api/drivers/documents/expiring` - Driver's expiring docs
-  - `GET /api/admin/documents/expiring` - All drivers' expiring docs
-
-## Document Types with Expiry
-```
-Documents with expiry date required:
-- Assurance Véhicule ✓
-- Contrôle Technique ✓
-- Permis de Conduire ✓
-- Carte VTC ✓
-- Carte Nationale d'Identité ✓
-- RC Professionnelle ✓
-- Attestation URSSAF ✓
-
-Documents without expiry:
-- Carte Grise
-- Justificatif de Domicile
-- KBIS
-- RIB
-```
-
-## Expiry Alert System
-- **Expired**: Red alert, document needs immediate renewal
-- **Expiring soon (30 days)**: Orange warning
-- Alert banner at top of documents page
-- Admin can view all expiring documents across drivers
-
 ## Backlog
 
 ### P2 - Medium Priority
-1. **Scheduled rides UI enhancement**
-2. **Wallet/credit system** for passengers
-3. **Email notifications for expiry** (SMTP)
+1. **Wallet/credit system** for passengers
+2. **Email notifications** for document expiry (SMTP)
+3. **Ride history export** (PDF)
 
 ### P3 - Future
-4. **Mobile App Conversion** - Capacitor for iOS/Android
-5. **Export statistics** - CSV/PDF for admin
-6. **Multi-language support**
+4. **Mobile App** - Capacitor for iOS/Android
+5. **Multi-language support**
+6. **Promo codes system**
 
 ## Stripe Test Card
 - Number: 4242 4242 4242 4242
@@ -145,4 +85,4 @@ Documents without expiry:
 - CVC: 123
 
 ## Last Updated
-2025-03-01 - Document expiry notifications completed
+2025-03-01 - Scheduled rides UI enhanced
