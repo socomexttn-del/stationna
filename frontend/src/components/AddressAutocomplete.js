@@ -111,6 +111,13 @@ function AddressAutocomplete(props) {
     }, 300);
   }
 
+  function handleKeyDown(e) {
+    if (e.key === 'Enter' && suggestions.length > 0) {
+      e.preventDefault();
+      handleSelectSuggestion(suggestions[0]);
+    }
+  }
+
   function handleSelectSuggestion(suggestion) {
     setInputValue(suggestion.address);
     setSuggestions([]);
