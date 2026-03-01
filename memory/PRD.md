@@ -54,19 +54,17 @@ French (Français)
 - [x] **Client database with search** ✅
 - [x] **Client ride history** ✅
 - [x] **Invoice generation per ride** ✅
+- [x] **Expiring documents overview** ✅ NEW
 
 ### Driver Features
 - [x] Driver dashboard with earnings
 - [x] Hide/show earnings toggle
 - [x] Vehicle & document management
 - [x] Waze/Google Maps integration
-- [x] **Expanded document system (11 types)** ✅ NEW
-  - Documents Véhicule: Carte Grise, Assurance, Contrôle Technique
-  - Documents Personnels: Permis, CNI, Justificatif Domicile
-  - Documents Professionnels: Carte VTC, RC-Pro, KBIS, Attestation URSSAF
-  - Documents Financiers: RIB
-- [x] **Document progress tracking** ✅ NEW
-- [x] **Document status (pending/approved/rejected)** ✅ NEW
+- [x] **Expanded document system (11 types)** ✅
+- [x] **Document progress tracking** ✅
+- [x] **Document expiry date tracking** ✅ NEW
+- [x] **Expiry notifications and alerts** ✅ NEW
 
 ### Rating System
 - [x] Star ratings with comments
@@ -92,64 +90,49 @@ French (Français)
 - Client list with search/pagination
 - Client details with ride history
 - Invoice generation for each ride
-- Print/PDF export
 
-### 4. Expanded Driver Documents ✅ NEW
+### 4. Expanded Driver Documents ✅
 - 11 document types across 4 categories
-- Upload with validation (JPG, PNG, PDF, max 5MB)
-- Progress bar showing completion %
-- Document preview modal
-- Delete/re-upload functionality
-- Status tracking (pending/approved/rejected)
+- Upload with validation
 
-## Document Types
+### 5. Document Expiry Notifications ✅ NEW
+- Expiry date input when uploading documents
+- Visual badges for expiring/expired documents
+- Alert banner showing documents to renew
+- API endpoints for expiry tracking:
+  - `GET /api/drivers/documents/expiring` - Driver's expiring docs
+  - `GET /api/admin/documents/expiring` - All drivers' expiring docs
+
+## Document Types with Expiry
 ```
-Vehicle Documents (Required):
-- carte_grise: Carte Grise
-- assurance: Assurance Véhicule  
-- controle_technique: Contrôle Technique
+Documents with expiry date required:
+- Assurance Véhicule ✓
+- Contrôle Technique ✓
+- Permis de Conduire ✓
+- Carte VTC ✓
+- Carte Nationale d'Identité ✓
+- RC Professionnelle ✓
+- Attestation URSSAF ✓
 
-Personal Documents (Required):
-- permis_conduire: Permis de Conduire
-- cni: Carte Nationale d'Identité
-- justificatif_domicile: Justificatif de Domicile
-
-Professional Documents:
-- carte_vtc: Carte VTC (Required)
-- rc_pro: RC Professionnelle (Required)
-- kbis: Extrait KBIS (Optional)
-- attestation_vigilance: Attestation URSSAF (Optional)
-
-Financial Documents (Required):
-- rib: RIB
+Documents without expiry:
+- Carte Grise
+- Justificatif de Domicile
+- KBIS
+- RIB
 ```
 
-## API Endpoints Added This Session
-```
-# Saved Cards
-POST /api/payments/setup-intent
-GET /api/payments/saved-cards
-DELETE /api/payments/saved-cards/{id}
-POST /api/payments/set-default-card/{id}
-POST /api/payments/pay-with-saved-card
-
-# Admin Clients
-GET /api/admin/clients
-GET /api/admin/clients/{id}
-GET /api/admin/clients/{id}/rides
-GET /api/admin/rides/{id}/invoice
-
-# Driver Documents
-GET /api/drivers/documents/status
-DELETE /api/drivers/documents/{doc_type}
-```
+## Expiry Alert System
+- **Expired**: Red alert, document needs immediate renewal
+- **Expiring soon (30 days)**: Orange warning
+- Alert banner at top of documents page
+- Admin can view all expiring documents across drivers
 
 ## Backlog
 
 ### P2 - Medium Priority
 1. **Scheduled rides UI enhancement**
 2. **Wallet/credit system** for passengers
-3. **Document expiry notifications**
+3. **Email notifications for expiry** (SMTP)
 
 ### P3 - Future
 4. **Mobile App Conversion** - Capacitor for iOS/Android
@@ -162,4 +145,4 @@ DELETE /api/drivers/documents/{doc_type}
 - CVC: 123
 
 ## Last Updated
-2025-03-01 - Expanded driver documents completed
+2025-03-01 - Document expiry notifications completed
