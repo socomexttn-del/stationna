@@ -53,51 +53,71 @@ const PassengerDashboard = () => {
 
   // Sound functions for passenger notifications
   const playAcceptedSound = useCallback(() => {
-    try {
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioContext.state === 'suspended') audioContext.resume();
-      
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      // Happy ascending sound
-      oscillator.frequency.value = 523;
-      oscillator.type = 'sine';
-      gainNode.gain.value = 0.4;
-      oscillator.start();
-      setTimeout(() => { oscillator.frequency.value = 659; }, 150);
-      setTimeout(() => { oscillator.frequency.value = 784; }, 300);
-      setTimeout(() => { oscillator.stop(); audioContext.close(); }, 450);
-    } catch (e) {}
+    const playSound = () => {
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioContext.state === 'suspended') audioContext.resume();
+        
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        // LOUD happy ascending sound - driver found!
+        oscillator.frequency.value = 523; // C5
+        oscillator.type = 'sine';
+        gainNode.gain.value = 0.7; // Louder
+        oscillator.start();
+        setTimeout(() => { oscillator.frequency.value = 659; }, 120); // E5
+        setTimeout(() => { oscillator.frequency.value = 784; }, 240); // G5
+        setTimeout(() => { oscillator.frequency.value = 1047; }, 360); // C6
+        setTimeout(() => { oscillator.stop(); audioContext.close(); }, 500);
+      } catch (e) {
+        console.log('Audio error:', e);
+      }
+    };
     
-    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    // Play 2 times for emphasis
+    playSound();
+    setTimeout(playSound, 600);
+    
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 300]);
   }, []);
 
   const playArrivedSound = useCallback(() => {
-    try {
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioContext.state === 'suspended') audioContext.resume();
-      
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      // More urgent sound - driver is waiting
-      oscillator.frequency.value = 880;
-      oscillator.type = 'square';
-      gainNode.gain.value = 0.5;
-      oscillator.start();
-      setTimeout(() => { oscillator.frequency.value = 1100; }, 100);
-      setTimeout(() => { oscillator.frequency.value = 880; }, 200);
-      setTimeout(() => { oscillator.frequency.value = 1100; }, 300);
-      setTimeout(() => { oscillator.frequency.value = 1320; }, 400);
-      setTimeout(() => { oscillator.stop(); audioContext.close(); }, 500);
-    } catch (e) {}
+    const playSound = () => {
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioContext.state === 'suspended') audioContext.resume();
+        
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        // URGENT sound - driver is waiting!
+        oscillator.frequency.value = 880; // A5
+        oscillator.type = 'square'; // More attention-grabbing
+        gainNode.gain.value = 0.8; // Maximum loudness
+        oscillator.start();
+        setTimeout(() => { oscillator.frequency.value = 1100; }, 80);
+        setTimeout(() => { oscillator.frequency.value = 880; }, 160);
+        setTimeout(() => { oscillator.frequency.value = 1100; }, 240);
+        setTimeout(() => { oscillator.frequency.value = 1320; }, 320);
+        setTimeout(() => { oscillator.frequency.value = 1100; }, 400);
+        setTimeout(() => { oscillator.frequency.value = 1320; }, 480);
+        setTimeout(() => { oscillator.stop(); audioContext.close(); }, 560);
+      } catch (e) {
+        console.log('Audio error:', e);
+      }
+    };
     
-    if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
+    // Play 3 times - URGENT, driver is waiting!
+    playSound();
+    setTimeout(playSound, 700);
+    setTimeout(playSound, 1400);
+    
+    if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300, 100, 300]);
   }, []);
 
   // Get user's current location on mount with permission check
