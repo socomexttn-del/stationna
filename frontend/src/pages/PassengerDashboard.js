@@ -468,6 +468,13 @@ const PassengerDashboard = () => {
       return;
     }
     
+    // Validate intermediate stops have addresses
+    const validStops = stops.filter(s => s.address && s.lat && s.lng);
+    if (stops.length > 0 && validStops.length !== stops.length) {
+      toast.error('Veuillez remplir toutes les adresses des arrêts intermédiaires');
+      return;
+    }
+    
     // Validate passengers for vehicle type
     if (vehicleType === 'standard' && passengers > 4) {
       toast.error('Maximum 4 passagers pour un véhicule standard. Choisissez un Van.');
@@ -482,6 +489,7 @@ const PassengerDashboard = () => {
       const response = await api.post('/rides/estimate', { 
         pickup, 
         destination,
+        stops: validStops.length > 0 ? validStops : null,
         vehicle_type: vehicleType,
         passenger_count: passengers
       });
@@ -493,10 +501,14 @@ const PassengerDashboard = () => {
   };
 
   const createRide = async () => {
+    // Filter valid stops
+    const validStops = stops.filter(s => s.address && s.lat && s.lng);
+    
     try {
       const response = await api.post('/rides', { 
         pickup, 
         destination,
+        stops: validStops.length > 0 ? validStops : null,
         vehicle_type: vehicleType,
         passenger_count: passengers
       });
