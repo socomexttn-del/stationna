@@ -204,6 +204,8 @@ class RideResponse(BaseModel):
     passenger_count: int = 1
     driver_eta_minutes: Optional[int] = None
     driver_distance_km: Optional[float] = None
+    driver_arrived: Optional[bool] = False  # Driver has arrived at pickup
+    driver_arrived_at: Optional[str] = None
 
 class RatingCreate(BaseModel):
     ride_id: str
