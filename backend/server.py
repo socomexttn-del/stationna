@@ -1028,6 +1028,64 @@ async def login(credentials: UserLogin):
 async def get_me(current_user: dict = Depends(get_current_user)):
     return UserResponse(**{k: v for k, v in current_user.items() if k != "password_hash"})
 
+# ======================== FCM TOKEN ROUTES ========================
+
+class FCMTokenRegister(BaseModel):
+    token: str
+    device_info: Optional[dict] = None
+
+class FCMTokenResponse(BaseModel):
+    success: bool
+    message: str
+
+@api_router.post("/fcm/register", response_model=FCMTokenResponse)
+async def register_fcm_token(data: FCMTokenRegister, current_user: dict = Depends(get_current_user)):
+    """Register or update FCM token for push notifications"""
+    # Deactivate any existing tokens with the same token value (from other users)
+    await db.fcm_tokens.update_many(
+        {"token": data.token, "user_id": {"$ne": current_user["id"]}},
+        {"$set": {"active": False}}
+    )
+    
+    # Update or insert token for current user
+    await db.fcm_tokens.update_one(
+        {"user_id": current_user["id"], "token": data.token},
+        {
+            "$set": {
+                "user_id": current_user["id"],
+                "token": data.token,
+                "device_info": data.device_info,
+                "active": True,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            },
+            "$setOnInsert": {
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+        },
+        upsert=True
+    )
+    
+    logger.info(f"FCM token registered for user {current_user['id']}")
+    return FCMTokenResponse(success=True, message="Token registered successfully")
+
+@api_router.delete("/fcm/unregister")
+async def unregister_fcm_token(data: FCMTokenRegister, current_user: dict = Depends(get_current_user)):
+    """Unregister FCM token (e.g., on logout)"""
+    await db.fcm_tokens.update_one(
+        {"user_id": current_user["id"], "token": data.token},
+        {"$set": {"active": False}}
+    )
+    return {"success": True, "message": "Token unregistered"}
+
+@api_router.get("/fcm/status")
+async def get_fcm_status():
+    """Check if Firebase push notifications are enabled"""
+    from services.firebase_service import is_firebase_initialized
+    return {
+        "enabled": is_firebase_initialized(),
+        "message": "Firebase push notifications are " + ("enabled" if is_firebase_initialized() else "disabled")
+    }
+
 # ======================== USER ROUTES ========================
 
 @api_router.put("/users/availability", response_model=UserResponse)
