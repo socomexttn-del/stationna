@@ -437,10 +437,34 @@ const DriverDashboard = () => {
     }
   };
 
+  // Track previous rides count to detect new ones
+  const [prevRidesCount, setPrevRidesCount] = useState(0);
+
   const fetchAvailableRides = async () => {
     try {
       const response = await api.get('/rides/available');
-      setAvailableRides(response.data);
+      const newRides = response.data || [];
+      
+      // Check if there are new rides
+      if (newRides.length > prevRidesCount && prevRidesCount > 0) {
+        // New ride detected - play sound!
+        playNotificationSound(3);
+        toast.success(
+          <div className="flex flex-col gap-1">
+            <span className="font-semibold">🚗 Nouvelle course!</span>
+            <span className="text-sm">{newRides[0]?.pickup?.address}</span>
+            <span className="text-primary font-bold">{newRides[0]?.estimated_fare}€</span>
+          </div>,
+          { duration: 10000 }
+        );
+      } else if (newRides.length > 0 && prevRidesCount === 0) {
+        // First ride when coming online
+        playNotificationSound(2);
+        toast.success(`${newRides.length} course(s) disponible(s)!`, { duration: 5000 });
+      }
+      
+      setPrevRidesCount(newRides.length);
+      setAvailableRides(newRides);
     } catch (error) {
       console.error('Error fetching available rides:', error);
     }
