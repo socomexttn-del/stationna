@@ -436,11 +436,12 @@ class TestAdminPromoCodes:
         assert response.status_code == 200
         data = response.json()
         
-        assert data.get("code") == code
-        assert data.get("discount_percent") == 10
+        # Response structure: {"status": "ok", "promo": {...}}
+        promo = data.get("promo", data)  # Handle both structures
+        assert promo.get("code") == code
+        assert promo.get("discount_percent") == 10
         
         print(f"✅ Promo code created: {code} (10% discount)")
-        return data.get("id")
     
     def test_non_admin_cannot_access_promo_codes(self):
         """Test that non-admin users cannot access promo codes"""
