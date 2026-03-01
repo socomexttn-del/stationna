@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 
 const ProfilePage = () => {
   const { user, api, updateUser } = useAuth();
+  const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [vehicleData, setVehicleData] = useState(user?.vehicle_info || {
     make: '',
