@@ -56,7 +56,7 @@ const DriverVehiclePage = () => {
   const [documentStatus, setDocumentStatus] = useState(null);
   const [expiringDocs, setExpiringDocs] = useState({ expired: [], expiring_soon: [], total_alerts: 0 });
   const [uploadingDoc, setUploadingDoc] = useState(null);
-  const [activeTab, setActiveTab] = useState('vehicle');
+  const [activeTab, setActiveTab] = useState('info');
   const [previewDoc, setPreviewDoc] = useState(null);
   const [uploadModal, setUploadModal] = useState(null); // { docType, docInfo }
 
