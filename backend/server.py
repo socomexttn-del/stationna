@@ -67,14 +67,143 @@ logger = logging.getLogger(__name__)
 
 # ======================== NOTIFICATION SYSTEM ========================
 
+# Import Firebase service for push notifications
+from services.firebase_service import (
+    send_push_notification, 
+    send_push_to_multiple, 
+    is_firebase_initialized
+)
+
+# Notification title/body templates for different notification types
+NOTIFICATION_TEMPLATES = {
+    "new_ride": {
+        "title": "🚖 Nouvelle course disponible!",
+        "body": "Course de {pickup} à {destination} - {price}€"
+    },
+    "ride_available": {
+        "title": "🚖 Nouvelle course disponible!",
+        "body": "Course de {pickup} à {destination}"
+    },
+    "ride_accepted": {
+        "title": "✅ Course acceptée!",
+        "body": "Votre chauffeur {driver_name} arrive"
+    },
+    "ride_taken": {
+        "title": "❌ Course déjà prise",
+        "body": "Cette course a été acceptée par un autre chauffeur"
+    },
+    "driver_arrived": {
+        "title": "🚗 Chauffeur arrivé!",
+        "body": "Votre chauffeur est arrivé au point de prise en charge"
+    },
+    "ride_started": {
+        "title": "🚀 Course démarrée!",
+        "body": "Votre course est en cours"
+    },
+    "ride_completed": {
+        "title": "🏁 Course terminée!",
+        "body": "Merci d'avoir utilisé Allogo"
+    },
+    "ride_assigned": {
+        "title": "📋 Course assignée!",
+        "body": "Une nouvelle course vous a été assignée"
+    },
+    "driver_changed": {
+        "title": "🔄 Changement de chauffeur",
+        "body": "Un nouveau chauffeur a été assigné à votre course"
+    },
+    "searching_driver": {
+        "title": "🔍 Recherche en cours",
+        "body": "Nous recherchons un nouveau chauffeur"
+    }
+}
+
 class NotificationManager:
-    """Store notifications in MongoDB for reliable delivery via polling"""
+    """Store notifications in MongoDB and send push notifications via Firebase"""
+    
+    def _get_notification_content(self, notification_type: str, data: dict) -> tuple:
+        """Get title and body for push notification based on type"""
+        template = NOTIFICATION_TEMPLATES.get(notification_type, {})
+        title = template.get("title", "Allogo")
+        body = template.get("body", "Vous avez une nouvelle notification")
+        
+        # Format body with data if available
+        try:
+            body = body.format(**data) if data else body
+        except (KeyError, ValueError):
+            pass
+        
+        return title, body
+    
+    async def _get_user_fcm_tokens(self, user_id: str) -> list:
+        """Get all FCM tokens for a user"""
+        tokens = await db.fcm_tokens.find(
+            {"user_id": user_id, "active": True},
+            {"_id": 0, "token": 1}
+        ).to_list(10)
+        return [t["token"] for t in tokens]
+    
+    async def _get_all_driver_fcm_tokens(self) -> list:
+        """Get FCM tokens for all available drivers"""
+        # Get all drivers who are available
+        available_drivers = await db.users.find(
+            {"role": "driver", "is_available": True},
+            {"_id": 0, "id": 1}
+        ).to_list(1000)
+        
+        driver_ids = [d["id"] for d in available_drivers]
+        
+        # Get all active tokens for these drivers
+        tokens = await db.fcm_tokens.find(
+            {"user_id": {"$in": driver_ids}, "active": True},
+            {"_id": 0, "token": 1}
+        ).to_list(1000)
+        
+        return [t["token"] for t in tokens]
+    
+    async def _send_push(self, user_id: str, notification_type: str, data: dict):
+        """Send push notification to a specific user"""
+        if not is_firebase_initialized():
+            return
+        
+        tokens = await self._get_user_fcm_tokens(user_id)
+        if not tokens:
+            return
+        
+        title, body = self._get_notification_content(notification_type, data)
+        
+        # Send to all user devices
+        for token in tokens:
+            await send_push_notification(
+                token=token,
+                title=title,
+                body=body,
+                data={"type": notification_type, **{k: str(v) for k, v in data.items() if v is not None}}
+            )
+    
+    async def _send_push_to_all_drivers(self, notification_type: str, data: dict):
+        """Send push notification to all available drivers"""
+        if not is_firebase_initialized():
+            return
+        
+        tokens = await self._get_all_driver_fcm_tokens()
+        if not tokens:
+            return
+        
+        title, body = self._get_notification_content(notification_type, data)
+        
+        await send_push_to_multiple(
+            tokens=tokens,
+            title=title,
+            body=body,
+            data={"type": notification_type, **{k: str(v) for k, v in data.items() if v is not None}}
+        )
     
     async def create_notification(self, user_id: str, notification_type: str, data: dict, role: str = None):
         """Create a notification for a user or broadcast to all drivers"""
         notification = {
             "id": str(uuid.uuid4()),
-            "user_id": user_id,  # Can be "broadcast_drivers" for all drivers
+            "user_id": user_id,
             "role": role,
             "type": notification_type,
             "data": data,
@@ -82,6 +211,10 @@ class NotificationManager:
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.notifications.insert_one(notification)
+        
+        # Send push notification
+        await self._send_push(user_id, notification_type, data)
+        
         return notification
     
     async def notify_all_drivers(self, notification_type: str, data: dict):
@@ -96,6 +229,10 @@ class NotificationManager:
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.notifications.insert_one(notification)
+        
+        # Send push notification to all drivers
+        await self._send_push_to_all_drivers(notification_type, data)
+        
         return notification
     
     async def notify_driver(self, driver_id: str, notification_type: str, data: dict):
