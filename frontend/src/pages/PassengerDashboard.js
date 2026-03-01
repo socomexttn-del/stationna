@@ -1192,7 +1192,7 @@ const PassengerDashboard = () => {
       />
 
       {/* Payment Modal */}
-      {showPaymentModal && paymentData && (
+      {showPaymentModal && activeRide && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
           <div className="relative w-full max-w-md animate-scale-in">
             <Button
@@ -1203,11 +1203,11 @@ const PassengerDashboard = () => {
             >
               <X className="w-5 h-5" />
             </Button>
-            <PaymentForm
-              clientSecret={paymentData.clientSecret}
-              publishableKey={paymentData.publishableKey}
-              amount={paymentData.amount}
-              rideName={paymentData.rideName}
+            <PaymentMethodSelector
+              api={api}
+              rideId={activeRide.id}
+              amount={activeRide.final_fare || activeRide.estimated_fare}
+              rideName={`${activeRide.pickup?.address} → ${activeRide.destination?.address}`}
               onSuccess={handlePaymentSuccess}
               onCancel={handlePaymentCancel}
               onError={handlePaymentError}
