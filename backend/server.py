@@ -2737,6 +2737,116 @@ async def get_referral_code(current_user: dict = Depends(get_current_user)):
     
     return {"referral_code": referral_code, "discount_percent": 10}
 
+# ======================== ADMIN PROMO CODES ========================
+
+@api_router.get("/admin/promo-codes")
+async def get_all_promo_codes(
+    page: int = 1,
+    limit: int = 20,
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Get all promo codes (admin only)"""
+    skip = (page - 1) * limit
+    
+    promos = await db.promo_codes.find(
+        {},
+        {"_id": 0}
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    total = await db.promo_codes.count_documents({})
+    
+    # Add usage stats
+    for promo in promos:
+        promo["usage_percent"] = round((promo.get("used_count", 0) / max(promo.get("max_uses", 1), 1)) * 100, 1)
+        # Check if expired
+        try:
+            valid_until = datetime.fromisoformat(promo["valid_until"].replace('Z', '+00:00'))
+            promo["is_expired"] = valid_until < datetime.now(timezone.utc)
+        except:
+            promo["is_expired"] = False
+    
+    return {
+        "promo_codes": promos,
+        "total": total,
+        "page": page,
+        "pages": (total + limit - 1) // limit
+    }
+
+@api_router.post("/admin/promo-codes")
+async def admin_create_promo_code(
+    data: PromoCodeCreate,
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Create a promo code (admin only)"""
+    existing = await db.promo_codes.find_one({"code": data.code.upper()})
+    if existing:
+        raise HTTPException(status_code=400, detail="Ce code existe déjà")
+    
+    promo = {
+        "id": str(uuid.uuid4()),
+        "code": data.code.upper(),
+        "discount_percent": data.discount_percent,
+        "max_uses": data.max_uses,
+        "used_count": 0,
+        "valid_until": data.valid_until,
+        "created_by": admin_user["id"],
+        "is_referral": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.promo_codes.insert_one(promo)
+    del promo["_id"] if "_id" in promo else None
+    
+    return {"status": "ok", "promo": promo}
+
+@api_router.delete("/admin/promo-codes/{promo_id}")
+async def delete_promo_code(
+    promo_id: str,
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Delete a promo code (admin only)"""
+    result = await db.promo_codes.delete_one({"id": promo_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Code promo non trouvé")
+    
+    # Also delete user_promos that reference this code
+    await db.user_promos.delete_many({"promo_id": promo_id})
+    
+    return {"status": "ok", "message": "Code promo supprimé"}
+
+@api_router.get("/admin/promo-codes/{promo_id}/stats")
+async def get_promo_code_stats(
+    promo_id: str,
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Get detailed stats for a promo code (admin only)"""
+    promo = await db.promo_codes.find_one({"id": promo_id}, {"_id": 0})
+    if not promo:
+        raise HTTPException(status_code=404, detail="Code promo non trouvé")
+    
+    # Get usage details
+    usages = await db.user_promos.find(
+        {"promo_id": promo_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    # Get user details for each usage
+    for usage in usages:
+        user = await db.users.find_one(
+            {"id": usage["user_id"]},
+            {"_id": 0, "first_name": 1, "last_name": 1, "email": 1}
+        )
+        if user:
+            usage["user_name"] = f"{user['first_name']} {user['last_name']}"
+            usage["user_email"] = user["email"]
+    
+    return {
+        "promo": promo,
+        "usages": usages,
+        "total_usages": len(usages),
+        "used_usages": len([u for u in usages if u.get("used")])
+    }
+
 # ======================== PAYMENT HISTORY ========================
 
 @api_router.get("/payments/history")
