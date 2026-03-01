@@ -10,7 +10,7 @@ import MapComponent from '../components/MapComponent';
 import AddressAutocomplete from '../components/AddressAutocomplete';
 import ChatComponent from '../components/ChatComponent';
 import RatingModal from '../components/RatingModal';
-import PaymentForm from '../components/PaymentForm';
+import PaymentMethodSelector from '../components/PaymentMethodSelector';
 import { 
   Car, MapPin, Navigation, Star, Clock, CreditCard, 
   Menu, User, History, LogOut, Phone, X, Route, MessageCircle,
