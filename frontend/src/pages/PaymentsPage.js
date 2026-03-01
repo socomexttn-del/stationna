@@ -151,15 +151,32 @@ const PaymentsPage = () => {
           </div>
         )}
 
-        <Tabs defaultValue="payments" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
+        <Tabs defaultValue="cards" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsTrigger value="cards" data-testid="tab-cards">
+              <CreditCard className="w-4 h-4 mr-2" /> Mes Cartes
+            </TabsTrigger>
             <TabsTrigger value="payments" data-testid="tab-payments">
-              <CreditCard className="w-4 h-4 mr-2" /> Paiements
+              <Wallet className="w-4 h-4 mr-2" /> Historique
             </TabsTrigger>
             <TabsTrigger value="promo" data-testid="tab-promo">
               <Gift className="w-4 h-4 mr-2" /> Promos
             </TabsTrigger>
           </TabsList>
+
+          {/* Saved Cards Tab */}
+          <TabsContent value="cards" className="space-y-4">
+            <Card className="bg-card border-border/50">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-primary" /> Cartes bancaires enregistrées
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <SavedCardsManager />
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           {/* Payments Tab */}
           <TabsContent value="payments" className="space-y-4">
