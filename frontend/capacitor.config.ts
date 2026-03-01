@@ -1,7 +1,7 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.allogo.taxi',
+  appId: 'com.allogo.app',
   appName: 'Allogo',
   webDir: 'build',
   server: {
@@ -17,6 +17,9 @@ const config: CapacitorConfig = {
     StatusBar: {
       backgroundColor: '#1a1a1a',
       style: 'DARK'
+    },
+    PushNotifications: {
+      presentationOptions: ['badge', 'sound', 'alert']
     }
   }
 };
