@@ -220,12 +220,14 @@ class DriverDocumentsUpdate(BaseModel):
 class FareEstimateRequest(BaseModel):
     pickup: LocationModel
     destination: LocationModel
+    stops: Optional[List[LocationModel]] = None  # Intermediate stops
     vehicle_type: str = "standard"  # "standard" (4 places) or "van" (7 places)
     passenger_count: int = 1
 
 class RideRequest(BaseModel):
     pickup: LocationModel
     destination: LocationModel
+    stops: Optional[List[LocationModel]] = None  # Intermediate stops
     vehicle_type: str = "standard"
     passenger_count: int = 1
 
