@@ -93,13 +93,32 @@ const RideHistory = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 glass p-4">
-        <div className="flex items-center gap-4">
-          <Link to={user?.role === 'driver' ? '/driver' : '/passenger'}>
-            <Button variant="ghost" size="icon" data-testid="back-btn" className="rounded-full">
-              <ArrowLeft className="w-5 h-5" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link to={user?.role === 'driver' ? '/driver' : '/passenger'}>
+              <Button variant="ghost" size="icon" data-testid="back-btn" className="rounded-full">
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+            </Link>
+            <h1 className="text-xl font-semibold" style={{ fontFamily: 'Space Grotesk' }}>Historique</h1>
+          </div>
+          {rides.length > 0 && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={exportPDF}
+              disabled={exporting}
+              className="gap-2"
+              data-testid="export-pdf-btn"
+            >
+              {exporting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              PDF
             </Button>
-          </Link>
-          <h1 className="text-xl font-semibold" style={{ fontFamily: 'Space Grotesk' }}>Historique</h1>
+          )}
         </div>
       </header>
 
