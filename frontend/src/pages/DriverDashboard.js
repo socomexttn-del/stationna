@@ -818,6 +818,34 @@ const DriverDashboard = () => {
           </div>
         )}
 
+        {/* Important warning for drivers */}
+        {isAvailable && (
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3 text-xs">
+            <div className="flex items-center gap-2 text-yellow-500 font-medium mb-1">
+              <Bell className="w-4 h-4" />
+              <span>Important - Notifications</span>
+            </div>
+            <p className="text-muted-foreground">
+              Pour recevoir les alertes de course, gardez cette page ouverte et votre écran allumé. 
+              Les navigateurs ne peuvent pas sonner quand le téléphone est en veille.
+            </p>
+            {!soundEnabled && (
+              <Button 
+                size="sm" 
+                className="w-full mt-2 bg-yellow-500 hover:bg-yellow-600 text-black"
+                onClick={() => {
+                  initAudio();
+                  playNotificationSound(1);
+                  toast.success('Son activé!');
+                }}
+              >
+                <Bell className="w-3 h-3 mr-2" />
+                Activer le son
+              </Button>
+            )}
+          </div>
+        )}
+
         {/* Stats Cards */}
         {stats && (
           <div className="space-y-3">
