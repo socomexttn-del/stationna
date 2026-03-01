@@ -805,9 +805,14 @@ const PassengerDashboard = () => {
             <div className="space-y-3">
               {/* Location indicator */}
               {isLocating && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 p-2 rounded-lg">
-                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                  <span>Détection de votre position...</span>
+                <div className="flex items-center gap-3 text-sm bg-primary/10 border border-primary/30 p-3 rounded-xl">
+                  <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center">
+                    <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-primary">Localisation en cours...</p>
+                    <p className="text-xs text-muted-foreground">Veuillez autoriser l'accès à votre position</p>
+                  </div>
                 </div>
               )}
               
