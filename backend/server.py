@@ -1444,7 +1444,9 @@ async def create_ride(data: RideRequest, current_user: dict = Depends(get_curren
         is_immediate=True,
         vehicle_type=data.vehicle_type,
         passenger_count=data.passenger_count,
-        stops_count=stops_count
+        stops_count=stops_count,
+        pickup_coords=pickup,
+        dest_coords=destination
     )
     fare = fare_details["total"]
     
