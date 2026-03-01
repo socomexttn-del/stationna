@@ -36,7 +36,12 @@ French (Français) + English (Multi-language support)
   - Réservation immédiate : +4,00€
   - Réservation à l'avance : +7,00€
   - 5ème passager+ : +5,50€/pers
-- **Interface** : Badge "OFFICIEL", couleur jaune, info réglementation
+- **Interface passager** : 
+  - Badge "OFFICIEL", couleur jaune
+  - Message clair : "Prix estimatif - Le montant final sera celui du compteur"
+- **Interface chauffeur** :
+  - Modal de saisie du prix compteur à la fin de la course
+  - Le prix saisi est débité au client
 
 ### Admin Promo Codes UI ✨ (NEW)
 - **Page dédiée** (`/admin/promo-codes`) 
