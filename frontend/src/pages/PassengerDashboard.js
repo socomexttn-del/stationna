@@ -1207,6 +1207,8 @@ const PassengerDashboard = () => {
         onClose={() => {
           setShowRatingModal(false);
           setCompletedRideForRating(null);
+          // Reset for new booking after closing rating modal
+          resetBookingState();
         }}
         onSubmit={submitRating}
       />
