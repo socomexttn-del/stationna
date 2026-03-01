@@ -496,6 +496,9 @@ const PassengerDashboard = () => {
     };
   }, [activeRide, fetchDriverLocation]);
 
+  // Track previous ride status to detect changes
+  const [prevRideStatus, setPrevRideStatus] = useState(null);
+
   useEffect(() => {
     fetchActiveRide();
     const interval = setInterval(fetchActiveRide, 5000);
@@ -506,9 +509,44 @@ const PassengerDashboard = () => {
     try {
       const response = await api.get('/rides/active');
       if (response.data) {
-        setActiveRide(response.data);
+        const newRide = response.data;
+        const newStatus = newRide.status;
+        
+        // Detect status changes and play sounds
+        if (prevRideStatus && prevRideStatus !== newStatus) {
+          if (newStatus === 'accepted' && prevRideStatus === 'pending') {
+            // Driver accepted the ride!
+            console.log('Ride accepted - playing sound');
+            playAcceptedSound();
+            toast.success(
+              <div className="flex flex-col gap-1">
+                <span className="font-semibold">🚗 Chauffeur trouvé!</span>
+                <span className="text-sm">{newRide.driver_name} arrive dans ~{newRide.driver_eta_minutes || 5} min</span>
+              </div>,
+              { duration: 8000 }
+            );
+          } else if (newStatus === 'in_progress' && prevRideStatus === 'accepted') {
+            // Driver arrived and ride started
+            console.log('Ride started - driver arrived');
+            playArrivedSound();
+            toast.success(
+              <div className="flex flex-col gap-1">
+                <span className="font-semibold">🚗 Course démarrée!</span>
+                <span className="text-sm">Bon voyage!</span>
+              </div>,
+              { duration: 5000 }
+            );
+          }
+        } else if (!prevRideStatus && newStatus === 'accepted') {
+          // Page loaded with already accepted ride - still notify
+          console.log('Ride already accepted on page load');
+        }
+        
+        setPrevRideStatus(newStatus);
+        setActiveRide(newRide);
         setStep('ride_active');
       } else {
+        setPrevRideStatus(null);
         setActiveRide(null);
         if (step === 'ride_active') setStep('idle');
       }
