@@ -830,6 +830,7 @@ const PassengerDashboard = () => {
                   onClick={() => {
                     if (navigator.geolocation) {
                       setIsLocating(true);
+                      toast.info('Localisation en cours...', { duration: 2000 });
                       navigator.geolocation.getCurrentPosition(
                         async (position) => {
                           const { latitude, longitude } = position.coords;
@@ -844,22 +845,35 @@ const PassengerDashboard = () => {
                             toast.success('Position mise à jour');
                           } catch (error) {
                             setPickup({ lat: latitude, lng: longitude, address: 'Position actuelle' });
+                            toast.success('Position détectée');
                           }
                           setIsLocating(false);
                         },
-                        () => {
-                          toast.error('Impossible d\'obtenir votre position');
+                        (error) => {
+                          console.error('Geolocation error:', error);
+                          toast.error('Impossible d\'obtenir votre position. Vérifiez les permissions.');
                           setIsLocating(false);
                         },
-                        { enableHighAccuracy: true }
+                        { enableHighAccuracy: true, timeout: 15000 }
                       );
+                    } else {
+                      toast.error('Géolocalisation non supportée');
                     }
                   }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-muted hover:bg-primary/20 rounded-full flex items-center justify-center transition-colors"
+                  disabled={isLocating}
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+                    isLocating 
+                      ? 'bg-primary/20 cursor-wait' 
+                      : 'bg-primary/10 hover:bg-primary/30 hover:scale-110'
+                  }`}
                   title="Me localiser"
                   data-testid="relocate-btn"
                 >
-                  <Crosshair className="w-4 h-4 text-primary" />
+                  {isLocating ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  ) : (
+                    <Crosshair className="w-5 h-5 text-primary" />
+                  )}
                 </button>
               </div>
               
