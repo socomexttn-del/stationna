@@ -865,6 +865,7 @@ async def create_ride(data: RideRequest, current_user: dict = Depends(get_curren
         "driver_identification": None,
         "pickup": pickup,
         "destination": destination,
+        "stops": stops_list if stops_list else None,  # Intermediate stops
         "distance_km": distance,
         "estimated_fare": fare,
         "commission_rate": commission_rate,
