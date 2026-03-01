@@ -110,31 +110,40 @@ French (Français) + English (Multi-language support)
 
 ## Backlog
 
-### P1 - Completed ✅
-1. ~~**Refactorisation Backend**~~ - Structure créée
-2. ~~**Email notifications**~~ - Implémenté avec Resend
-3. ~~**Export PDF**~~ - Implémenté avec ReportLab
+### P1 - All Completed ✅
+1. ~~**Notifications Email**~~ - Resend
+2. ~~**Export PDF**~~ - ReportLab
+3. ~~**UI Admin Codes Promo**~~ - Implémenté
+4. ~~**Préparation Mobile**~~ - Capacitor configuré
+5. ~~**Multi-langues**~~ - i18next FR/EN
 
 ### P2 - Medium Priority
-1. **Compléter migration routes** vers modules backend
-2. **Système de codes promo avancé** - UI admin pour créer/gérer
+1. **Notifications Push** - Firebase (nécessite configuration compte)
+2. **Compléter traductions** - Traduire tous les composants
 
 ### P3 - Future
-3. **Mobile App** - Capacitor for iOS/Android
-4. **Multi-language support**
-5. **Notifications push** - Firebase
+3. **Build Mobile** - Générer APK/IPA avec Capacitor
+4. **Plus de langues** - Espagnol, Allemand, etc.
+5. **Tests automatisés** - Jest/Cypress
 
-## Configuration Email (Resend)
-Pour activer les notifications email :
-```
+## Configuration
+
+### Email (Resend)
+```env
 RESEND_API_KEY=re_your_api_key
 SENDER_EMAIL=noreply@yourdomain.com
 ```
 
-## Stripe Test Card
+### Stripe
+```env
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_PUBLISHABLE_KEY=pk_test_...
+```
+
+### Stripe Test Card
 - Number: 4242 4242 4242 4242
 - Exp: 12/34
 - CVC: 123
 
 ## Last Updated
-2025-03-01 - Email notifications & PDF export added
+2025-03-01 - Added Promo UI, Mobile prep, Multi-language
