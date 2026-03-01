@@ -309,6 +309,8 @@ const PassengerDashboard = () => {
         );
         // Push notification
         notifyDriverAccepted(data.driver_name, data.eta_minutes || 5);
+        // Play sound for ride accepted
+        playAcceptedSound();
         setStep('ride_active');
         fetchActiveRide();
         break;
@@ -323,6 +325,8 @@ const PassengerDashboard = () => {
         );
         // Push notification
         notifyDriverArrived(data.driver_name);
+        // Play urgent sound for driver arrived
+        playArrivedSound();
         fetchActiveRide();
         break;
         
