@@ -353,6 +353,39 @@ def calculate_distance(pickup: Dict, destination: Dict) -> float:
     c = 2 * math.asin(math.sqrt(a))
     return round(R * c, 2)
 
+def calculate_total_distance_with_stops(pickup: Dict, destination: Dict, stops: Optional[List[Dict]] = None) -> tuple:
+    """Calculate total distance with intermediate stops
+    Returns: (total_distance_km, stop_distances list)
+    """
+    if not stops or len(stops) == 0:
+        return calculate_distance(pickup, destination), []
+    
+    total_distance = 0
+    stop_distances = []
+    current_point = pickup
+    
+    # Calculate distance to each stop
+    for stop in stops:
+        dist = calculate_distance(current_point, stop)
+        stop_distances.append({
+            "from": current_point.get("address", ""),
+            "to": stop.get("address", ""),
+            "distance_km": dist
+        })
+        total_distance += dist
+        current_point = stop
+    
+    # Distance from last stop to destination
+    final_dist = calculate_distance(current_point, destination)
+    stop_distances.append({
+        "from": current_point.get("address", ""),
+        "to": destination.get("address", ""),
+        "distance_km": final_dist
+    })
+    total_distance += final_dist
+    
+    return round(total_distance, 2), stop_distances
+
 async def find_nearest_driver(pickup_location: Dict, max_distance_km: float = 15.0) -> Optional[Dict]:
     """Find the nearest available driver to the pickup location"""
     available_drivers = await db.users.find({
