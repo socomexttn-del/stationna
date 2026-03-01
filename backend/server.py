@@ -807,6 +807,176 @@ async def get_all_expiring_documents(
         "expiring_count": len([d for d in expiring_docs if not d["is_expired"]])
     }
 
+# ======================== EMAIL NOTIFICATIONS ========================
+
+class EmailNotificationRequest(BaseModel):
+    driver_id: Optional[str] = None  # If None, send to all drivers with expiring docs
+
+def create_expiry_email_html(driver_name: str, documents: List[dict]) -> str:
+    """Create HTML email for document expiry notification"""
+    expired = [d for d in documents if d.get("is_expired") or d.get("days_until_expiry", 0) < 0]
+    expiring = [d for d in documents if not d.get("is_expired") and d.get("days_until_expiry", 0) >= 0]
+    
+    html = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #1a1a1a; color: #ffffff; padding: 20px; border-radius: 10px;">
+        <div style="text-align: center; margin-bottom: 20px;">
+            <h1 style="color: #facc15; margin: 0;">🚕 Allogo</h1>
+            <p style="color: #9ca3af; margin: 5px 0;">Notification Documents</p>
+        </div>
+        
+        <p style="margin-bottom: 20px;">Bonjour <strong>{driver_name}</strong>,</p>
+        
+        <p style="margin-bottom: 20px;">Certains de vos documents nécessitent votre attention :</p>
+    """
+    
+    if expired:
+        html += """
+        <div style="background: #7f1d1d; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+            <h3 style="color: #fca5a5; margin: 0 0 10px 0;">⚠️ Documents expirés</h3>
+            <ul style="margin: 0; padding-left: 20px;">
+        """
+        for doc in expired:
+            html += f'<li style="margin-bottom: 5px;">{doc.get("doc_name", doc.get("doc_type"))} - Expiré depuis {abs(doc.get("days_until_expiry", 0))} jours</li>'
+        html += "</ul></div>"
+    
+    if expiring:
+        html += """
+        <div style="background: #78350f; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+            <h3 style="color: #fcd34d; margin: 0 0 10px 0;">📅 Documents à renouveler</h3>
+            <ul style="margin: 0; padding-left: 20px;">
+        """
+        for doc in expiring:
+            html += f'<li style="margin-bottom: 5px;">{doc.get("doc_name", doc.get("doc_type"))} - Expire dans {doc.get("days_until_expiry", 0)} jours</li>'
+        html += "</ul></div>"
+    
+    html += """
+        <p style="margin-top: 20px;">Veuillez mettre à jour vos documents dès que possible pour continuer à utiliser Allogo.</p>
+        
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="#" style="background: #facc15; color: #000; padding: 12px 30px; text-decoration: none; border-radius: 25px; font-weight: bold;">Mettre à jour mes documents</a>
+        </div>
+        
+        <p style="color: #6b7280; font-size: 12px; margin-top: 30px; text-align: center;">
+            Cet email a été envoyé automatiquement par Allogo.<br>
+            © 2025 Allogo - Votre partenaire VTC
+        </p>
+    </div>
+    """
+    return html
+
+@api_router.post("/admin/notifications/send-expiry-alerts")
+async def send_expiry_email_alerts(
+    data: EmailNotificationRequest,
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Send email notifications to drivers with expiring documents (admin only)"""
+    if not RESEND_API_KEY:
+        raise HTTPException(status_code=503, detail="Service email non configuré")
+    
+    today = datetime.now(timezone.utc).date()
+    emails_sent = []
+    errors = []
+    
+    # Build query
+    query = {"role": "driver"}
+    if data.driver_id:
+        query["id"] = data.driver_id
+    
+    drivers = await db.users.find(
+        query,
+        {"_id": 0, "id": 1, "first_name": 1, "last_name": 1, "email": 1, "documents": 1}
+    ).to_list(1000)
+    
+    for driver in drivers:
+        documents = driver.get("documents", {})
+        expiring_docs = []
+        
+        for doc_type, doc_data in documents.items():
+            if not doc_data or not doc_data.get("expiry_date"):
+                continue
+            
+            try:
+                expiry_date = datetime.fromisoformat(doc_data["expiry_date"].replace("Z", "+00:00")).date()
+                days_until_expiry = (expiry_date - today).days
+                
+                if days_until_expiry <= 30:
+                    expiring_docs.append({
+                        "doc_type": doc_type,
+                        "doc_name": DRIVER_DOCUMENT_TYPES.get(doc_type, {}).get("name", doc_type),
+                        "expiry_date": doc_data["expiry_date"],
+                        "days_until_expiry": days_until_expiry,
+                        "is_expired": days_until_expiry < 0
+                    })
+            except (ValueError, TypeError):
+                continue
+        
+        if not expiring_docs:
+            continue
+        
+        # Sort by urgency
+        expiring_docs.sort(key=lambda x: x["days_until_expiry"])
+        
+        driver_name = f"{driver['first_name']} {driver['last_name']}"
+        html_content = create_expiry_email_html(driver_name, expiring_docs)
+        
+        expired_count = len([d for d in expiring_docs if d["is_expired"]])
+        subject = f"⚠️ {'Documents expirés' if expired_count else 'Documents à renouveler'} - Allogo"
+        
+        try:
+            params = {
+                "from": SENDER_EMAIL,
+                "to": [driver["email"]],
+                "subject": subject,
+                "html": html_content
+            }
+            email_result = await asyncio.to_thread(resend.Emails.send, params)
+            emails_sent.append({
+                "driver_id": driver["id"],
+                "driver_name": driver_name,
+                "email": driver["email"],
+                "documents_count": len(expiring_docs),
+                "email_id": email_result.get("id")
+            })
+            
+            # Log notification sent
+            await db.email_logs.insert_one({
+                "id": str(uuid.uuid4()),
+                "type": "document_expiry",
+                "recipient_id": driver["id"],
+                "recipient_email": driver["email"],
+                "subject": subject,
+                "sent_at": datetime.now(timezone.utc).isoformat(),
+                "sent_by": admin_user["id"]
+            })
+            
+        except Exception as e:
+            logger.error(f"Failed to send email to {driver['email']}: {e}")
+            errors.append({
+                "driver_id": driver["id"],
+                "email": driver["email"],
+                "error": str(e)
+            })
+    
+    return {
+        "status": "ok",
+        "emails_sent": len(emails_sent),
+        "details": emails_sent,
+        "errors": errors if errors else None
+    }
+
+@api_router.get("/admin/notifications/email-logs")
+async def get_email_logs(
+    limit: int = 50,
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Get email notification logs (admin only)"""
+    logs = await db.email_logs.find(
+        {},
+        {"_id": 0}
+    ).sort("sent_at", -1).limit(limit).to_list(limit)
+    
+    return {"logs": logs, "total": len(logs)}
+
 class DriverStatusUpdate(BaseModel):
     is_active: bool
 
