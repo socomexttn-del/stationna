@@ -21,6 +21,11 @@ const RatingModal = ({ ride, onClose, onSubmit, isOpen }) => {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
+      console.log('RatingModal - Submitting:', { ride_id: ride?.id, rating, comment: comment.trim() || null });
+      if (!ride?.id) {
+        toast.error('Erreur: ID de course manquant');
+        return;
+      }
       await onSubmit({
         ride_id: ride.id,
         rating,
@@ -32,7 +37,9 @@ const RatingModal = ({ ride, onClose, onSubmit, isOpen }) => {
         onClose();
       }, 1500);
     } catch (error) {
-      toast.error('Erreur lors de l\'envoi');
+      console.error('RatingModal error:', error);
+      const errorMsg = error.response?.data?.detail || 'Erreur lors de l\'envoi';
+      toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
     }
