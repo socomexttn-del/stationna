@@ -192,6 +192,9 @@ const WalletPage = () => {
 
   // Transaction icon and color
   const getTransactionStyle = (type, amount) => {
+    if (type === 'bonus') {
+      return { icon: Gift, color: 'text-green-400', bg: 'bg-green-400/20' };
+    }
     if (type === 'topup' || amount > 0) {
       return { icon: ArrowDownLeft, color: 'text-green-500', bg: 'bg-green-500/20' };
     }
