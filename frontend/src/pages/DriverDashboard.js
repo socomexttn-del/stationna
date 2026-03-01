@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../hooks/useNotifications';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Switch } from '../components/ui/switch';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../components/ui/sheet';
@@ -32,6 +33,10 @@ const DriverDashboard = () => {
   const [hideEarnings, setHideEarnings] = useState(() => {
     return localStorage.getItem('allogo_hide_earnings') === 'true';
   });
+  
+  // Taxi meter price modal
+  const [showMeterModal, setShowMeterModal] = useState(false);
+  const [meterPrice, setMeterPrice] = useState('');
 
   // Get current location on mount with permission check
   useEffect(() => {
