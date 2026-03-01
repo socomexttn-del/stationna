@@ -17,7 +17,7 @@ French (Français)
 
 ### Ride Management
 - [x] Ride booking flow (immediate & scheduled)
-- [x] **Intermediate stops (up to 3)** ✨ NEW
+- [x] **Intermediate stops (up to 3)** ✅
 - [x] Real-time ride status updates
 - [x] Ride cancellation
 - [x] Vehicle type selection (Standard/Van)
@@ -43,23 +43,30 @@ French (Français)
 - [x] Stripe integration (test mode)
 - [x] Fare estimation with breakdown
 - [x] Stripe Elements payment form
-- [x] **Saved card management** ✨ NEW
-- [x] **Pay with saved card** ✨ NEW
+- [x] **Saved card management** ✅
+- [x] **Pay with saved card** ✅
 - [x] Payment history
 
 ### Admin Features
 - [x] Admin dashboard with statistics
 - [x] Driver stats and management
 - [x] Driver account activation/deactivation
-- [x] **Client database with search** ✨ NEW
-- [x] **Client ride history** ✨ NEW
-- [x] **Invoice generation per ride** ✨ NEW
+- [x] **Client database with search** ✅
+- [x] **Client ride history** ✅
+- [x] **Invoice generation per ride** ✅
 
 ### Driver Features
 - [x] Driver dashboard with earnings
 - [x] Hide/show earnings toggle
 - [x] Vehicle & document management
 - [x] Waze/Google Maps integration
+- [x] **Expanded document system (11 types)** ✅ NEW
+  - Documents Véhicule: Carte Grise, Assurance, Contrôle Technique
+  - Documents Personnels: Permis, CNI, Justificatif Domicile
+  - Documents Professionnels: Carte VTC, RC-Pro, KBIS, Attestation URSSAF
+  - Documents Financiers: RIB
+- [x] **Document progress tracking** ✅ NEW
+- [x] **Document status (pending/approved/rejected)** ✅ NEW
 
 ### Rating System
 - [x] Star ratings with comments
@@ -69,35 +76,17 @@ French (Français)
 - Driver: driver@test.com / password
 - Admin: admin@volttaxi.com / admin123
 
-## Fare Calculation
-```
-Base Rates:
-- Prise en charge: 4.48€
-- Prix/km: 1.30€
-- Tarif/minute: 0.70€
-- Tarif minimum: 8.00€
-
-Supplements:
-- Réservation immédiate: +4.00€
-- Réservation à l'avance: +7.00€
-- Van (7 places): +10.00€
-- Passager supplémentaire (5e+): +5.50€/passager
-- Arrêt intermédiaire: +3.00€/arrêt
-```
-
 ## Session Accomplishments (2025-03-01)
 
 ### 1. Saved Cards Feature ✅
 - Stripe SetupIntent integration
 - Card management in user profile
 - Pay with saved card (one-click)
-- Tests: 100% (13/13)
 
 ### 2. Intermediate Stops Feature ✅
 - Add up to 3 waypoints in trips
 - Distance calculated via all points
 - +3€ supplement per stop
-- Tests: 100% (12/12)
 
 ### 3. Admin Client Database ✅
 - Client list with search/pagination
@@ -105,14 +94,37 @@ Supplements:
 - Invoice generation for each ride
 - Print/PDF export
 
-## New Pages & Components
-- `/admin/clients` - Admin client database page
-- `AdminClientsPage.js` - Client management UI
-- `IntermediateStops.js` - Stop management component
-- `SavedCardsManager.js` - Card management component
-- `PaymentMethodSelector.js` - Payment modal
+### 4. Expanded Driver Documents ✅ NEW
+- 11 document types across 4 categories
+- Upload with validation (JPG, PNG, PDF, max 5MB)
+- Progress bar showing completion %
+- Document preview modal
+- Delete/re-upload functionality
+- Status tracking (pending/approved/rejected)
 
-## API Endpoints Added
+## Document Types
+```
+Vehicle Documents (Required):
+- carte_grise: Carte Grise
+- assurance: Assurance Véhicule  
+- controle_technique: Contrôle Technique
+
+Personal Documents (Required):
+- permis_conduire: Permis de Conduire
+- cni: Carte Nationale d'Identité
+- justificatif_domicile: Justificatif de Domicile
+
+Professional Documents:
+- carte_vtc: Carte VTC (Required)
+- rc_pro: RC Professionnelle (Required)
+- kbis: Extrait KBIS (Optional)
+- attestation_vigilance: Attestation URSSAF (Optional)
+
+Financial Documents (Required):
+- rib: RIB
+```
+
+## API Endpoints Added This Session
 ```
 # Saved Cards
 POST /api/payments/setup-intent
@@ -126,18 +138,23 @@ GET /api/admin/clients
 GET /api/admin/clients/{id}
 GET /api/admin/clients/{id}/rides
 GET /api/admin/rides/{id}/invoice
+
+# Driver Documents
+GET /api/drivers/documents/status
+DELETE /api/drivers/documents/{doc_type}
 ```
 
 ## Backlog
 
 ### P2 - Medium Priority
-1. **Expanded driver documents** - CNI, justificatif domicile, RC-Pro
-2. **Scheduled rides UI enhancement**
-3. **Wallet/credit system** for passengers
+1. **Scheduled rides UI enhancement**
+2. **Wallet/credit system** for passengers
+3. **Document expiry notifications**
 
 ### P3 - Future
 4. **Mobile App Conversion** - Capacitor for iOS/Android
 5. **Export statistics** - CSV/PDF for admin
+6. **Multi-language support**
 
 ## Stripe Test Card
 - Number: 4242 4242 4242 4242
@@ -145,4 +162,4 @@ GET /api/admin/rides/{id}/invoice
 - CVC: 123
 
 ## Last Updated
-2025-03-01 - Admin client database completed
+2025-03-01 - Expanded driver documents completed
