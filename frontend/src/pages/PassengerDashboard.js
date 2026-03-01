@@ -521,6 +521,15 @@ const PassengerDashboard = () => {
     }
     
     try {
+      // Debug: log what we're sending
+      console.log('Estimate request:', { 
+        pickup, 
+        destination, 
+        vehicle_type: vehicleType,
+        pickup_has_coords: Boolean(pickup.lat && pickup.lng),
+        dest_has_coords: Boolean(destination.lat && destination.lng)
+      });
+      
       const response = await api.post('/rides/estimate', { 
         pickup, 
         destination,
