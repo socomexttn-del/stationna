@@ -709,9 +709,56 @@ const DriverDashboard = () => {
         )}
         
         {locationError && (
-          <div className="flex items-center gap-2 text-sm text-orange-500 bg-orange-500/10 p-3 rounded-xl">
-            <Crosshair className="w-4 h-4" />
-            <span>{locationError} - Activez la géolocalisation pour recevoir des courses</span>
+          <div className="flex flex-col gap-3 text-sm bg-orange-500/10 p-4 rounded-xl border border-orange-500/30">
+            <div className="flex items-center gap-2 text-orange-500">
+              <Crosshair className="w-5 h-5" />
+              <span className="font-medium">Géolocalisation requise</span>
+            </div>
+            <p className="text-muted-foreground text-xs">
+              Pour recevoir des courses, vous devez activer la géolocalisation.
+            </p>
+            <Button 
+              onClick={() => {
+                setLocationError(null);
+                if (navigator.geolocation) {
+                  navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                      const loc = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude,
+                        address: "Position actuelle"
+                      };
+                      setCurrentLocation(loc);
+                      toast.success('Position détectée!');
+                    },
+                    (error) => {
+                      console.error('Geolocation error:', error);
+                      if (error.code === 1) {
+                        setLocationError('Permission refusée');
+                        toast.error(
+                          <div>
+                            <p className="font-bold">Permission refusée</p>
+                            <p className="text-xs">Allez dans les paramètres de votre navigateur pour autoriser la géolocalisation</p>
+                          </div>,
+                          { duration: 8000 }
+                        );
+                      } else {
+                        setLocationError('Position indisponible');
+                      }
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+                  );
+                }
+              }}
+              className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+              data-testid="enable-location-btn"
+            >
+              <Crosshair className="w-4 h-4 mr-2" />
+              Activer ma position
+            </Button>
+            <p className="text-[10px] text-muted-foreground text-center">
+              Si le bouton ne fonctionne pas, vérifiez les paramètres de votre navigateur
+            </p>
           </div>
         )}
         
