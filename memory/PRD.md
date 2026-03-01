@@ -15,7 +15,25 @@ French (Français)
 4. ✅ **Documents chauffeur élargis** - 11 types de documents
 5. ✅ **Notifications d'expiration** - Alertes 30 jours avant
 6. ✅ **UI Courses Planifiées** - Refonte complète
-7. ✅ **Système de Portefeuille Passager** - Rechargement Stripe + paiement ✨ NEW
+7. ✅ **Système de Portefeuille Passager** - Rechargement Stripe + bonus
+8. ✅ **Notifications Email** - Alertes expiration documents (Resend) ✨ NEW
+9. ✅ **Export PDF** - Historique des courses ✨ NEW
+10. ✅ **Structure Backend** - Début refactorisation modulaire ✨ NEW
+
+### Email Notifications ✨ (NEW - 2025-03-01)
+- **Alertes d'expiration** : Email automatique aux chauffeurs
+- **Template HTML** : Design professionnel Allogo
+- **Dashboard Admin** : Section "Documents à renouveler" avec bouton envoi
+- **Logs d'envoi** : Historique des emails envoyés
+- **API Endpoints** :
+  - `POST /api/admin/notifications/send-expiry-alerts` - Envoyer alertes
+  - `GET /api/admin/notifications/email-logs` - Historique emails
+
+### PDF Export ✨ (NEW - 2025-03-01)
+- **Export historique** : Bouton PDF dans la page Historique
+- **Contenu** : Statistiques + détail des courses
+- **Format** : PDF A4 avec design Allogo
+- **API** : `GET /api/rides/history/export-pdf`
 
 ### Wallet System ✨ (NEW - 2025-03-01)
 - **Page Portefeuille** (`/wallet`) accessible depuis le menu passager
