@@ -51,73 +51,143 @@ const PassengerDashboard = () => {
   const [passengers, setPassengers] = useState(1);
   const [vehicleType, setVehicleType] = useState('standard');
 
+  // Keep AudioContext alive for sounds - initialized on first user interaction
+  const audioContextRef = useRef(null);
+  const [soundEnabled, setSoundEnabled] = useState(false);
+
+  // Initialize audio on first user interaction
+  const initAudio = useCallback(() => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      setSoundEnabled(true);
+      console.log('Audio initialized');
+    }
+    if (audioContextRef.current.state === 'suspended') {
+      audioContextRef.current.resume();
+    }
+  }, []);
+
+  // Add click listener to enable audio
+  useEffect(() => {
+    const handleInteraction = () => {
+      initAudio();
+    };
+    document.addEventListener('click', handleInteraction, { once: false });
+    document.addEventListener('touchstart', handleInteraction, { once: false });
+    return () => {
+      document.removeEventListener('click', handleInteraction);
+      document.removeEventListener('touchstart', handleInteraction);
+    };
+  }, [initAudio]);
+
   // Sound functions for passenger notifications
   const playAcceptedSound = useCallback(() => {
-    const playSound = () => {
+    // Method 1: Web Audio API
+    const playWebAudio = () => {
       try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioContext.state === 'suspended') audioContext.resume();
+        const ctx = audioContextRef.current || new (window.AudioContext || window.webkitAudioContext)();
+        if (ctx.state === 'suspended') ctx.resume();
         
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
         
-        // LOUD happy ascending sound - driver found!
-        oscillator.frequency.value = 523; // C5
-        oscillator.type = 'sine';
-        gainNode.gain.value = 0.7; // Louder
-        oscillator.start();
-        setTimeout(() => { oscillator.frequency.value = 659; }, 120); // E5
-        setTimeout(() => { oscillator.frequency.value = 784; }, 240); // G5
-        setTimeout(() => { oscillator.frequency.value = 1047; }, 360); // C6
-        setTimeout(() => { oscillator.stop(); audioContext.close(); }, 500);
+        osc.frequency.value = 523;
+        osc.type = 'sine';
+        gain.gain.value = 0.7;
+        osc.start();
+        setTimeout(() => { osc.frequency.value = 659; }, 120);
+        setTimeout(() => { osc.frequency.value = 784; }, 240);
+        setTimeout(() => { osc.frequency.value = 1047; }, 360);
+        setTimeout(() => { osc.stop(); }, 500);
       } catch (e) {
-        console.log('Audio error:', e);
+        console.log('Web Audio error:', e);
       }
     };
+
+    // Method 2: HTML5 Audio with base64 beep
+    const playHTML5Audio = () => {
+      try {
+        // Short beep sound in base64
+        const audio = new Audio('data:audio/wav;base64,UklGRl9vT19teleVBFVkVmbXQgEAAAABAAEARKwAAIhYAQACABAAZGF0YU' + 'AAAAAA'.repeat(100));
+        audio.volume = 1.0;
+        audio.play().catch(() => {});
+      } catch (e) {}
+    };
+
+    // Try both methods
+    playWebAudio();
+    playHTML5Audio();
+    setTimeout(playWebAudio, 600);
     
-    // Play 2 times for emphasis
-    playSound();
-    setTimeout(playSound, 600);
-    
+    // Vibrate on mobile
     if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 300]);
+    
+    // Request notification permission and show notification with sound
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('🚗 Chauffeur trouvé!', {
+        body: 'Votre chauffeur arrive bientôt',
+        icon: '/favicon.ico',
+        requireInteraction: true,
+        silent: false
+      });
+    }
   }, []);
 
   const playArrivedSound = useCallback(() => {
-    const playSound = () => {
+    // Method 1: Web Audio API - URGENT SOUND
+    const playWebAudio = () => {
       try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioContext.state === 'suspended') audioContext.resume();
+        const ctx = audioContextRef.current || new (window.AudioContext || window.webkitAudioContext)();
+        if (ctx.state === 'suspended') ctx.resume();
         
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
         
-        // URGENT sound - driver is waiting!
-        oscillator.frequency.value = 880; // A5
-        oscillator.type = 'square'; // More attention-grabbing
-        gainNode.gain.value = 0.8; // Maximum loudness
-        oscillator.start();
-        setTimeout(() => { oscillator.frequency.value = 1100; }, 80);
-        setTimeout(() => { oscillator.frequency.value = 880; }, 160);
-        setTimeout(() => { oscillator.frequency.value = 1100; }, 240);
-        setTimeout(() => { oscillator.frequency.value = 1320; }, 320);
-        setTimeout(() => { oscillator.frequency.value = 1100; }, 400);
-        setTimeout(() => { oscillator.frequency.value = 1320; }, 480);
-        setTimeout(() => { oscillator.stop(); audioContext.close(); }, 560);
+        osc.frequency.value = 880;
+        osc.type = 'square';
+        gain.gain.value = 0.9;
+        osc.start();
+        setTimeout(() => { osc.frequency.value = 1100; }, 80);
+        setTimeout(() => { osc.frequency.value = 880; }, 160);
+        setTimeout(() => { osc.frequency.value = 1100; }, 240);
+        setTimeout(() => { osc.frequency.value = 1320; }, 320);
+        setTimeout(() => { osc.frequency.value = 1100; }, 400);
+        setTimeout(() => { osc.frequency.value = 1320; }, 480);
+        setTimeout(() => { osc.stop(); }, 560);
       } catch (e) {
-        console.log('Audio error:', e);
+        console.log('Web Audio error:', e);
       }
     };
+
+    // Play multiple times
+    playWebAudio();
+    setTimeout(playWebAudio, 700);
+    setTimeout(playWebAudio, 1400);
     
-    // Play 3 times - URGENT, driver is waiting!
-    playSound();
-    setTimeout(playSound, 700);
-    setTimeout(playSound, 1400);
+    // Strong vibration pattern
+    if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500, 200, 500]);
     
-    if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300, 100, 300]);
+    // Browser notification with sound
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('🚗 CHAUFFEUR ARRIVÉ!', {
+        body: 'Votre chauffeur vous attend! Rejoignez-le maintenant.',
+        icon: '/favicon.ico',
+        requireInteraction: true,
+        silent: false,
+        tag: 'driver-arrived'
+      });
+    }
+  }, []);
+
+  // Request notification permission on mount
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
   }, []);
 
   // Get user's current location on mount with permission check
