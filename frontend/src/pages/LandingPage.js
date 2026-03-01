@@ -48,12 +48,12 @@ const LandingPage = () => {
         
         <div className="container mx-auto px-4 relative z-10 text-center">
           <h1 className="text-5xl md:text-7xl font-bold tracking-tighter leading-none mb-6" style={{ fontFamily: 'Space Grotesk' }}>
-            <span className="text-foreground">Votre course,</span>
+            <span className="text-foreground">{t('landing.heroTitle1', 'Votre course,')}</span>
             <br />
-            <span className="text-primary">en un éclair</span>
+            <span className="text-primary">{t('landing.heroTitle2', 'en un éclair')}</span>
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
-            Réservez un chauffeur en quelques secondes. Suivez votre trajet en temps réel. Payez en toute sécurité.
+            {t('landing.heroSubtitle', 'Réservez un chauffeur en quelques secondes. Suivez votre trajet en temps réel. Payez en toute sécurité.')}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/auth?role=passenger">
@@ -61,7 +61,7 @@ const LandingPage = () => {
                 data-testid="hero-passenger-btn"
                 className="bg-primary text-primary-foreground hover:bg-primary/90 h-14 px-8 rounded-full font-bold text-lg shadow-[0_0_30px_rgba(250,204,21,0.3)] transition-all hover:shadow-[0_0_40px_rgba(250,204,21,0.5)]"
               >
-                Réserver une course
+                {t('ride.bookRide')}
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
