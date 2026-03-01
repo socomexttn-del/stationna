@@ -925,24 +925,50 @@ const DriverDashboard = () => {
                 <Receipt className="w-4 h-4 mr-2" /> Voir le bon de réservation
               </Button>
 
-              <div className="flex gap-3">
+              <div className="flex flex-col gap-3">
                 {activeRide.status === 'accepted' && (
                   <>
-                    <Button 
-                      variant="outline" 
-                      className="flex-1 border-red-500/50 text-red-500 hover:bg-red-500/10"
-                      onClick={rejectRide}
-                      data-testid="driver-reject-btn"
-                    >
-                      <X className="w-4 h-4 mr-2" /> Refuser
-                    </Button>
-                    <Button 
-                      className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
-                      onClick={startRide}
-                      data-testid="start-ride-btn"
-                    >
-                      <Play className="w-4 h-4 mr-2" /> Démarrer
-                    </Button>
+                    {/* Arrived button - only show if not already arrived */}
+                    {!activeRide.driver_arrived && (
+                      <Button 
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12"
+                        onClick={async () => {
+                          try {
+                            await api.post(`/rides/${activeRide.id}/arrived`);
+                            toast.success('Client notifié de votre arrivée!');
+                            playNotificationSound(1);
+                            fetchActiveRide();
+                          } catch (error) {
+                            toast.error('Erreur lors de la notification');
+                          }
+                        }}
+                        data-testid="driver-arrived-btn"
+                      >
+                        <MapPin className="w-5 h-5 mr-2" /> Je suis arrivé
+                      </Button>
+                    )}
+                    {activeRide.driver_arrived && (
+                      <div className="text-center py-2 bg-blue-500/20 rounded-lg text-blue-400 text-sm">
+                        ✓ Client notifié de votre arrivée
+                      </div>
+                    )}
+                    <div className="flex gap-3">
+                      <Button 
+                        variant="outline" 
+                        className="flex-1 border-red-500/50 text-red-500 hover:bg-red-500/10"
+                        onClick={rejectRide}
+                        data-testid="driver-reject-btn"
+                      >
+                        <X className="w-4 h-4 mr-2" /> Refuser
+                      </Button>
+                      <Button 
+                        className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+                        onClick={startRide}
+                        data-testid="start-ride-btn"
+                      >
+                        <Play className="w-4 h-4 mr-2" /> Démarrer
+                      </Button>
+                    </div>
                   </>
                 )}
                 {activeRide.status === 'in_progress' && (
