@@ -930,6 +930,20 @@ const PassengerDashboard = () => {
               </div>
             </div>
 
+            {/* Taxi tariff info */}
+            {vehicleType === 'taxi' && (
+              <div className="text-xs bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-3 py-2">
+                <div className="flex items-center gap-2 text-yellow-500 font-medium mb-1">
+                  <Car className="w-4 h-4" />
+                  <span>Taxi Parisien - Tarif Réglementé</span>
+                </div>
+                <p className="text-muted-foreground">
+                  Tarif A (jour) / B (nuit, dim) / C (banlieue) selon horaires.
+                  Prise en charge 3€ + prix/km variable.
+                </p>
+              </div>
+            )}
+
             {/* Info about extra passenger fee */}
             {passengers > 4 && (
               <div className="text-xs text-yellow-500 bg-yellow-500/10 rounded-lg px-3 py-2 flex items-center gap-2">
