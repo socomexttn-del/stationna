@@ -2795,7 +2795,8 @@ async def admin_create_promo_code(
     }
     
     await db.promo_codes.insert_one(promo)
-    del promo["_id"] if "_id" in promo else None
+    if "_id" in promo:
+        del promo["_id"]
     
     return {"status": "ok", "promo": promo}
 
