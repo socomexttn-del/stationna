@@ -97,59 +97,91 @@ const PassengerDashboard = () => {
     if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
   }, []);
 
-  // Get user's current location on mount
+  // Get user's current location on mount with permission check
   useEffect(() => {
-    const getLocation = () => {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          async (position) => {
-            const { latitude, longitude } = position.coords;
-            
-            // Reverse geocode to get address
-            try {
-              const MAPBOX_TOKEN = process.env.REACT_APP_MAPBOX_TOKEN;
-              const response = await fetch(
-                `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${MAPBOX_TOKEN}&language=fr`
-              );
-              const data = await response.json();
-              const address = data.features?.[0]?.place_name || 'Position actuelle';
-              
-              setPickup({
-                lat: latitude,
-                lng: longitude,
-                address: address
-              });
-              toast.success('Position détectée automatiquement', { duration: 2000 });
-            } catch (error) {
-              setPickup({
-                lat: latitude,
-                lng: longitude,
-                address: 'Position actuelle'
-              });
-            }
+    const checkPermissionAndGetLocation = async () => {
+      // Check permission status first if API is available
+      if (navigator.permissions && navigator.permissions.query) {
+        try {
+          const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
+          
+          if (permissionStatus.state === 'denied') {
             setIsLocating(false);
-          },
-          (error) => {
-            console.error('Geolocation error:', error);
-            setIsLocating(false);
-            if (error.code === error.PERMISSION_DENIED) {
-              toast.error(
-                'Géolocalisation désactivée. Activez-la dans les paramètres de votre navigateur pour une meilleure expérience.',
-                { duration: 5000 }
-              );
-            } else {
-              toast.info('Entrez votre adresse de départ', { duration: 3000 });
+            toast.error(
+              'Géolocalisation refusée. Pour une meilleure expérience, activez-la dans les paramètres de votre navigateur.',
+              { duration: 6000 }
+            );
+            return;
+          }
+          
+          // Listen for permission changes
+          permissionStatus.onchange = () => {
+            if (permissionStatus.state === 'granted') {
+              getLocation();
             }
-          },
-          { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
-        );
-      } else {
-        setIsLocating(false);
-        toast.error('Votre navigateur ne supporte pas la géolocalisation');
+          };
+        } catch (e) {
+          // Permission API not fully supported, continue with geolocation
+        }
       }
+      
+      getLocation();
     };
 
-    getLocation();
+    const getLocation = () => {
+      if (!navigator.geolocation) {
+        setIsLocating(false);
+        toast.error('Votre navigateur ne supporte pas la géolocalisation');
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          
+          // Reverse geocode to get address
+          try {
+            const MAPBOX_TOKEN = process.env.REACT_APP_MAPBOX_TOKEN;
+            const response = await fetch(
+              `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${MAPBOX_TOKEN}&language=fr`
+            );
+            const data = await response.json();
+            const address = data.features?.[0]?.place_name || 'Position actuelle';
+            
+            setPickup({
+              lat: latitude,
+              lng: longitude,
+              address: address
+            });
+            toast.success('Position détectée automatiquement', { duration: 2000 });
+          } catch (error) {
+            setPickup({
+              lat: latitude,
+              lng: longitude,
+              address: 'Position actuelle'
+            });
+          }
+          setIsLocating(false);
+        },
+        (error) => {
+          console.error('Geolocation error:', error);
+          setIsLocating(false);
+          if (error.code === error.PERMISSION_DENIED) {
+            toast.error(
+              'Géolocalisation désactivée. Activez-la dans les paramètres de votre navigateur pour une meilleure expérience.',
+              { duration: 5000 }
+            );
+          } else if (error.code === error.TIMEOUT) {
+            toast.info('Délai de géolocalisation dépassé. Entrez votre adresse manuellement.', { duration: 3000 });
+          } else {
+            toast.info('Entrez votre adresse de départ', { duration: 3000 });
+          }
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+      );
+    };
+
+    checkPermissionAndGetLocation();
   }, []);
 
   // Submit rating and reset page after
