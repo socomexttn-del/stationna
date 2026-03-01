@@ -167,26 +167,34 @@ const DriverDashboard = () => {
   useEffect(() => {
     const initPushNotifications = async () => {
       const authToken = localStorage.getItem('volt_token');
-      if (authToken) {
-        const { initializeNative, addPushListener, isNative } = require('../hooks/usePushNotifications').default();
-        
-        // Only initialize on native platforms
-        if (isNative) {
-          await initializeNative(authToken);
-          
-          // Add listener for push notifications
-          addPushListener((event) => {
-            console.log('Push notification received:', event);
-            if (event.notification?.data?.type) {
-              handleNotification(event.notification.data);
-            }
-          });
+      if (authToken && isNative && initializeNative) {
+        console.log('Initializing native push notifications for driver...');
+        const success = await initializeNative(authToken);
+        if (success) {
+          console.log('Native push notifications initialized successfully');
         }
       }
     };
     
     initPushNotifications();
-  }, []);
+  }, [isNative, initializeNative]);
+
+  // Listen for native push notifications
+  useEffect(() => {
+    if (!isNative || !addPushListener) return;
+    
+    const unsubscribe = addPushListener((event) => {
+      console.log('Native push notification received:', event);
+      if (event.notification?.data) {
+        // Refresh available rides when a new ride notification arrives
+        if (event.notification.data.type === 'new_ride' || event.notification.data.type === 'ride_available') {
+          fetchAvailableRides();
+        }
+      }
+    });
+    
+    return unsubscribe;
+  }, [isNative, addPushListener]);
 
   // Continuous location tracking when available
   useEffect(() => {
