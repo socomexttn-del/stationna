@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -12,6 +13,7 @@ import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 
 const AdminDashboard = () => {
+  const { t } = useTranslation();
   const { user, api, logout } = useAuth();
   const navigate = useNavigate();
   
