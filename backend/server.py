@@ -1977,11 +1977,15 @@ async def confirm_wallet_topup(payment_intent_id: str, current_user: dict = Depe
         if transaction["status"] == "completed":
             return {"status": "already_processed", "message": "Déjà traité"}
         
-        # Update wallet balance
+        # Get total credit (amount + bonus)
         amount = transaction["amount"]
+        bonus = transaction.get("bonus", 0)
+        total_credit = transaction.get("total_credit", amount)
+        
+        # Update wallet balance with total (amount + bonus)
         await db.users.update_one(
             {"id": current_user["id"]},
-            {"$inc": {"wallet_balance": amount}}
+            {"$inc": {"wallet_balance": total_credit}}
         )
         
         # Update transaction status
@@ -1990,13 +1994,34 @@ async def confirm_wallet_topup(payment_intent_id: str, current_user: dict = Depe
             {"$set": {"status": "completed", "completed_at": datetime.now(timezone.utc).isoformat()}}
         )
         
+        # If there was a bonus, create a bonus transaction record
+        if bonus > 0:
+            bonus_transaction = {
+                "id": str(uuid.uuid4()),
+                "user_id": current_user["id"],
+                "type": "bonus",
+                "amount": bonus,
+                "status": "completed",
+                "description": f"Bonus rechargement +{bonus}€",
+                "related_transaction_id": transaction["id"],
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.wallet_transactions.insert_one(bonus_transaction)
+        
         # Get new balance
         user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0, "wallet_balance": 1})
         new_balance = user.get("wallet_balance", 0.0)
         
+        message = f"Portefeuille rechargé de {amount}€"
+        if bonus > 0:
+            message += f" + {bonus}€ de bonus !"
+        
         return {
             "status": "succeeded",
-            "message": f"Portefeuille rechargé de {amount}€",
+            "message": message,
+            "amount": amount,
+            "bonus": bonus,
+            "total_credit": total_credit,
             "new_balance": round(new_balance, 2)
         }
     except stripe.error.StripeError as e:
