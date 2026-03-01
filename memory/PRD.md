@@ -25,10 +25,15 @@ French (Français)
 - **Intégration Stripe** : Paiement sécurisé
 - **Historique des transactions** avec pagination
 - **Option de paiement** dans PaymentMethodSelector
+- **🎁 Bonus de rechargement** :
+  - 20€ → +2€ offerts (total 22€)
+  - 50€ → +5€ offerts (total 55€)
+  - 100€ → +15€ offerts (total 115€)
 - **API Endpoints** :
   - `GET /api/wallet/balance` - Solde du portefeuille
   - `GET /api/wallet/transactions` - Historique des transactions
-  - `POST /api/wallet/top-up` - Créer un paiement Stripe
+  - `GET /api/wallet/bonus-tiers` - Paliers de bonus
+  - `POST /api/wallet/top-up` - Créer un paiement Stripe (avec bonus)
   - `POST /api/wallet/confirm-topup` - Confirmer le rechargement
   - `POST /api/wallet/pay` - Payer une course avec le portefeuille
 
