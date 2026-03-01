@@ -2190,6 +2190,251 @@ async def get_admin_recent_rides(
     
     return {"rides": rides}
 
+# ======================== ADMIN CLIENT DATABASE ========================
+
+class ClientResponse(BaseModel):
+    id: str
+    email: str
+    first_name: str
+    last_name: str
+    phone: str
+    created_at: str
+    total_rides: int
+    completed_rides: int
+    total_spent: float
+    last_ride_date: Optional[str] = None
+    rating: float
+
+@api_router.get("/admin/clients")
+async def get_admin_clients(
+    search: Optional[str] = None,
+    sort_by: str = "created_at",
+    sort_order: str = "desc",
+    page: int = 1,
+    limit: int = 20,
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Get all clients (passengers) with their stats"""
+    # Build query
+    query = {"role": "passenger"}
+    if search:
+        query["$or"] = [
+            {"email": {"$regex": search, "$options": "i"}},
+            {"first_name": {"$regex": search, "$options": "i"}},
+            {"last_name": {"$regex": search, "$options": "i"}},
+            {"phone": {"$regex": search, "$options": "i"}}
+        ]
+    
+    # Get total count
+    total_count = await db.users.count_documents(query)
+    
+    # Sort direction
+    sort_dir = -1 if sort_order == "desc" else 1
+    
+    # Get clients
+    clients = await db.users.find(
+        query,
+        {"_id": 0, "password_hash": 0}
+    ).sort(sort_by, sort_dir).skip((page - 1) * limit).limit(limit).to_list(limit)
+    
+    # Enrich with ride stats
+    client_list = []
+    for client in clients:
+        # Get ride stats for this client
+        rides = await db.rides.find(
+            {"passenger_id": client["id"]},
+            {"_id": 0, "status": 1, "final_fare": 1, "estimated_fare": 1, "created_at": 1}
+        ).sort("created_at", -1).to_list(1000)
+        
+        total_rides = len(rides)
+        completed_rides = len([r for r in rides if r["status"] == "completed"])
+        total_spent = sum(r.get("final_fare", r.get("estimated_fare", 0)) for r in rides if r["status"] == "completed")
+        last_ride = rides[0] if rides else None
+        
+        # Get average rating
+        ratings = await db.ratings.find(
+            {"rated_user_id": client["id"]},
+            {"_id": 0, "rating": 1}
+        ).to_list(100)
+        avg_rating = sum(r["rating"] for r in ratings) / len(ratings) if ratings else 5.0
+        
+        client_list.append({
+            "id": client["id"],
+            "email": client["email"],
+            "first_name": client["first_name"],
+            "last_name": client["last_name"],
+            "phone": client.get("phone", ""),
+            "created_at": client.get("created_at", ""),
+            "total_rides": total_rides,
+            "completed_rides": completed_rides,
+            "total_spent": round(total_spent, 2),
+            "last_ride_date": last_ride["created_at"] if last_ride else None,
+            "rating": round(avg_rating, 1)
+        })
+    
+    return {
+        "clients": client_list,
+        "total": total_count,
+        "page": page,
+        "limit": limit,
+        "pages": (total_count + limit - 1) // limit
+    }
+
+@api_router.get("/admin/clients/{client_id}")
+async def get_client_details(client_id: str, admin_user: dict = Depends(get_admin_user)):
+    """Get detailed information about a specific client"""
+    client = await db.users.find_one(
+        {"id": client_id, "role": "passenger"},
+        {"_id": 0, "password_hash": 0}
+    )
+    
+    if not client:
+        raise HTTPException(status_code=404, detail="Client non trouvé")
+    
+    # Get all rides for this client
+    rides = await db.rides.find(
+        {"passenger_id": client_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    # Calculate stats
+    total_spent = sum(r.get("final_fare", r.get("estimated_fare", 0)) for r in rides if r["status"] == "completed")
+    total_distance = sum(r.get("distance_km", 0) for r in rides if r["status"] == "completed")
+    
+    # Get ratings given and received
+    ratings_given = await db.ratings.find(
+        {"user_id": client_id},
+        {"_id": 0}
+    ).to_list(100)
+    
+    ratings_received = await db.ratings.find(
+        {"rated_user_id": client_id},
+        {"_id": 0}
+    ).to_list(100)
+    
+    avg_rating = sum(r["rating"] for r in ratings_received) / len(ratings_received) if ratings_received else 5.0
+    
+    return {
+        "client": {
+            **client,
+            "total_spent": round(total_spent, 2),
+            "total_distance": round(total_distance, 1),
+            "avg_rating": round(avg_rating, 1),
+            "ratings_given": len(ratings_given),
+            "ratings_received": len(ratings_received)
+        },
+        "rides": rides
+    }
+
+@api_router.get("/admin/clients/{client_id}/rides")
+async def get_client_rides(
+    client_id: str,
+    page: int = 1,
+    limit: int = 10,
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Get paginated ride history for a client"""
+    # Verify client exists
+    client = await db.users.find_one({"id": client_id, "role": "passenger"}, {"_id": 0, "id": 1})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client non trouvé")
+    
+    total = await db.rides.count_documents({"passenger_id": client_id})
+    rides = await db.rides.find(
+        {"passenger_id": client_id},
+        {"_id": 0}
+    ).sort("created_at", -1).skip((page - 1) * limit).limit(limit).to_list(limit)
+    
+    return {
+        "rides": rides,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "pages": (total + limit - 1) // limit
+    }
+
+class InvoiceData(BaseModel):
+    ride_id: str
+    invoice_number: str
+    date: str
+    client_name: str
+    client_email: str
+    client_phone: str
+    pickup_address: str
+    destination_address: str
+    stops: Optional[List[str]] = None
+    distance_km: float
+    duration_minutes: Optional[int] = None
+    vehicle_type: str
+    passenger_count: int
+    fare_details: dict
+    total_amount: float
+    payment_status: str
+    driver_name: Optional[str] = None
+    driver_company: Optional[str] = None
+
+@api_router.get("/admin/rides/{ride_id}/invoice")
+async def generate_invoice(ride_id: str, admin_user: dict = Depends(get_admin_user)):
+    """Generate invoice data for a specific ride"""
+    ride = await db.rides.find_one({"id": ride_id}, {"_id": 0})
+    if not ride:
+        raise HTTPException(status_code=404, detail="Course non trouvée")
+    
+    # Get client info
+    client = await db.users.find_one(
+        {"id": ride["passenger_id"]},
+        {"_id": 0, "password_hash": 0}
+    )
+    
+    # Generate invoice number (format: INV-YYYYMMDD-XXXX)
+    ride_date = ride.get("created_at", "")[:10].replace("-", "")
+    invoice_number = f"INV-{ride_date}-{ride_id[:8].upper()}"
+    
+    # Build fare details
+    fare = ride.get("final_fare") or ride.get("estimated_fare", 0)
+    fare_details = {
+        "base_fare": round(fare * 0.85, 2),  # Approximation
+        "supplements": round(fare * 0.15, 2),
+        "subtotal": fare,
+        "tax_rate": 20,
+        "tax_amount": round(fare * 0.20, 2),
+        "total": fare
+    }
+    
+    # Extract stop addresses
+    stop_addresses = None
+    if ride.get("stops"):
+        stop_addresses = [s.get("address", "") for s in ride["stops"]]
+    
+    invoice_data = {
+        "ride_id": ride_id,
+        "invoice_number": invoice_number,
+        "date": ride.get("created_at", "")[:10],
+        "client_name": ride.get("passenger_name", f"{client['first_name']} {client['last_name']}" if client else ""),
+        "client_email": client.get("email", "") if client else "",
+        "client_phone": client.get("phone", "") if client else "",
+        "pickup_address": ride.get("pickup", {}).get("address", ""),
+        "destination_address": ride.get("destination", {}).get("address", ""),
+        "stops": stop_addresses,
+        "distance_km": ride.get("distance_km", 0),
+        "duration_minutes": None,  # Not stored in ride
+        "vehicle_type": ride.get("vehicle_type", "standard"),
+        "passenger_count": ride.get("passenger_count", 1),
+        "fare_details": fare_details,
+        "total_amount": fare,
+        "payment_status": ride.get("payment_status", "pending"),
+        "driver_name": ride.get("driver_name"),
+        "driver_company": ride.get("driver_company"),
+        "company_info": {
+            "name": "Allogo",
+            "address": "Paris, France",
+            "siret": "XXX XXX XXX XXXXX",
+            "tva": "FR XX XXXXXXXXX"
+        }
+    }
+    
+    return invoice_data
+
 # ======================== NOTIFICATION ROUTES ========================
 
 @api_router.get("/notifications")
