@@ -517,9 +517,9 @@ const DriverVehiclePage = () => {
         {/* Tabs */}
         <div className="flex gap-2 border-b border-border/50 pb-2 overflow-x-auto">
           <Button
-            variant={activeTab === 'vehicle' ? 'default' : 'ghost'}
+            variant={activeTab === 'info' ? 'default' : 'ghost'}
             size="sm"
-            onClick={() => setActiveTab('vehicle')}
+            onClick={() => setActiveTab('info')}
             className="shrink-0"
           >
             <Car className="w-4 h-4 mr-2" /> Véhicule
@@ -538,7 +538,7 @@ const DriverVehiclePage = () => {
         </div>
 
         {/* Vehicle Info Tab */}
-        {activeTab === 'vehicle' && (
+        {activeTab === 'info' && (
           <Card className="bg-card border-border/50">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
