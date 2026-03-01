@@ -69,6 +69,12 @@ from routers.drivers_router import router as drivers_router
 from routers.rides_router import router as rides_router
 from routers.wallet_router import router as wallet_router
 from routers.admin_router import router as admin_router
+from routers.payments_router import router as payments_router
+from routers.chat_router import router as chat_router
+from routers.favorites_router import router as favorites_router
+from routers.scheduled_router import router as scheduled_router
+from routers.ratings_router import router as ratings_router
+from routers.promo_router import router as promo_router
 
 # Include all routers with /api prefix
 app.include_router(auth_router, prefix="/api")
@@ -77,6 +83,12 @@ app.include_router(drivers_router, prefix="/api")
 app.include_router(rides_router, prefix="/api")
 app.include_router(wallet_router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
+app.include_router(payments_router, prefix="/api")
+app.include_router(chat_router, prefix="/api")
+app.include_router(favorites_router, prefix="/api")
+app.include_router(scheduled_router, prefix="/api")
+app.include_router(ratings_router, prefix="/api")
+app.include_router(promo_router, prefix="/api")
 
 
 # Root endpoint
