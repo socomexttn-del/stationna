@@ -1942,6 +1942,67 @@ async def activate_scheduled_ride(ride_id: str, current_user: dict = Depends(get
     updated = await db.rides.find_one({"id": ride_id}, {"_id": 0})
     return RideResponse(**updated)
 
+class RescheduleRideRequest(BaseModel):
+    scheduled_time: str
+    pickup: Optional[LocationModel] = None
+    destination: Optional[LocationModel] = None
+    vehicle_type: Optional[str] = None
+    passenger_count: Optional[int] = None
+
+@api_router.put("/rides/{ride_id}/reschedule", response_model=RideResponse)
+async def reschedule_ride(ride_id: str, data: RescheduleRideRequest, current_user: dict = Depends(get_current_user)):
+    """Modify a scheduled ride"""
+    ride = await db.rides.find_one({"id": ride_id, "status": "scheduled"}, {"_id": 0})
+    if not ride:
+        raise HTTPException(status_code=404, detail="Scheduled ride not found")
+    
+    if ride["passenger_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Not your ride")
+    
+    # Validate scheduled time
+    try:
+        scheduled_dt = datetime.fromisoformat(data.scheduled_time.replace('Z', '+00:00'))
+        if scheduled_dt <= datetime.now(timezone.utc):
+            raise HTTPException(status_code=400, detail="La date doit être dans le futur")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format")
+    
+    # Build update data
+    update_data = {"scheduled_time": data.scheduled_time}
+    
+    # Update pickup if provided
+    new_pickup = data.pickup.model_dump() if data.pickup else ride["pickup"]
+    new_destination = data.destination.model_dump() if data.destination else ride["destination"]
+    new_vehicle_type = data.vehicle_type if data.vehicle_type else ride.get("vehicle_type", "standard")
+    new_passenger_count = data.passenger_count if data.passenger_count else ride.get("passenger_count", 1)
+    
+    # Recalculate fare if route changed
+    if data.pickup or data.destination:
+        distance = calculate_distance(new_pickup, new_destination)
+        duration = estimate_duration_minutes(distance)
+        fare_details = calculate_fare(
+            distance, 
+            duration, 
+            is_scheduled=True, 
+            is_immediate=False,
+            vehicle_type=new_vehicle_type,
+            passenger_count=new_passenger_count
+        )
+        update_data["pickup"] = new_pickup
+        update_data["destination"] = new_destination
+        update_data["distance_km"] = distance
+        update_data["estimated_fare"] = fare_details["total"]
+    
+    if data.vehicle_type:
+        update_data["vehicle_type"] = new_vehicle_type
+    if data.passenger_count:
+        update_data["passenger_count"] = new_passenger_count
+    
+    await db.rides.update_one({"id": ride_id}, {"$set": update_data})
+    
+    updated = await db.rides.find_one({"id": ride_id}, {"_id": 0})
+    return RideResponse(**updated)
+
 # ======================== FAVORITE ADDRESSES ========================
 
 @api_router.post("/favorites", response_model=FavoriteAddressResponse)
