@@ -6,7 +6,7 @@ import { Button } from '../components/ui/button';
 import { 
   Users, Car, DollarSign, TrendingUp, MapPin, Clock, Star,
   ArrowLeft, RefreshCw, Calendar, Route, FileText, Check, X, Eye,
-  Power, UserX, UserCheck, Database, Mail, AlertTriangle, Bell, Loader2
+  Power, UserX, UserCheck, Database, Mail, AlertTriangle, Bell, Loader2, Tag
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
