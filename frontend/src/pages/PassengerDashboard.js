@@ -1055,19 +1055,45 @@ const PassengerDashboard = () => {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
-                      {vehicleType === 'van' ? <Truck className="w-5 h-5 text-primary" /> : <Car className="w-5 h-5 text-primary" />}
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      vehicleType === 'taxi' ? 'bg-yellow-500/20' : 'bg-primary/20'
+                    }`}>
+                      {vehicleType === 'van' ? (
+                        <Truck className="w-5 h-5 text-primary" />
+                      ) : vehicleType === 'taxi' ? (
+                        <Car className="w-5 h-5 text-yellow-500" />
+                      ) : (
+                        <Car className="w-5 h-5 text-primary" />
+                      )}
                     </div>
                     <div>
-                      <p className="font-semibold">Allogo {vehicleType === 'van' ? 'Van' : 'Chauffeur'}</p>
+                      <p className="font-semibold">
+                        {vehicleType === 'taxi' ? 'Taxi Parisien' : vehicleType === 'van' ? 'Allogo Van' : 'Allogo VTC'}
+                        {estimate.fare_details?.tariff_label && (
+                          <span className="ml-2 text-xs px-2 py-0.5 bg-yellow-500/20 text-yellow-500 rounded-full">
+                            {estimate.fare_details.tariff_label}
+                          </span>
+                        )}
+                      </p>
                       <p className="text-sm text-muted-foreground">
                         {routeInfo?.distance || estimate.distance_km} km • {estimate.duration_minutes || routeInfo?.duration} min • {passengers} passager{passengers > 1 ? 's' : ''}
                         {estimate.stops_count > 0 && ` • ${estimate.stops_count} arrêt${estimate.stops_count > 1 ? 's' : ''}`}
                       </p>
                     </div>
                   </div>
-                  <p className="text-2xl font-bold text-primary">{estimate.estimated_fare}€</p>
+                  <p className={`text-2xl font-bold ${vehicleType === 'taxi' ? 'text-yellow-500' : 'text-primary'}`}>
+                    {estimate.estimated_fare}€
+                  </p>
                 </div>
+                
+                {/* Taxi regulation notice */}
+                {vehicleType === 'taxi' && estimate.fare_details?.regulated && (
+                  <div className="mb-4 px-3 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                    <p className="text-xs text-yellow-500">
+                      {estimate.fare_details.regulation_text}
+                    </p>
+                  </div>
+                )}
                 
                 {/* Route with stops */}
                 {stops.length > 0 && (
