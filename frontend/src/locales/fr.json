@@ -15,6 +15,18 @@
     "error": "Erreur",
     "success": "Succès"
   },
+  "landing": {
+    "heroTitle1": "Votre course,",
+    "heroTitle2": "en un éclair",
+    "heroSubtitle": "Réservez un chauffeur en quelques secondes. Suivez votre trajet en temps réel. Payez en toute sécurité.",
+    "becomeDriver": "Devenir chauffeur",
+    "feature1Title": "Rapide & Fiable",
+    "feature1Desc": "Trouvez un chauffeur en moins de 3 minutes",
+    "feature2Title": "Paiement Sécurisé",
+    "feature2Desc": "Payez par carte ou portefeuille",
+    "feature3Title": "Suivi Temps Réel",
+    "feature3Desc": "Suivez votre chauffeur sur la carte"
+  },
   "auth": {
     "login": "Connexion",
     "logout": "Déconnexion",
