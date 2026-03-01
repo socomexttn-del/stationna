@@ -460,42 +460,158 @@ def estimate_duration_minutes(distance_km: float) -> int:
     AVG_SPEED_KMH = 25
     return max(5, round((distance_km / AVG_SPEED_KMH) * 60))
 
-def calculate_fare(distance_km: float, duration_minutes: int = 0, is_scheduled: bool = False, is_immediate: bool = True, vehicle_type: str = "standard", passenger_count: int = 1, stops_count: int = 0) -> dict:
+def get_paris_taxi_tariff(scheduled_time: datetime = None) -> dict:
     """
-    Calculate fare based on official taxi rates:
-    - Prise en charge: 4.48€
-    - Prix au km: 1.30€/km
-    - Tarif horaire (attente): 42.15€/h = 0.70€/min
-    - Tarif minimum: 8€
-    - Supplément réservation immédiate: +4€
-    - Supplément réservation à l'avance: +7€
-    - Supplément 5ème passager+: +5.50€ par passager
-    - Van: +10€ de base
-    - Supplément arrêt intermédiaire: +3€ par arrêt (temps d'attente)
+    Determine which Paris taxi tariff applies (A, B, or C) based on time/day
+    Tarifs officiels taxis parisiens 2025 (Arrêté 2025-00248)
+    
+    Tarif A: Jour (10h-17h) Lundi-Samedi, intra-muros
+    Tarif B: Nuit (17h-10h) OU Dimanche/Jours fériés (7h-24h), intra-muros
+    Tarif C: Banlieue / courses suburbaines
     """
-    # Base rates
-    PRISE_EN_CHARGE = 4.48
-    PRIX_KM = 1.30
-    TARIF_MINUTE = 0.70  # 42.15€/h ÷ 60
+    check_time = scheduled_time if scheduled_time else datetime.now(timezone.utc)
+    
+    # Get hour and day of week (0=Monday, 6=Sunday)
+    hour = check_time.hour
+    day_of_week = check_time.weekday()
+    
+    # French public holidays 2025 (simplified - main ones)
+    holidays_2025 = [
+        (1, 1), (4, 21), (5, 1), (5, 8), (5, 29), (6, 9),
+        (7, 14), (8, 15), (11, 1), (11, 11), (12, 25)
+    ]
+    is_holiday = (check_time.month, check_time.day) in holidays_2025
+    
+    is_sunday = day_of_week == 6
+    is_night = hour >= 17 or hour < 10
+    
+    # Tarif B applies for nights or Sundays/holidays
+    if is_sunday or is_holiday:
+        return {
+            "tariff": "B",
+            "label": "Tarif B (Dim/Férié)",
+            "price_per_km": 1.64,
+            "price_per_hour": 51.79,
+            "prise_en_charge": 3.00
+        }
+    elif is_night:
+        return {
+            "tariff": "B", 
+            "label": "Tarif B (Nuit)",
+            "price_per_km": 1.64,
+            "price_per_hour": 51.79,
+            "prise_en_charge": 3.00
+        }
+    else:
+        # Tarif A - Jour (10h-17h) Lundi-Samedi
+        return {
+            "tariff": "A",
+            "label": "Tarif A (Jour)",
+            "price_per_km": 1.25,
+            "price_per_hour": 38.85,
+            "prise_en_charge": 3.00
+        }
+
+def calculate_taxi_fare(distance_km: float, duration_minutes: int = 0, is_scheduled: bool = False, 
+                        passenger_count: int = 1, stops_count: int = 0, scheduled_time: datetime = None,
+                        is_suburban: bool = False) -> dict:
+    """
+    Calculate fare for official Paris taxi with regulated pricing
+    Tarifs officiels taxis parisiens 2025
+    """
+    # Get applicable tariff
+    if is_suburban:
+        tariff_info = {
+            "tariff": "C",
+            "label": "Tarif C (Banlieue)",
+            "price_per_km": 1.74,
+            "price_per_hour": 42.52,
+            "prise_en_charge": 3.00
+        }
+    else:
+        tariff_info = get_paris_taxi_tariff(scheduled_time)
+    
+    # Constants
     TARIF_MINIMUM = 8.00
+    SUPPLEMENT_IMMEDIAT = 4.00
+    SUPPLEMENT_AVANCE = 7.00
+    SUPPLEMENT_PASSAGER = 5.50  # Per passenger from 5th
+    SUPPLEMENT_ARRET = 3.00
+    
+    # Base calculation (horokilométrique)
+    prise_en_charge = tariff_info["prise_en_charge"]
+    distance_cost = distance_km * tariff_info["price_per_km"]
+    time_cost = (duration_minutes / 60) * tariff_info["price_per_hour"]
     
     # Supplements
+    supplements = 0
+    supplement_details = []
+    
+    # Booking supplement
+    if is_scheduled:
+        supplements += SUPPLEMENT_AVANCE
+        supplement_details.append({"name": "Réservation à l'avance", "amount": SUPPLEMENT_AVANCE})
+    else:
+        supplements += SUPPLEMENT_IMMEDIAT
+        supplement_details.append({"name": "Réservation immédiate", "amount": SUPPLEMENT_IMMEDIAT})
+    
+    # Extra passengers (5th+)
+    extra_passengers = max(0, passenger_count - 4)
+    if extra_passengers > 0:
+        passenger_supplement = SUPPLEMENT_PASSAGER * extra_passengers
+        supplements += passenger_supplement
+        supplement_details.append({"name": f"Passager(s) supplémentaire(s) ({extra_passengers})", "amount": round(passenger_supplement, 2)})
+    
+    # Intermediate stops
+    if stops_count > 0:
+        stops_supplement = SUPPLEMENT_ARRET * stops_count
+        supplements += stops_supplement
+        supplement_details.append({"name": f"Arrêt(s) intermédiaire(s) ({stops_count})", "amount": round(stops_supplement, 2)})
+    
+    subtotal = prise_en_charge + distance_cost + time_cost + supplements
+    total = max(TARIF_MINIMUM, subtotal)
+    
+    return {
+        "vehicle_type": "taxi",
+        "tariff": tariff_info["tariff"],
+        "tariff_label": tariff_info["label"],
+        "price_per_km": tariff_info["price_per_km"],
+        "price_per_hour": tariff_info["price_per_hour"],
+        "prise_en_charge": prise_en_charge,
+        "distance_cost": round(distance_cost, 2),
+        "time_cost": round(time_cost, 2),
+        "supplements": round(supplements, 2),
+        "supplement_details": supplement_details,
+        "subtotal": round(subtotal, 2),
+        "minimum_applied": subtotal < TARIF_MINIMUM,
+        "total": round(total, 2),
+        "regulated": True,
+        "regulation_text": "Tarification réglementée - Préfecture de Police de Paris 2025"
+    }
+
+def calculate_vtc_fare(distance_km: float, duration_minutes: int = 0, is_scheduled: bool = False, 
+                       vehicle_type: str = "standard", passenger_count: int = 1, stops_count: int = 0) -> dict:
+    """
+    Calculate fare for VTC (standard or van)
+    """
+    # VTC rates (non-regulated, competitive pricing)
+    PRISE_EN_CHARGE = 4.48
+    PRIX_KM = 1.30
+    TARIF_MINUTE = 0.70
+    TARIF_MINIMUM = 8.00
     SUPPLEMENT_IMMEDIAT = 4.00
     SUPPLEMENT_AVANCE = 7.00
     SUPPLEMENT_PASSAGER = 5.50
     SUPPLEMENT_VAN = 10.00
-    SUPPLEMENT_ARRET = 3.00  # Per intermediate stop
+    SUPPLEMENT_ARRET = 3.00
     
-    # Calculate base fare
     base = PRISE_EN_CHARGE
     distance_cost = distance_km * PRIX_KM
     time_cost = duration_minutes * TARIF_MINUTE
     
-    # Calculate supplements
     supplements = 0
     supplement_details = []
     
-    # Vehicle type supplement
     if vehicle_type == "van":
         supplements += SUPPLEMENT_VAN
         supplement_details.append({"name": "Van (7 places)", "amount": SUPPLEMENT_VAN})
@@ -503,39 +619,63 @@ def calculate_fare(distance_km: float, duration_minutes: int = 0, is_scheduled: 
     if is_scheduled:
         supplements += SUPPLEMENT_AVANCE
         supplement_details.append({"name": "Réservation à l'avance", "amount": SUPPLEMENT_AVANCE})
-    elif is_immediate:
+    else:
         supplements += SUPPLEMENT_IMMEDIAT
         supplement_details.append({"name": "Réservation immédiate", "amount": SUPPLEMENT_IMMEDIAT})
     
-    # Extra passengers (5th passenger and above)
     extra_passengers = max(0, passenger_count - 4)
     if extra_passengers > 0:
         passenger_supplement = SUPPLEMENT_PASSAGER * extra_passengers
         supplements += passenger_supplement
-        supplement_details.append({"name": f"Supplément {extra_passengers} passager(s) sup.", "amount": round(passenger_supplement, 2)})
+        supplement_details.append({"name": f"Passager(s) supplémentaire(s) ({extra_passengers})", "amount": round(passenger_supplement, 2)})
     
-    # Intermediate stops supplement
     if stops_count > 0:
         stops_supplement = SUPPLEMENT_ARRET * stops_count
         supplements += stops_supplement
         supplement_details.append({"name": f"Arrêt(s) intermédiaire(s) ({stops_count})", "amount": round(stops_supplement, 2)})
     
-    # Total before minimum
     subtotal = base + distance_cost + time_cost + supplements
-    
-    # Apply minimum fare
     total = max(TARIF_MINIMUM, subtotal)
     
     return {
+        "vehicle_type": vehicle_type,
         "prise_en_charge": PRISE_EN_CHARGE,
+        "price_per_km": PRIX_KM,
         "distance_cost": round(distance_cost, 2),
         "time_cost": round(time_cost, 2),
         "supplements": round(supplements, 2),
         "supplement_details": supplement_details,
         "subtotal": round(subtotal, 2),
         "minimum_applied": subtotal < TARIF_MINIMUM,
-        "total": round(total, 2)
+        "total": round(total, 2),
+        "regulated": False
     }
+
+def calculate_fare(distance_km: float, duration_minutes: int = 0, is_scheduled: bool = False, is_immediate: bool = True, vehicle_type: str = "standard", passenger_count: int = 1, stops_count: int = 0, scheduled_time: datetime = None) -> dict:
+    """
+    Calculate fare based on vehicle type:
+    - taxi: Official Paris taxi rates (regulated)
+    - standard: VTC standard rates
+    - van: VTC van rates
+    """
+    if vehicle_type == "taxi":
+        return calculate_taxi_fare(
+            distance_km=distance_km,
+            duration_minutes=duration_minutes,
+            is_scheduled=is_scheduled,
+            passenger_count=passenger_count,
+            stops_count=stops_count,
+            scheduled_time=scheduled_time
+        )
+    else:
+        return calculate_vtc_fare(
+            distance_km=distance_km,
+            duration_minutes=duration_minutes,
+            is_scheduled=is_scheduled,
+            vehicle_type=vehicle_type,
+            passenger_count=passenger_count,
+            stops_count=stops_count
+        )
 
 # ======================== AUTH ROUTES ========================
 
