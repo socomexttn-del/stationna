@@ -36,6 +36,20 @@ AIRPORT_FLAT_RATES = {
     }
 }
 
+# Paris city boundaries (approximate bounding box for Paris intra-muros)
+PARIS_BOUNDS = {
+    "lat_min": 48.815,   # South boundary (Porte d'Orléans area)
+    "lat_max": 48.902,   # North boundary (Porte de la Chapelle area)
+    "lng_min": 2.225,    # West boundary (Bois de Boulogne)
+    "lng_max": 2.470     # East boundary (Bois de Vincennes)
+}
+
+
+def is_in_paris(lat: float, lng: float) -> bool:
+    """Check if coordinates are within Paris intra-muros"""
+    return (PARIS_BOUNDS["lat_min"] <= lat <= PARIS_BOUNDS["lat_max"] and
+            PARIS_BOUNDS["lng_min"] <= lng <= PARIS_BOUNDS["lng_max"])
+
 
 def calculate_distance_simple(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     """Simple distance calculation in km using Haversine formula"""
