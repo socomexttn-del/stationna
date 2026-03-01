@@ -24,7 +24,7 @@ const PassengerDashboard = () => {
   const { t } = useTranslation();
   const { user, logout, api } = useAuth();
   const navigate = useNavigate();
-  const { permission, requestPermission, notifyDriverAccepted, notifyDriverArrived, notifyRideCompleted, notifyNewMessage } = usePushNotifications();
+  const { permission, requestPermission, notifyDriverAccepted, notifyDriverArrived, notifyRideCompleted, notifyNewMessage, initializeNative, addPushListener, isNative } = usePushNotifications();
   
   const [step, setStep] = useState('idle'); // idle, booking, searching, ride_active
   const [chatOpen, setChatOpen] = useState(false);
