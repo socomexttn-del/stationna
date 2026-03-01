@@ -341,9 +341,16 @@ const PassengerDashboard = () => {
 
   // Submit rating and reset page after
   const submitRating = async (ratingData) => {
-    await api.post('/ratings', ratingData);
-    // Reset page state for new booking
-    resetBookingState();
+    try {
+      console.log('Submitting rating:', ratingData);
+      const response = await api.post('/ratings', ratingData);
+      console.log('Rating submitted successfully:', response.data);
+      // Reset page state for new booking
+      resetBookingState();
+    } catch (error) {
+      console.error('Rating submission error:', error.response?.data || error.message);
+      throw error; // Re-throw so RatingModal can handle it
+    }
   };
 
   // Reset page to initial booking state
