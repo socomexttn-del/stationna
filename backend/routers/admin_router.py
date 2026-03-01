@@ -321,7 +321,7 @@ async def create_promo_code(data: PromoCodeCreate, admin_user: dict = Depends(ge
     }
     
     await db.promo_codes.insert_one(promo)
-    del promo["_id"] if "_id" in promo else None
+    promo.pop("_id", None)
     
     return promo
 
