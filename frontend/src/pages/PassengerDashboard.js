@@ -828,6 +828,15 @@ const PassengerDashboard = () => {
                 iconColor="text-primary"
                 dataTestId="input-destination"
               />
+              
+              {/* Intermediate Stops */}
+              <div className="pt-2">
+                <IntermediateStops 
+                  stops={stops} 
+                  setStops={setStops} 
+                  maxStops={3} 
+                />
+              </div>
             </div>
 
             {/* Vehicle Type & Passengers Selection */}
