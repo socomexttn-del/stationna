@@ -23,6 +23,21 @@ French (Français) + English (Multi-language support)
 12. ✅ **Préparation Mobile** - Capacitor configuré ✨ NEW
 13. ✅ **Support Multi-langues** - i18next FR/EN ✨ NEW
 
+### Taxi Parisien ✨ (NEW - 2025-03-01)
+- **Option Taxi** ajoutée dans la sélection de véhicule
+- **Tarification réglementée** (Arrêté 2025-00248 Préfecture de Police de Paris)
+- **3 tarifs automatiques** selon horaires :
+  - **Tarif A** (Jour 10h-17h Lun-Sam) : 1,25€/km + 38,85€/h
+  - **Tarif B** (Nuit + Dim/Fériés) : 1,64€/km + 51,79€/h
+  - **Tarif C** (Banlieue) : 1,74€/km + 42,52€/h
+- **Frais fixes** :
+  - Prise en charge : 3,00€
+  - Course minimum : 8,00€
+  - Réservation immédiate : +4,00€
+  - Réservation à l'avance : +7,00€
+  - 5ème passager+ : +5,50€/pers
+- **Interface** : Badge "OFFICIEL", couleur jaune, info réglementation
+
 ### Admin Promo Codes UI ✨ (NEW)
 - **Page dédiée** (`/admin/promo-codes`) 
 - **Création de codes** : réduction %, uses max, date expiration
