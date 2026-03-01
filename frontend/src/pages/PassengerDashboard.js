@@ -1121,6 +1121,12 @@ const PassengerDashboard = () => {
                 {/* Fare breakdown */}
                 {estimate.fare_details && (
                   <div className="space-y-2 pt-3 border-t border-white/10 text-sm">
+                    {/* Taxi specific: show tariff rates */}
+                    {vehicleType === 'taxi' && estimate.fare_details.price_per_km && (
+                      <div className="flex justify-between text-muted-foreground text-xs mb-2 pb-2 border-b border-white/5">
+                        <span>Prix au km: {estimate.fare_details.price_per_km}€ | Horaire: {estimate.fare_details.price_per_hour}€/h</span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-muted-foreground">
                       <span>Prise en charge</span>
                       <span>{estimate.fare_details.prise_en_charge}€</span>
@@ -1153,9 +1159,13 @@ const PassengerDashboard = () => {
             <Button 
               onClick={createRide}
               data-testid="book-ride-btn"
-              className="w-full h-14 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full font-bold text-lg pulse-glow"
+              className={`w-full h-14 hover:opacity-90 rounded-full font-bold text-lg pulse-glow ${
+                vehicleType === 'taxi' 
+                  ? 'bg-yellow-500 text-black' 
+                  : 'bg-primary text-primary-foreground'
+              }`}
             >
-              Réserver maintenant (+4€ immédiat)
+              {vehicleType === 'taxi' ? 'Réserver un Taxi' : 'Réserver maintenant'} (+4€ immédiat)
             </Button>
           </div>
         )}
