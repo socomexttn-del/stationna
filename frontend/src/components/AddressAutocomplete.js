@@ -176,6 +176,7 @@ function AddressAutocomplete(props) {
           placeholder={placeholder}
           value={inputValue}
           onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
           onFocus={function() { if (suggestions.length > 0) setShowSuggestions(true); }}
           className="h-14 pl-12 pr-12 bg-muted border-white/10 rounded-xl text-lg"
         />
