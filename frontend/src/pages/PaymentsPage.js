@@ -7,9 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { 
   ArrowLeft, CreditCard, Gift, Copy, Check, 
-  MapPin, Navigation, Clock, DollarSign, Share2
+  MapPin, Navigation, Clock, DollarSign, Share2, Wallet
 } from 'lucide-react';
 import { toast } from 'sonner';
+import SavedCardsManager from '../components/SavedCardsManager';
 
 const PaymentsPage = () => {
   const { api, user } = useAuth();
