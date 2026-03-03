@@ -16,7 +16,7 @@ import PaymentMethodSelector from '../components/PaymentMethodSelector';
 import { 
   Car, MapPin, Navigation, Star, Clock, CreditCard, 
   Menu, User, History, LogOut, Phone, X, Route, MessageCircle,
-  Calendar, Gift, Users, Truck, Bookmark, Plus, Trash2, Zap, Bell, Crosshair, Loader2, Wallet
+  Calendar, Gift, Users, Truck, Bookmark, Plus, Trash2, Zap, Bell, Crosshair, Loader2, Wallet, RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -838,7 +838,22 @@ const PassengerDashboard = () => {
             <span className="text-xl font-bold" style={{ fontFamily: 'Space Grotesk' }}>Allogo</span>
           </div>
           
-          <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+          <div className="flex items-center gap-2">
+            {/* Refresh button */}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => {
+                fetchActiveRide();
+                toast.success('Actualisé');
+              }}
+              className="rounded-full"
+              data-testid="refresh-btn"
+            >
+              <RefreshCw className="w-5 h-5" />
+            </Button>
+            
+            <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" data-testid="menu-btn" className="rounded-full">
                 <Menu className="w-6 h-6" />
@@ -908,6 +923,7 @@ const PassengerDashboard = () => {
               </nav>
             </SheetContent>
           </Sheet>
+          </div>
         </div>
       </header>
 
@@ -1185,10 +1201,10 @@ const PassengerDashboard = () => {
                     <span>Taxi Parisien - Tarif Réglementé</span>
                   </div>
                   <p className="text-muted-foreground mb-2">
-                    Tarif A (jour) / B (nuit, dim) / C (banlieue) selon horaires.
+                    Tarification officielle : Tarif A, B ou C selon horaires et zone.
                   </p>
                   <p className="text-yellow-500/80 font-medium">
-                    💡 Le prix affiché est une estimation. Le montant final sera celui du compteur du taxi.
+                    💡 Le prix affiché est une estimation. Le montant final sera celui du compteur.
                   </p>
                 </div>
                 
@@ -1211,7 +1227,7 @@ const PassengerDashboard = () => {
                     </div>
                   </div>
                   <p className="text-[10px] text-muted-foreground mt-2 italic">
-                    + 4€ (réservation immédiate) ou +7€ (réservation à l'avance)
+                    Ces forfaits s'appliquent pour les trajets entre Paris intra-muros et les aéroports
                   </p>
                 </div>
               </div>
@@ -1493,7 +1509,7 @@ const PassengerDashboard = () => {
                   : 'bg-primary text-primary-foreground'
               }`}
             >
-              {vehicleType === 'taxi' ? 'Réserver un Taxi' : 'Réserver maintenant'} (+4€ immédiat)
+              {vehicleType === 'taxi' ? 'Réserver un Taxi' : 'Réserver maintenant'}
             </Button>
           </div>
         )}

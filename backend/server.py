@@ -867,11 +867,7 @@ def calculate_taxi_fare(distance_km: float, duration_minutes: int = 0, is_schedu
         supplements += passenger_supplement
         supplement_details.append({"name": f"Passager(s) supplémentaire(s) ({extra_passengers})", "amount": round(passenger_supplement, 2)})
     
-    # Intermediate stops
-    if stops_count > 0:
-        stops_supplement = SUPPLEMENT_ARRET * stops_count
-        supplements += stops_supplement
-        supplement_details.append({"name": f"Arrêt(s) intermédiaire(s) ({stops_count})", "amount": round(stops_supplement, 2)})
+    # Intermediate stops - No extra fee, price is calculated on total route distance
     
     subtotal = prise_en_charge + distance_cost + time_cost + supplements
     total = max(TARIF_MINIMUM, subtotal)
@@ -934,10 +930,7 @@ def calculate_vtc_fare(distance_km: float, duration_minutes: int = 0, is_schedul
         supplements += passenger_supplement
         supplement_details.append({"name": f"Passager(s) supplémentaire(s) ({extra_passengers})", "amount": round(passenger_supplement, 2)})
     
-    if stops_count > 0:
-        stops_supplement = SUPPLEMENT_ARRET * stops_count
-        supplements += stops_supplement
-        supplement_details.append({"name": f"Arrêt(s) intermédiaire(s) ({stops_count})", "amount": round(stops_supplement, 2)})
+    # Intermediate stops - No extra fee for VTC, price is calculated on total route distance
     
     subtotal = base + distance_cost + time_cost + supplements
     total = max(TARIF_MINIMUM, subtotal)

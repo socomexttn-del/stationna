@@ -13,7 +13,7 @@ import ChatComponent from '../components/ChatComponent';
 import BookingReceipt from '../components/BookingReceipt';
 import { 
   Car, MapPin, Navigation, Star, Clock, DollarSign,
-  Menu, User, History, LogOut, Check, X, Play, Phone, Bell, Wifi, WifiOff, MessageCircle, FileText, Receipt, Crosshair, Loader2, Eye, EyeOff
+  Menu, User, History, LogOut, Check, X, Play, Phone, Bell, Wifi, WifiOff, MessageCircle, FileText, Receipt, Crosshair, Loader2, Eye, EyeOff, RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -721,6 +721,21 @@ const DriverDashboard = () => {
                 disabled={!!activeRide}
               />
             </div>
+            
+            {/* Refresh button */}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => {
+                fetchAvailableRides();
+                fetchActiveRide();
+                toast.success('Actualisé');
+              }}
+              className="rounded-full"
+              data-testid="driver-refresh-btn"
+            >
+              <RefreshCw className="w-5 h-5" />
+            </Button>
             
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
               <SheetTrigger asChild>

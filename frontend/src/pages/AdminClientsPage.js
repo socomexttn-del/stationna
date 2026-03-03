@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -6,12 +7,13 @@ import { Input } from '../components/ui/input';
 import { 
   Users, Search, ChevronLeft, ChevronRight, Mail, Phone, 
   Calendar, MapPin, Navigation, Car, CreditCard, Star, 
-  FileText, X, Download, Loader2, ArrowUpDown, Eye
+  FileText, X, Download, Loader2, ArrowUpDown, Eye, ArrowLeft
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const AdminClientsPage = () => {
   const { api } = useAuth();
+  const navigate = useNavigate();
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -209,12 +211,23 @@ const AdminClientsPage = () => {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3" style={{ fontFamily: 'Space Grotesk' }}>
-              <Users className="w-8 h-8 text-primary" />
-              Base de données clients
-            </h1>
-            <p className="text-muted-foreground mt-1">{total} client{total > 1 ? 's' : ''} enregistré{total > 1 ? 's' : ''}</p>
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => navigate('/admin')}
+              className="rounded-full hover:bg-primary/20"
+              data-testid="back-to-admin"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3" style={{ fontFamily: 'Space Grotesk' }}>
+                <Users className="w-8 h-8 text-primary" />
+                Base de données clients
+              </h1>
+              <p className="text-muted-foreground mt-1">{total} client{total > 1 ? 's' : ''} enregistré{total > 1 ? 's' : ''}</p>
+            </div>
           </div>
           
           {/* Search */}

@@ -72,7 +72,7 @@ const IntermediateStops = ({ stops, setStops, maxStops = 3 }) => {
       {stops.length > 0 && (
         <p className="text-xs text-muted-foreground flex items-center gap-1">
           <MapPin className="w-3 h-3" />
-          +3€ par arrêt intermédiaire (temps d'attente inclus)
+          Les arrêts seront effectués dans l'ordre indiqué
         </p>
       )}
     </div>

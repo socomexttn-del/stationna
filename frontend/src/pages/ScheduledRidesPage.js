@@ -454,6 +454,22 @@ const ScheduledRidesPage = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Favorite shortcuts for pickup */}
+                  {favorites.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {favorites.slice(0, 4).map((fav) => (
+                        <button
+                          key={`pickup-${fav.id}`}
+                          type="button"
+                          onClick={() => setPickup(fav.location)}
+                          className="px-3 py-1.5 text-xs bg-muted/50 hover:bg-primary/20 border border-border/50 hover:border-primary/50 rounded-full transition-colors flex items-center gap-1"
+                        >
+                          <Star className="w-3 h-3 text-yellow-500" />
+                          {fav.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <AddressAutocomplete
                     value={pickup}
                     onChange={setPickup}
@@ -462,6 +478,23 @@ const ScheduledRidesPage = () => {
                     iconColor="text-green-500"
                     dataTestId="schedule-pickup"
                   />
+                  
+                  {/* Favorite shortcuts for destination */}
+                  {favorites.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {favorites.slice(0, 4).map((fav) => (
+                        <button
+                          key={`dest-${fav.id}`}
+                          type="button"
+                          onClick={() => setDestination(fav.location)}
+                          className="px-3 py-1.5 text-xs bg-muted/50 hover:bg-primary/20 border border-border/50 hover:border-primary/50 rounded-full transition-colors flex items-center gap-1"
+                        >
+                          <Star className="w-3 h-3 text-yellow-500" />
+                          {fav.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <AddressAutocomplete
                     value={destination}
                     onChange={setDestination}

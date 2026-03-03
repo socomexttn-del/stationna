@@ -16,13 +16,12 @@ Application taxi complète "Allogo" avec support multi-rôles (Passager, Chauffe
 
 ### ✅ Authentification
 - JWT-based login/register pour passagers, chauffeurs, admin
-- Gestion des sessions
 
 ### ✅ Courses (Rides)
 - Réservation immédiate et programmée
 - Types: VTC (Standard/Van) et Taxis réglementés
 - Calcul de tarifs avec tarifs aéroport forfaitaires
-- Arrêts intermédiaires
+- Arrêts intermédiaires (sans supplément, prix sur itinéraire total)
 - Cycle complet: pending → accepted → arrived → in_progress → completed
 
 ### ✅ Chauffeurs
@@ -30,38 +29,49 @@ Application taxi complète "Allogo" avec support multi-rôles (Passager, Chauffe
 - Système de documents avec expiration
 - Localisation GPS temps réel
 - Notification de nouvelles courses
+- Bouton rafraîchir
 
 ### ✅ Passagers
 - Dashboard de réservation
 - Suivi en temps réel du chauffeur
 - Historique des courses
 - Export PDF
+- Favoris pour courses planifiées
+- Bouton rafraîchir
 
 ### ✅ Admin
 - Statistiques
 - Gestion des codes promo
 - Alertes documents expirés
-- Base clients
+- Base clients avec bouton retour
 
 ### ✅ Paiements (Stripe)
 - Paiement one-time
 - Cartes sauvegardées
 - Portefeuille avec bonus
 
-### ✅ Push Notifications (Firebase) - NOUVEAU 01/03/2026
+### ✅ Push Notifications (Firebase)
 - Firebase Admin SDK intégré au backend
 - Endpoints FCM pour enregistrement tokens
 - Notifications automatiques lors des événements de course
-- Support Capacitor pour notifications natives Android/iOS
+
+## Modifications Récentes (03/03/2026)
+
+1. **Suppression frais arrêts intermédiaires** - Plus de +3€ par arrêt
+2. **Tarif Taxi simplifié** - Affiche seulement "Tarif A, B ou C"
+3. **Boutons réservation simplifiés** - Retiré "+4€ immédiat"
+4. **Favoris courses planifiées** - Boutons cliquables ajoutés
+5. **Bouton rafraîchir** - Ajouté sur PassengerDashboard et DriverDashboard
+6. **Bouton retour Admin Clients** - Navigation vers /admin
 
 ## Fichiers Clés
-- `/app/backend/server.py` - Backend principal (monolithe actif)
+- `/app/backend/server.py` - Backend principal
 - `/app/backend/services/firebase_service.py` - Service FCM
-- `/app/backend/firebase-credentials.json` - Credentials Firebase
-- `/app/frontend/src/services/pushNotifications.js` - Service push frontend
-- `/app/frontend/src/hooks/usePushNotifications.js` - Hook notifications
-- `/app/frontend/capacitor.config.ts` - Config Capacitor
-- `/app/frontend/android/app/google-services.json` - Config Firebase Android
+- `/app/frontend/src/pages/PassengerDashboard.js` - Dashboard passager
+- `/app/frontend/src/pages/DriverDashboard.js` - Dashboard chauffeur
+- `/app/frontend/src/pages/AdminClientsPage.js` - Base clients admin
+- `/app/frontend/src/pages/ScheduledRidesPage.js` - Courses planifiées
+- `/app/frontend/src/components/IntermediateStops.js` - Arrêts intermédiaires
 
 ## Credentials Test
 - Admin: admin@volttaxi.com / admin123
@@ -72,18 +82,16 @@ Application taxi complète "Allogo" avec support multi-rôles (Passager, Chauffe
 
 ### P0 - Critique
 - [x] Intégration Firebase Push Notifications
+- [ ] Tester APK Android avec vraies notifications
 
 ### P1 - Important
-- [ ] Tester APK Android avec vraies notifications
+- [ ] Bug envoi commentaire fin de course
 - [ ] Finaliser refactoring backend (activer main.py)
-- [ ] Vérifier estimation tarifs aéroport
 
 ### P2 - Normal
 - [ ] Stabilité build frontend
 - [ ] Tests automatisés Pytest
-- [ ] Couverture i18n complète
 
 ## Notes Techniques
 - AppId Capacitor: `com.allogo.app`
 - Firebase Project: `allogo-43fd4`
-- Sender ID: `1003171734817`
