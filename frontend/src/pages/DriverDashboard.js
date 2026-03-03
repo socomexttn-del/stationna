@@ -1182,24 +1182,32 @@ const DriverDashboard = () => {
               </Card>
             ) : (
               availableRides.map((ride) => (
-                <Card key={ride.id} className="bg-card border-green-500/50 hover:border-green-500 transition-colors shadow-[0_0_15px_rgba(34,197,94,0.2)]">
+                <Card key={ride.id} className={`bg-card ${ride.is_scheduled ? 'border-amber-500/50 hover:border-amber-500' : 'border-green-500/50 hover:border-green-500'} transition-colors shadow-[0_0_15px_${ride.is_scheduled ? 'rgba(245,158,11,0.2)' : 'rgba(34,197,94,0.2)'}]`}>
                   <CardContent className="p-4 space-y-3">
+                    {/* Scheduled ride badge */}
+                    {ride.is_scheduled && ride.scheduled_time && (
+                      <div className="flex items-center gap-2 bg-amber-500/20 text-amber-500 px-3 py-1.5 rounded-full w-fit text-sm font-medium">
+                        <Clock className="w-4 h-4" />
+                        <span>Course réservée à l'avance - {new Date(ride.scheduled_time).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                    )}
+                    
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
-                          <User className="w-4 h-4 text-green-500" />
+                        <div className={`w-8 h-8 ${ride.is_scheduled ? 'bg-amber-500/20' : 'bg-green-500/20'} rounded-full flex items-center justify-center`}>
+                          <User className={`w-4 h-4 ${ride.is_scheduled ? 'text-amber-500' : 'text-green-500'}`} />
                         </div>
                         <p className="font-semibold">{ride.passenger_name}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-xl font-bold text-green-500">{ride.driver_earnings || (ride.estimated_fare * 0.82).toFixed(2)}€</p>
+                        <p className={`text-xl font-bold ${ride.is_scheduled ? 'text-amber-500' : 'text-green-500'}`}>{ride.driver_earnings || (ride.estimated_fare * 0.82).toFixed(2)}€</p>
                         <p className="text-xs text-muted-foreground">Vos gains</p>
                       </div>
                     </div>
                     
                     <div className="space-y-2 bg-muted/30 rounded-lg p-3">
                       <div className="flex items-start gap-2">
-                        <MapPin className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                        <MapPin className={`w-4 h-4 ${ride.is_scheduled ? 'text-amber-500' : 'text-green-500'} mt-0.5 flex-shrink-0`} />
                         <p className="text-sm">{ride.pickup.address}</p>
                       </div>
                       <div className="flex items-start gap-2">
@@ -1212,14 +1220,14 @@ const DriverDashboard = () => {
                       <div className="flex items-center gap-3 text-sm text-muted-foreground">
                         <span>{ride.distance_km} km</span>
                         <span>•</span>
-                        <span>{ride.vehicle_type === 'van' ? 'Van' : 'Standard'}</span>
+                        <span>{ride.vehicle_type === 'van' ? 'Van' : ride.vehicle_type === 'taxi' ? 'Taxi' : 'Standard'}</span>
                         <span>•</span>
                         <span>{ride.passenger_count || 1} passager{(ride.passenger_count || 1) > 1 ? 's' : ''}</span>
                       </div>
                       <Button 
                         onClick={() => acceptRide(ride.id)}
                         data-testid={`accept-ride-${ride.id}`}
-                        className="bg-green-600 hover:bg-green-700 text-white font-bold"
+                        className={`${ride.is_scheduled ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'} text-white font-bold`}
                       >
                         <Check className="w-4 h-4 mr-2" /> Accepter
                       </Button>

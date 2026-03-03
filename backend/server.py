@@ -84,6 +84,10 @@ NOTIFICATION_TEMPLATES = {
         "title": "🚖 Nouvelle course disponible!",
         "body": "Course de {pickup} à {destination}"
     },
+    "scheduled_ride_available": {
+        "title": "📅 Course réservée à l'avance!",
+        "body": "Prise en charge à {scheduled_time} - {pickup} → {destination}"
+    },
     "ride_accepted": {
         "title": "✅ Course acceptée!",
         "body": "Votre chauffeur {driver_name} arrive"
@@ -107,6 +111,10 @@ NOTIFICATION_TEMPLATES = {
     "ride_assigned": {
         "title": "📋 Course assignée!",
         "body": "Une nouvelle course vous a été assignée"
+    },
+    "scheduled_ride_assigned": {
+        "title": "📅 Course planifiée assignée!",
+        "body": "Course à {scheduled_time} - {pickup}"
     },
     "driver_changed": {
         "title": "🔄 Changement de chauffeur",
@@ -266,6 +274,142 @@ class NotificationManager:
 
 notification_manager = NotificationManager()
 
+# ======================== SCHEDULED RIDES PROCESSOR ========================
+
+async def process_scheduled_rides():
+    """
+    Check for scheduled rides that should be proposed to drivers.
+    Rides are proposed 15 minutes before their scheduled pickup time.
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        # Find rides scheduled for 15 minutes from now (with 2 min tolerance)
+        target_time_start = now + timedelta(minutes=13)
+        target_time_end = now + timedelta(minutes=17)
+        
+        # Find scheduled rides that haven't been proposed yet
+        scheduled_rides = await db.rides.find({
+            "status": "scheduled",
+            "proposed_to_drivers": {"$ne": True},
+            "scheduled_time": {
+                "$gte": target_time_start.isoformat(),
+                "$lte": target_time_end.isoformat()
+            }
+        }, {"_id": 0}).to_list(50)
+        
+        for ride in scheduled_rides:
+            await propose_scheduled_ride_to_drivers(ride)
+            
+        return len(scheduled_rides)
+        
+    except Exception as e:
+        logger.error(f"Error processing scheduled rides: {e}")
+        return 0
+
+async def propose_scheduled_ride_to_drivers(ride: dict):
+    """
+    Propose a scheduled ride to the nearest available driver.
+    If no driver accepts within 5 minutes, propose to the next nearest.
+    """
+    try:
+        ride_id = ride["id"]
+        pickup = ride["pickup"]
+        
+        # Parse scheduled time for display
+        scheduled_dt = datetime.fromisoformat(ride["scheduled_time"].replace('Z', '+00:00'))
+        scheduled_time_str = scheduled_dt.strftime("%H:%M")
+        
+        # Find nearest available driver
+        nearest_driver = await find_nearest_driver(pickup, max_distance_km=20.0)
+        
+        if nearest_driver:
+            # Propose to nearest driver first
+            driver_id = nearest_driver["driver"]["id"]
+            
+            # Update ride to track proposed driver
+            await db.rides.update_one(
+                {"id": ride_id},
+                {
+                    "$set": {
+                        "proposed_to_drivers": True,
+                        "proposed_driver_id": driver_id,
+                        "proposed_at": datetime.now(timezone.utc).isoformat(),
+                        "status": "pending"  # Change status so driver can accept
+                    }
+                }
+            )
+            
+            # Notify the specific driver about the scheduled ride
+            await notification_manager.notify_driver(driver_id, "scheduled_ride_available", {
+                "ride_id": ride_id,
+                "pickup": pickup.get("address", ""),
+                "destination": ride["destination"].get("address", ""),
+                "scheduled_time": scheduled_time_str,
+                "distance_km": ride.get("distance_km", 0),
+                "estimated_fare": ride.get("estimated_fare", 0),
+                "passenger_name": ride.get("passenger_name", ""),
+                "is_scheduled": True
+            })
+            
+            logger.info(f"Scheduled ride {ride_id} proposed to driver {driver_id}")
+            
+        else:
+            # No driver available - notify all drivers
+            await db.rides.update_one(
+                {"id": ride_id},
+                {
+                    "$set": {
+                        "proposed_to_drivers": True,
+                        "status": "pending"
+                    }
+                }
+            )
+            
+            await notification_manager.notify_all_drivers("scheduled_ride_available", {
+                "ride_id": ride_id,
+                "pickup": pickup.get("address", ""),
+                "destination": ride["destination"].get("address", ""),
+                "scheduled_time": scheduled_time_str,
+                "distance_km": ride.get("distance_km", 0),
+                "estimated_fare": ride.get("estimated_fare", 0),
+                "passenger_name": ride.get("passenger_name", ""),
+                "is_scheduled": True
+            })
+            
+            logger.info(f"Scheduled ride {ride_id} broadcast to all drivers (no nearby driver)")
+            
+    except Exception as e:
+        logger.error(f"Error proposing scheduled ride {ride.get('id')}: {e}")
+
+# Background task to check scheduled rides every minute
+scheduled_rides_task = None
+
+async def scheduled_rides_checker():
+    """Background task that runs every minute to check for scheduled rides"""
+    while True:
+        try:
+            count = await process_scheduled_rides()
+            if count > 0:
+                logger.info(f"Processed {count} scheduled ride(s)")
+        except Exception as e:
+            logger.error(f"Scheduled rides checker error: {e}")
+        await asyncio.sleep(60)  # Check every minute
+
+@app.on_event("startup")
+async def start_scheduled_rides_checker():
+    """Start the background task on app startup"""
+    global scheduled_rides_task
+    scheduled_rides_task = asyncio.create_task(scheduled_rides_checker())
+    logger.info("Scheduled rides checker started")
+
+@app.on_event("shutdown")
+async def stop_scheduled_rides_checker():
+    """Stop the background task on app shutdown"""
+    global scheduled_rides_task
+    if scheduled_rides_task:
+        scheduled_rides_task.cancel()
+        logger.info("Scheduled rides checker stopped")
+
 # ======================== MODELS ========================
 
 class UserBase(BaseModel):
@@ -334,6 +478,7 @@ class RideResponse(BaseModel):
     payment_status: str = "pending"
     payment_method: Optional[str] = None  # card, cash
     scheduled_time: Optional[str] = None
+    is_scheduled: Optional[bool] = False  # Flag for scheduled rides
     created_at: str
     accepted_at: Optional[str] = None
     completed_at: Optional[str] = None
@@ -427,6 +572,9 @@ class ScheduledRideRequest(BaseModel):
     pickup: LocationModel
     destination: LocationModel
     scheduled_time: str  # ISO format datetime
+    vehicle_type: Optional[str] = "standard"
+    passenger_count: Optional[int] = 1
+    stops: Optional[List[Dict]] = None
 
 class FavoriteAddressCreate(BaseModel):
     name: str  # "Maison", "Travail", etc.
@@ -2968,25 +3116,35 @@ async def schedule_ride(data: ScheduledRideRequest, current_user: dict = Depends
     fare = fare_details["total"]
     
     ride_id = str(uuid.uuid4())
+    
+    # Process stops if provided
+    stops_list = data.stops if data.stops else []
+    
     ride = {
         "id": ride_id,
         "passenger_id": current_user["id"],
         "passenger_name": f"{current_user['first_name']} {current_user['last_name']}",
+        "passenger_phone": current_user.get("phone"),
         "driver_id": None,
         "driver_name": None,
         "pickup": pickup,
         "destination": destination,
+        "stops": stops_list,
         "distance_km": distance,
         "duration_minutes": duration,
         "estimated_fare": fare,
         "fare_details": fare_details,
         "final_fare": None,
         "status": "scheduled",
+        "is_scheduled": True,  # Flag to indicate this is a scheduled ride
+        "proposed_to_drivers": False,  # Will be set to True 15 min before
         "payment_status": "pending",
         "scheduled_time": data.scheduled_time,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "accepted_at": None,
-        "completed_at": None
+        "completed_at": None,
+        "vehicle_type": data.vehicle_type,
+        "passenger_count": data.passenger_count
     }
     await db.rides.insert_one(ride)
     return RideResponse(**ride)
@@ -3837,6 +3995,28 @@ async def generate_invoice(ride_id: str, admin_user: dict = Depends(get_admin_us
     }
     
     return invoice_data
+
+@api_router.get("/admin/scheduled-rides")
+async def get_scheduled_rides(admin_user: dict = Depends(get_admin_user)):
+    """Get all scheduled rides with their status"""
+    rides = await db.rides.find(
+        {"status": {"$in": ["scheduled", "pending"]}, "is_scheduled": True},
+        {"_id": 0}
+    ).sort("scheduled_time", 1).to_list(100)
+    
+    return {
+        "total": len(rides),
+        "rides": rides
+    }
+
+@api_router.post("/admin/process-scheduled-rides")
+async def manually_process_scheduled_rides(admin_user: dict = Depends(get_admin_user)):
+    """Manually trigger scheduled rides processing (for testing)"""
+    count = await process_scheduled_rides()
+    return {
+        "processed": count,
+        "message": f"{count} course(s) planifiée(s) proposée(s) aux chauffeurs"
+    }
 
 # ======================== NOTIFICATION ROUTES ========================
 
