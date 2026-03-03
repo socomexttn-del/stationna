@@ -151,15 +151,31 @@ class NotificationManager:
         ).to_list(10)
         return [t["token"] for t in tokens]
     
-    async def _get_all_driver_fcm_tokens(self) -> list:
-        """Get FCM tokens for all available drivers"""
-        # Get all drivers who are available
+    async def _get_all_driver_fcm_tokens(self, vehicle_type: str = None) -> list:
+        """Get FCM tokens for all available drivers, optionally filtered by vehicle type"""
+        # Build query based on vehicle type filter
+        query = {"role": "driver", "is_available": True}
+        
+        # If vehicle_type is specified, filter drivers who can handle this type
+        # Taxi rides -> only drivers with "taxi" in their vehicle_types
+        # VTC/Standard/Van rides -> only drivers with "vtc" in their vehicle_types
+        if vehicle_type:
+            if vehicle_type == "taxi":
+                # Taxi rides: only drivers configured for taxi
+                query["driver_vehicle_types"] = {"$in": ["taxi"]}
+            else:
+                # VTC/Standard/Van rides: only drivers configured for VTC
+                query["driver_vehicle_types"] = {"$in": ["vtc", "standard", "van"]}
+        
         available_drivers = await db.users.find(
-            {"role": "driver", "is_available": True},
+            query,
             {"_id": 0, "id": 1}
         ).to_list(1000)
         
         driver_ids = [d["id"] for d in available_drivers]
+        
+        if not driver_ids:
+            return []
         
         # Get all active tokens for these drivers
         tokens = await db.fcm_tokens.find(
@@ -189,12 +205,12 @@ class NotificationManager:
                 data={"type": notification_type, **{k: str(v) for k, v in data.items() if v is not None}}
             )
     
-    async def _send_push_to_all_drivers(self, notification_type: str, data: dict):
-        """Send push notification to all available drivers"""
+    async def _send_push_to_all_drivers(self, notification_type: str, data: dict, vehicle_type: str = None):
+        """Send push notification to all available drivers filtered by vehicle type"""
         if not is_firebase_initialized():
             return
         
-        tokens = await self._get_all_driver_fcm_tokens()
+        tokens = await self._get_all_driver_fcm_tokens(vehicle_type)
         if not tokens:
             return
         
@@ -225,21 +241,22 @@ class NotificationManager:
         
         return notification
     
-    async def notify_all_drivers(self, notification_type: str, data: dict):
-        """Broadcast notification to all available drivers"""
+    async def notify_all_drivers(self, notification_type: str, data: dict, vehicle_type: str = None):
+        """Broadcast notification to available drivers filtered by vehicle type"""
         notification = {
             "id": str(uuid.uuid4()),
             "user_id": "broadcast_drivers",
             "role": "driver",
             "type": notification_type,
             "data": data,
+            "vehicle_type_filter": vehicle_type,  # Track which type this notification is for
             "read": False,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.notifications.insert_one(notification)
         
-        # Send push notification to all drivers
-        await self._send_push_to_all_drivers(notification_type, data)
+        # Send push notification to filtered drivers
+        await self._send_push_to_all_drivers(notification_type, data, vehicle_type)
         
         return notification
     
@@ -441,6 +458,7 @@ class UserResponse(BaseModel):
     is_available: bool = False
     vehicle_info: Optional[Dict] = None
     location: Optional[Dict] = None
+    driver_vehicle_types: Optional[List[str]] = None  # ["taxi", "vtc", "van"] - Types de véhicules que le chauffeur peut accepter
     created_at: str
 
 class TokenResponse(BaseModel):
@@ -1149,6 +1167,7 @@ async def register(user: UserCreate):
         "is_available": False,
         "vehicle_info": None,
         "location": None,
+        "driver_vehicle_types": ["vtc"] if user.role == "driver" else None,  # Default to VTC for drivers
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.users.insert_one(user_dict)
@@ -1882,13 +1901,28 @@ async def create_ride(data: RideRequest, current_user: dict = Depends(get_curren
     
     await db.rides.insert_one(ride)
     
-    # Find nearby drivers and notify them about the new ride
-    available_drivers = await db.users.find({
+    # Build driver query with vehicle type filter
+    driver_query = {
         "role": "driver", 
         "is_available": True,
         "location": {"$exists": True},
         "$or": [{"is_active": True}, {"is_active": {"$exists": False}}]
-    }, {"_id": 0, "password_hash": 0}).to_list(20)
+    }
+    
+    # Filter drivers by vehicle type capability
+    vehicle_type = data.vehicle_type
+    if vehicle_type == "taxi":
+        # Taxi rides: only drivers with "taxi" in their vehicle_types
+        driver_query["driver_vehicle_types"] = {"$in": ["taxi"]}
+    else:
+        # VTC/Standard/Van rides: only drivers with "vtc" capability
+        driver_query["driver_vehicle_types"] = {"$in": ["vtc", "standard", "van"]}
+    
+    # Find nearby drivers filtered by vehicle type and notify them
+    available_drivers = await db.users.find(
+        driver_query, 
+        {"_id": 0, "password_hash": 0}
+    ).to_list(20)
     
     # Calculate distance and notify drivers within 10km
     notified_driver_ids = []
@@ -1899,6 +1933,7 @@ async def create_ride(data: RideRequest, current_user: dict = Depends(get_curren
                 eta = max(2, round(dist * 2.5))
                 await notification_manager.notify_driver(driver["id"], "ride_available", {
                     "id": ride_id,
+                    "ride_id": ride_id,
                     "passenger_name": ride["passenger_name"],
                     "pickup": pickup,
                     "destination": destination,
@@ -1906,7 +1941,8 @@ async def create_ride(data: RideRequest, current_user: dict = Depends(get_curren
                     "estimated_fare": fare,
                     "driver_earnings": driver_earnings,
                     "distance_to_pickup": round(dist, 1),
-                    "eta_minutes": eta
+                    "eta_minutes": eta,
+                    "vehicle_type": vehicle_type
                 })
                 notified_driver_ids.append(driver["id"])
     
@@ -3161,15 +3197,16 @@ async def activate_scheduled_ride(ride_id: str, current_user: dict = Depends(get
     
     await db.rides.update_one({"id": ride_id}, {"$set": {"status": "pending"}})
     
-    # Notify drivers
+    # Notify drivers filtered by vehicle type
     await notification_manager.notify_all_drivers("new_ride", {
         "id": ride_id,
         "passenger_name": ride["passenger_name"],
         "pickup": ride["pickup"],
         "destination": ride["destination"],
         "distance_km": ride["distance_km"],
-        "estimated_fare": ride["estimated_fare"]
-    })
+        "estimated_fare": ride["estimated_fare"],
+        "vehicle_type": ride.get("vehicle_type", "standard")
+    }, vehicle_type=ride.get("vehicle_type", "standard"))
     
     updated = await db.rides.find_one({"id": ride_id}, {"_id": 0})
     return RideResponse(**updated)
@@ -4016,6 +4053,50 @@ async def manually_process_scheduled_rides(admin_user: dict = Depends(get_admin_
     return {
         "processed": count,
         "message": f"{count} course(s) planifiée(s) proposée(s) aux chauffeurs"
+    }
+
+class DriverVehicleTypesUpdate(BaseModel):
+    driver_id: str
+    vehicle_types: List[str]  # ["taxi", "vtc"] or ["taxi"] or ["vtc"]
+
+@api_router.put("/admin/drivers/vehicle-types")
+async def update_driver_vehicle_types(data: DriverVehicleTypesUpdate, admin_user: dict = Depends(get_admin_user)):
+    """Update which vehicle types a driver can accept (taxi, vtc, or both)"""
+    # Validate vehicle types
+    valid_types = ["taxi", "vtc", "standard", "van"]
+    for vt in data.vehicle_types:
+        if vt not in valid_types:
+            raise HTTPException(status_code=400, detail=f"Invalid vehicle type: {vt}. Valid types are: {valid_types}")
+    
+    # Check driver exists
+    driver = await db.users.find_one({"id": data.driver_id, "role": "driver"})
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+    
+    # Update driver's vehicle types
+    await db.users.update_one(
+        {"id": data.driver_id},
+        {"$set": {"driver_vehicle_types": data.vehicle_types}}
+    )
+    
+    return {
+        "success": True,
+        "driver_id": data.driver_id,
+        "vehicle_types": data.vehicle_types,
+        "message": f"Chauffeur configuré pour: {', '.join(data.vehicle_types)}"
+    }
+
+@api_router.get("/admin/drivers")
+async def get_all_drivers(admin_user: dict = Depends(get_admin_user)):
+    """Get all drivers with their vehicle type configuration"""
+    drivers = await db.users.find(
+        {"role": "driver"},
+        {"_id": 0, "password_hash": 0}
+    ).to_list(500)
+    
+    return {
+        "total": len(drivers),
+        "drivers": drivers
     }
 
 # ======================== NOTIFICATION ROUTES ========================

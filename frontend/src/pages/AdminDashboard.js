@@ -196,6 +196,16 @@ const AdminDashboard = () => {
                 <Database className="w-4 h-4" /> Clients
               </Button>
             </Link>
+            <Link to="/admin/drivers">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="gap-2"
+                data-testid="admin-drivers-link"
+              >
+                <Car className="w-4 h-4" /> Chauffeurs
+              </Button>
+            </Link>
             <Link to="/admin/promo-codes">
               <Button 
                 variant="outline" 
