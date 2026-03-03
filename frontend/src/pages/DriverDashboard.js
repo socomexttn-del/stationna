@@ -225,14 +225,26 @@ const DriverDashboard = () => {
     
     switch (data.type) {
       case 'new_ride':
-        // Show notification for new ride
-        toast.success(
-          <div className="flex flex-col gap-1">
-            <span className="font-semibold">Nouvelle course!</span>
-            <span className="text-sm">{data.pickup?.address} → {data.destination?.address}</span>
-            <span className="text-primary font-bold">{data.estimated_fare}€</span>
+        // Show notification for new ride with accept button
+        toast(
+          <div className="flex flex-col gap-2">
+            <span className="font-semibold text-green-500">🚗 Nouvelle course!</span>
+            <span className="text-sm">{data.pickup?.address}</span>
+            <span className="text-xs text-muted-foreground">→ {data.destination?.address}</span>
+            <div className="flex justify-between items-center mt-1">
+              <span className="text-primary font-bold">{data.estimated_fare}€</span>
+              <button 
+                onClick={() => {
+                  acceptRide(data.id);
+                  toast.dismiss();
+                }}
+                className="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-lg text-sm"
+              >
+                Accepter
+              </button>
+            </div>
           </div>,
-          { duration: 10000 }
+          { duration: 30000 }
         );
         // Add to available rides
         setAvailableRides(prev => {
@@ -276,16 +288,24 @@ const DriverDashboard = () => {
       case 'ride_available':
         // New ride available - driver must accept
         toast(
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-2">
             <span className="font-semibold text-green-500">🚗 Nouvelle course disponible!</span>
             <span className="text-sm">{data.pickup?.address}</span>
             <span className="text-xs text-muted-foreground">→ {data.destination?.address}</span>
-            <div className="flex justify-between mt-1">
-              <span className="text-primary font-bold">{data.driver_earnings}€</span>
-              <span className="text-xs">{data.distance_to_pickup} km • ~{data.eta_minutes} min</span>
+            <div className="flex justify-between items-center mt-1">
+              <span className="text-primary font-bold">{data.driver_earnings || data.estimated_fare}€</span>
+              <button 
+                onClick={() => {
+                  acceptRide(data.ride_id);
+                  toast.dismiss();
+                }}
+                className="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-lg text-sm"
+              >
+                Accepter
+              </button>
             </div>
           </div>,
-          { duration: 15000 }
+          { duration: 30000 }
         );
         // Push notification
         notifyNewRide(data.passenger_name, data.pickup?.address, data.driver_earnings);
@@ -300,6 +320,36 @@ const DriverDashboard = () => {
       case 'ride_taken':
         // Remove ride from available list
         setAvailableRides(prev => prev.filter(r => r.id !== data.ride_id));
+        break;
+      
+      case 'scheduled_ride_available':
+        // Scheduled ride notification with accept button
+        toast(
+          <div className="flex flex-col gap-2">
+            <span className="font-semibold text-amber-500">📅 Course réservée à l'avance!</span>
+            <span className="text-sm font-medium">Prise en charge: {data.scheduled_time}</span>
+            <span className="text-sm">{data.pickup}</span>
+            <span className="text-xs text-muted-foreground">→ {data.destination}</span>
+            <div className="flex justify-between items-center mt-1">
+              <span className="text-amber-500 font-bold">{data.estimated_fare}€</span>
+              <button 
+                onClick={() => {
+                  acceptRide(data.ride_id);
+                  toast.dismiss();
+                }}
+                className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2 rounded-lg text-sm"
+              >
+                Accepter
+              </button>
+            </div>
+          </div>,
+          { duration: 60000 }
+        );
+        // Refresh available rides
+        fetchAvailableRides();
+        // Play notification sound
+        playNotificationSound();
+        setTimeout(() => playNotificationSound(), 500);
         break;
       
       case 'new_message':
