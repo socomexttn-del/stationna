@@ -303,13 +303,15 @@ const ScheduledRidesPage = () => {
               <Route className="w-4 h-4" />
               <span>{ride.distance_km} km</span>
             </div>
-            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <div className={`flex items-center gap-1.5 text-sm ${ride.vehicle_type === 'taxi' ? 'text-yellow-500' : 'text-muted-foreground'}`}>
               {ride.vehicle_type === 'van' ? (
                 <Truck className="w-4 h-4" />
+              ) : ride.vehicle_type === 'taxi' ? (
+                <Car className="w-4 h-4 text-yellow-500" />
               ) : (
                 <Car className="w-4 h-4" />
               )}
-              <span>{ride.vehicle_type === 'van' ? 'Van' : 'Standard'}</span>
+              <span>{ride.vehicle_type === 'van' ? 'Van' : ride.vehicle_type === 'taxi' ? 'Taxi' : 'VTC'}</span>
             </div>
             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <Users className="w-4 h-4" />
@@ -507,24 +509,24 @@ const ScheduledRidesPage = () => {
                   {/* Vehicle Type */}
                   <div>
                     <label className="text-sm text-muted-foreground mb-2 block">Type de véhicule</label>
-                    <div className="flex gap-3">
+                    <div className="grid grid-cols-3 gap-2">
                       <button
                         type="button"
                         onClick={() => setVehicleType('standard')}
-                        className={`flex-1 p-3 rounded-xl border-2 transition-all ${
+                        className={`p-3 rounded-xl border-2 transition-all ${
                           vehicleType === 'standard' 
                             ? 'border-primary bg-primary/10' 
                             : 'border-border/50 hover:border-primary/50'
                         }`}
                       >
                         <Car className="w-5 h-5 mx-auto mb-1 text-primary" />
-                        <p className="text-sm font-medium">Standard</p>
+                        <p className="text-sm font-medium">VTC</p>
                         <p className="text-xs text-muted-foreground">4 places</p>
                       </button>
                       <button
                         type="button"
                         onClick={() => setVehicleType('van')}
-                        className={`flex-1 p-3 rounded-xl border-2 transition-all ${
+                        className={`p-3 rounded-xl border-2 transition-all ${
                           vehicleType === 'van' 
                             ? 'border-primary bg-primary/10' 
                             : 'border-border/50 hover:border-primary/50'
@@ -533,6 +535,19 @@ const ScheduledRidesPage = () => {
                         <Truck className="w-5 h-5 mx-auto mb-1 text-primary" />
                         <p className="text-sm font-medium">Van</p>
                         <p className="text-xs text-muted-foreground">7 places</p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setVehicleType('taxi')}
+                        className={`p-3 rounded-xl border-2 transition-all ${
+                          vehicleType === 'taxi' 
+                            ? 'border-yellow-500 bg-yellow-500/10' 
+                            : 'border-border/50 hover:border-yellow-500/50'
+                        }`}
+                      >
+                        <Car className="w-5 h-5 mx-auto mb-1 text-yellow-500" />
+                        <p className="text-sm font-medium text-yellow-500">Taxi</p>
+                        <p className="text-xs text-muted-foreground">4 places</p>
                       </button>
                     </div>
                   </div>
