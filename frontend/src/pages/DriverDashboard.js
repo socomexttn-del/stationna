@@ -728,10 +728,30 @@ const DriverDashboard = () => {
               size="icon" 
               onClick={async () => {
                 try {
-                  await Promise.all([
-                    fetchAvailableRides(),
-                    fetchActiveRide()
-                  ]);
+                  // Show loading indicator
+                  const toastId = toast.loading('Actualisation...');
+                  
+                  // Refresh available rides
+                  const ridesResponse = await api.get('/rides/available');
+                  setAvailableRides(ridesResponse.data || []);
+                  
+                  // Refresh active ride
+                  const activeResponse = await api.get('/rides/active');
+                  if (activeResponse.data) {
+                    setActiveRide(activeResponse.data);
+                  } else {
+                    setActiveRide(null);
+                  }
+                  
+                  // Refresh earnings
+                  try {
+                    const earningsResponse = await api.get('/drivers/earnings');
+                    setTodayEarnings(earningsResponse.data?.today || 0);
+                    setTotalEarnings(earningsResponse.data?.total || 0);
+                    setTodayRides(earningsResponse.data?.rides_today || 0);
+                  } catch (e) {}
+                  
+                  toast.dismiss(toastId);
                   toast.success('Page actualisée');
                 } catch (error) {
                   console.error('Refresh error:', error);

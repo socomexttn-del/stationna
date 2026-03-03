@@ -846,12 +846,35 @@ const PassengerDashboard = () => {
               size="icon" 
               onClick={async () => {
                 try {
+                  // Show loading indicator
+                  const toastId = toast.loading('Actualisation...');
+                  
                   // Refresh active ride
-                  await fetchActiveRide();
-                  // Also refresh estimate if in booking step
-                  if (step === 'booking' && pickup?.lat && destination?.lat) {
-                    await getEstimate();
+                  const rideResponse = await api.get('/rides/active');
+                  if (rideResponse.data) {
+                    setActiveRide(rideResponse.data);
+                    setStep('ride_active');
+                  } else {
+                    setActiveRide(null);
+                    // Refresh estimate if in booking step
+                    if (step === 'booking' && pickup?.lat && destination?.lat) {
+                      await getEstimate();
+                    }
                   }
+                  
+                  // Refresh favorites
+                  try {
+                    const favResponse = await api.get('/favorites');
+                    setFavorites(favResponse.data || []);
+                  } catch (e) {}
+                  
+                  // Refresh wallet balance
+                  try {
+                    const walletResponse = await api.get('/wallet/balance');
+                    setWalletBalance(walletResponse.data?.balance || 0);
+                  } catch (e) {}
+                  
+                  toast.dismiss(toastId);
                   toast.success('Page actualisée');
                 } catch (error) {
                   console.error('Refresh error:', error);
