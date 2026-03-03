@@ -25,6 +25,7 @@ const LandingPage = () => {
               <Button 
                 data-testid="header-login-btn"
                 className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full font-bold px-6"
+                translate="no"
               >
                 {t('auth.login')}
               </Button>

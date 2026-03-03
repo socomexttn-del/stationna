@@ -33,9 +33,9 @@
     "feature3Desc": "Suivez votre chauffeur sur la carte"
   },
   "auth": {
-    "login": "Connexion",
+    "login": "Se connecter",
     "logout": "Déconnexion",
-    "register": "Inscription",
+    "register": "S'inscrire",
     "loginSubtitle": "Accédez à votre compte Allogo",
     "registerSubtitle": "Créez votre compte Allogo",
     "iAm": "Je suis un(e)",
