@@ -775,21 +775,23 @@ def calculate_taxi_fare(distance_km: float, duration_minutes: int = 0, is_schedu
     Calculate fare for official Paris taxi with regulated pricing
     Tarifs officiels taxis parisiens 2025
     
-    Special case: Airport flat rates (forfaits) apply for Paris ↔ CDG/Orly trips
+    Special case: Airport flat rates (forfaits) apply ONLY for DIRECT trips Paris ↔ CDG/Orly
+    With intermediate stops, the fare is metered (au compteur)
     """
     # Constants for supplements
     SUPPLEMENT_IMMEDIAT = 4.00
     SUPPLEMENT_AVANCE = 7.00
     
-    # Check for airport flat rate
+    # Check for airport flat rate - ONLY if there are NO intermediate stops
+    # According to Paris taxi regulations, flat rates only apply for direct trips
     airport_trip = {"is_airport_trip": False}
-    if pickup_coords and dest_coords:
+    if pickup_coords and dest_coords and stops_count == 0:
         airport_trip = detect_airport_trip(
             pickup_coords.get("lat", 0), pickup_coords.get("lng", 0),
             dest_coords.get("lat", 0), dest_coords.get("lng", 0)
         )
     
-    # If airport trip, apply flat rate
+    # If airport trip WITH NO STOPS, apply flat rate
     if airport_trip["is_airport_trip"]:
         flat_rate = airport_trip["flat_rate"]
         
