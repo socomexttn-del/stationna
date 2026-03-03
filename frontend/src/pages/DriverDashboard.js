@@ -726,10 +726,17 @@ const DriverDashboard = () => {
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={() => {
-                fetchAvailableRides();
-                fetchActiveRide();
-                toast.success('Actualisé');
+              onClick={async () => {
+                try {
+                  await Promise.all([
+                    fetchAvailableRides(),
+                    fetchActiveRide()
+                  ]);
+                  toast.success('Page actualisée');
+                } catch (error) {
+                  console.error('Refresh error:', error);
+                  toast.error('Erreur lors du rafraîchissement');
+                }
               }}
               className="rounded-full"
               data-testid="driver-refresh-btn"

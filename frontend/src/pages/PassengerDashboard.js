@@ -844,9 +844,19 @@ const PassengerDashboard = () => {
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={() => {
-                fetchActiveRide();
-                toast.success('Actualisé');
+              onClick={async () => {
+                try {
+                  // Refresh active ride
+                  await fetchActiveRide();
+                  // Also refresh estimate if in booking step
+                  if (step === 'booking' && pickup?.lat && destination?.lat) {
+                    await getEstimate();
+                  }
+                  toast.success('Page actualisée');
+                } catch (error) {
+                  console.error('Refresh error:', error);
+                  toast.error('Erreur lors du rafraîchissement');
+                }
               }}
               className="rounded-full"
               data-testid="refresh-btn"
