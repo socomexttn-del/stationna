@@ -710,7 +710,8 @@ const PassengerDashboard = () => {
         destination, 
         vehicle_type: vehicleType,
         pickup_has_coords: Boolean(pickup.lat && pickup.lng),
-        dest_has_coords: Boolean(destination.lat && destination.lng)
+        dest_has_coords: Boolean(destination.lat && destination.lng),
+        stops_order: stops.map((s, i) => `${i+1}: ${s.address}`)
       });
       
       const response = await api.post('/rides/estimate', { 
@@ -1429,17 +1430,17 @@ const PassengerDashboard = () => {
                     <p className="text-xs text-muted-foreground mb-2">Itinéraire</p>
                     <div className="space-y-1 text-sm">
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-green-500" />
+                        <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center text-[10px] font-bold text-white">1</div>
                         <span className="truncate">{pickup.address}</span>
                       </div>
                       {stops.map((stop, idx) => (
                         <div key={idx} className="flex items-center gap-2 text-amber-500">
-                          <div className="w-2 h-2 rounded-full bg-amber-500" />
+                          <div className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center text-[10px] font-bold text-white">{idx + 2}</div>
                           <span className="truncate">{stop.address}</span>
                         </div>
                       ))}
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-primary" />
+                        <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-[10px] font-bold text-primary-foreground">{stops.length + 2}</div>
                         <span className="truncate">{destination.address}</span>
                       </div>
                     </div>

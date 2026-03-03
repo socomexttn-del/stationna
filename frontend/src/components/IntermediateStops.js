@@ -6,17 +6,32 @@ import { Plus, X, MapPin, ArrowDown } from 'lucide-react';
 const IntermediateStops = ({ stops, setStops, maxStops = 3 }) => {
   const addStop = () => {
     if (stops.length < maxStops) {
-      setStops([...stops, { lat: null, lng: null, address: '' }]);
+      // Add unique ID and creation timestamp to preserve order
+      const newStop = { 
+        id: Date.now(),
+        order: stops.length,
+        lat: null, 
+        lng: null, 
+        address: '' 
+      };
+      setStops([...stops, newStop]);
     }
   };
 
   const removeStop = (index) => {
-    setStops(stops.filter((_, i) => i !== index));
+    const newStops = stops.filter((_, i) => i !== index);
+    // Re-index the order after removal
+    setStops(newStops.map((s, i) => ({ ...s, order: i })));
   };
 
   const updateStop = (index, location) => {
     const newStops = [...stops];
-    newStops[index] = location;
+    // Preserve the id and order when updating
+    newStops[index] = { 
+      ...location, 
+      id: stops[index].id || Date.now(),
+      order: index 
+    };
     setStops(newStops);
   };
 
