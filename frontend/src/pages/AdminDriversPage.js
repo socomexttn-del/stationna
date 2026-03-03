@@ -121,11 +121,15 @@ const AdminDriversPage = () => {
             <div className="flex flex-wrap gap-4">
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded bg-primary"></div>
-                <span className="text-sm">VTC - Courses VTC/Standard/Van</span>
+                <span className="text-sm">VTC - Courses VTC standard</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-blue-500"></div>
+                <span className="text-sm">Van - Courses Van (7 places)</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded bg-yellow-500"></div>
-                <span className="text-sm">Taxi - Courses Taxi uniquement</span>
+                <span className="text-sm">Taxi - Courses Taxi (peut aussi faire VTC)</span>
               </div>
             </div>
           </CardContent>
@@ -147,8 +151,9 @@ const AdminDriversPage = () => {
           <div className="grid gap-4">
             {drivers.map(driver => {
               const vehicleTypes = driver.driver_vehicle_types || ['vtc'];
+              const hasVtc = vehicleTypes.includes('vtc');
+              const hasVan = vehicleTypes.includes('van');
               const hasTaxi = vehicleTypes.includes('taxi');
-              const hasVtc = vehicleTypes.includes('vtc') || vehicleTypes.includes('standard') || vehicleTypes.includes('van');
               const isUpdating = updating === driver.id;
               
               return (
@@ -206,6 +211,20 @@ const AdminDriversPage = () => {
                             onCheckedChange={() => toggleVehicleType(driver, 'vtc')}
                             disabled={isUpdating}
                             className="data-[state=checked]:bg-primary"
+                          />
+                        </div>
+                        
+                        {/* Van Toggle */}
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
+                            <Truck className="w-5 h-5 text-blue-500" />
+                            <span className="font-medium text-blue-500">Van</span>
+                          </div>
+                          <Switch
+                            checked={hasVan}
+                            onCheckedChange={() => toggleVehicleType(driver, 'van')}
+                            disabled={isUpdating}
+                            className="data-[state=checked]:bg-blue-500"
                           />
                         </div>
                         

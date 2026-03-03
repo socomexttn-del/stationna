@@ -54,6 +54,7 @@ Application taxi complète "Allogo" avec support multi-rôles (Passager, Chauffe
 - Alertes documents expirés
 - Base clients avec bouton retour
 - Gestion courses planifiées (`GET/POST /api/admin/scheduled-rides`)
+- **Gestion types véhicules chauffeurs** - Page `/admin/drivers` avec 3 toggles indépendants (VTC, Van, Taxi)
 
 ### ✅ Paiements (Stripe)
 - Paiement one-time
@@ -75,6 +76,10 @@ Application taxi complète "Allogo" avec support multi-rôles (Passager, Chauffe
 6. **Bouton retour Admin Clients** - Navigation vers /admin
 7. **Forfait aéroport** - Seulement pour trajets DIRECTS (sans arrêts)
 8. **Courses planifiées** - Proposition aux chauffeurs 15 min avant
+9. **Types véhicules chauffeurs (3 indépendants)** - VTC, Van, Taxi avec logique métier:
+   - Course Van → uniquement chauffeurs avec "van"
+   - Course Taxi → uniquement chauffeurs avec "taxi"
+   - Course VTC → chauffeurs avec "vtc" OU "taxi" (car un taxi peut faire du VTC)
 
 ## Fichiers Clés
 - `/app/backend/server.py` - Backend principal
@@ -82,6 +87,7 @@ Application taxi complète "Allogo" avec support multi-rôles (Passager, Chauffe
 - `/app/frontend/src/pages/PassengerDashboard.js` - Dashboard passager
 - `/app/frontend/src/pages/DriverDashboard.js` - Dashboard chauffeur
 - `/app/frontend/src/pages/AdminClientsPage.js` - Base clients admin
+- `/app/frontend/src/pages/AdminDriversPage.js` - Gestion types véhicules chauffeurs
 - `/app/frontend/src/pages/ScheduledRidesPage.js` - Courses planifiées
 - `/app/frontend/src/components/IntermediateStops.js` - Arrêts intermédiaires
 

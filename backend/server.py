@@ -157,15 +157,19 @@ class NotificationManager:
         query = {"role": "driver", "is_available": True}
         
         # If vehicle_type is specified, filter drivers who can handle this type
+        # Van rides -> only drivers with "van" in their vehicle_types
         # Taxi rides -> only drivers with "taxi" in their vehicle_types
-        # VTC/Standard/Van rides -> only drivers with "vtc" in their vehicle_types
+        # VTC/Standard rides -> drivers with "vtc" OR "taxi" (taxi can do VTC)
         if vehicle_type:
-            if vehicle_type == "taxi":
+            if vehicle_type == "van":
+                # Van rides: only drivers configured for van
+                query["driver_vehicle_types"] = {"$in": ["van"]}
+            elif vehicle_type == "taxi":
                 # Taxi rides: only drivers configured for taxi
                 query["driver_vehicle_types"] = {"$in": ["taxi"]}
             else:
-                # VTC/Standard/Van rides: only drivers configured for VTC
-                query["driver_vehicle_types"] = {"$in": ["vtc", "standard", "van"]}
+                # VTC/Standard rides: drivers with vtc OR taxi (taxi can do VTC)
+                query["driver_vehicle_types"] = {"$in": ["vtc", "taxi"]}
         
         available_drivers = await db.users.find(
             query,
@@ -331,13 +335,14 @@ async def propose_scheduled_ride_to_drivers(ride: dict):
     try:
         ride_id = ride["id"]
         pickup = ride["pickup"]
+        vehicle_type = ride.get("vehicle_type", "standard")
         
         # Parse scheduled time for display
         scheduled_dt = datetime.fromisoformat(ride["scheduled_time"].replace('Z', '+00:00'))
         scheduled_time_str = scheduled_dt.strftime("%H:%M")
         
-        # Find nearest available driver
-        nearest_driver = await find_nearest_driver(pickup, max_distance_km=20.0)
+        # Find nearest available driver filtered by vehicle type
+        nearest_driver = await find_nearest_driver(pickup, max_distance_km=20.0, vehicle_type=vehicle_type)
         
         if nearest_driver:
             # Propose to nearest driver first
@@ -365,13 +370,14 @@ async def propose_scheduled_ride_to_drivers(ride: dict):
                 "distance_km": ride.get("distance_km", 0),
                 "estimated_fare": ride.get("estimated_fare", 0),
                 "passenger_name": ride.get("passenger_name", ""),
-                "is_scheduled": True
+                "is_scheduled": True,
+                "vehicle_type": vehicle_type
             })
             
-            logger.info(f"Scheduled ride {ride_id} proposed to driver {driver_id}")
+            logger.info(f"Scheduled ride {ride_id} ({vehicle_type}) proposed to driver {driver_id}")
             
         else:
-            # No driver available - notify all drivers
+            # No driver available - notify all drivers matching vehicle type
             await db.rides.update_one(
                 {"id": ride_id},
                 {
@@ -390,10 +396,11 @@ async def propose_scheduled_ride_to_drivers(ride: dict):
                 "distance_km": ride.get("distance_km", 0),
                 "estimated_fare": ride.get("estimated_fare", 0),
                 "passenger_name": ride.get("passenger_name", ""),
-                "is_scheduled": True
-            })
+                "is_scheduled": True,
+                "vehicle_type": vehicle_type
+            }, vehicle_type=vehicle_type)
             
-            logger.info(f"Scheduled ride {ride_id} broadcast to all drivers (no nearby driver)")
+            logger.info(f"Scheduled ride {ride_id} ({vehicle_type}) broadcast to all drivers matching vehicle type")
             
     except Exception as e:
         logger.error(f"Error proposing scheduled ride {ride.get('id')}: {e}")
@@ -725,13 +732,27 @@ def calculate_total_distance_with_stops(pickup: Dict, destination: Dict, stops: 
     
     return round(total_distance, 2), stop_distances
 
-async def find_nearest_driver(pickup_location: Dict, max_distance_km: float = 15.0) -> Optional[Dict]:
-    """Find the nearest available driver to the pickup location"""
-    available_drivers = await db.users.find({
+async def find_nearest_driver(pickup_location: Dict, max_distance_km: float = 15.0, vehicle_type: str = None) -> Optional[Dict]:
+    """Find the nearest available driver to the pickup location, optionally filtered by vehicle type"""
+    query = {
         "role": "driver",
         "is_available": True,
         "location": {"$ne": None}
-    }, {"_id": 0}).to_list(100)
+    }
+    
+    # Filter by vehicle type capability
+    if vehicle_type:
+        if vehicle_type == "van":
+            # Van rides: only drivers with "van" capability
+            query["driver_vehicle_types"] = {"$in": ["van"]}
+        elif vehicle_type == "taxi":
+            # Taxi rides: only drivers with "taxi"
+            query["driver_vehicle_types"] = {"$in": ["taxi"]}
+        else:
+            # VTC/Standard rides: drivers with "vtc" OR "taxi" (taxi can do VTC)
+            query["driver_vehicle_types"] = {"$in": ["vtc", "taxi"]}
+    
+    available_drivers = await db.users.find(query, {"_id": 0}).to_list(100)
     
     if not available_drivers:
         return None
@@ -1911,12 +1932,15 @@ async def create_ride(data: RideRequest, current_user: dict = Depends(get_curren
     
     # Filter drivers by vehicle type capability
     vehicle_type = data.vehicle_type
-    if vehicle_type == "taxi":
+    if vehicle_type == "van":
+        # Van rides: only drivers with "van" capability
+        driver_query["driver_vehicle_types"] = {"$in": ["van"]}
+    elif vehicle_type == "taxi":
         # Taxi rides: only drivers with "taxi" in their vehicle_types
         driver_query["driver_vehicle_types"] = {"$in": ["taxi"]}
     else:
-        # VTC/Standard/Van rides: only drivers with "vtc" capability
-        driver_query["driver_vehicle_types"] = {"$in": ["vtc", "standard", "van"]}
+        # VTC/Standard rides: drivers with "vtc" OR "taxi" (taxi can do VTC)
+        driver_query["driver_vehicle_types"] = {"$in": ["vtc", "taxi"]}
     
     # Find nearby drivers filtered by vehicle type and notify them
     available_drivers = await db.users.find(
@@ -4057,13 +4081,13 @@ async def manually_process_scheduled_rides(admin_user: dict = Depends(get_admin_
 
 class DriverVehicleTypesUpdate(BaseModel):
     driver_id: str
-    vehicle_types: List[str]  # ["taxi", "vtc"] or ["taxi"] or ["vtc"]
+    vehicle_types: List[str]  # ["vtc", "van", "taxi"] - independent types
 
 @api_router.put("/admin/drivers/vehicle-types")
 async def update_driver_vehicle_types(data: DriverVehicleTypesUpdate, admin_user: dict = Depends(get_admin_user)):
-    """Update which vehicle types a driver can accept (taxi, vtc, or both)"""
-    # Validate vehicle types
-    valid_types = ["taxi", "vtc", "standard", "van"]
+    """Update which vehicle types a driver can accept (vtc, van, taxi - independent)"""
+    # Validate vehicle types - now 3 independent types
+    valid_types = ["vtc", "van", "taxi"]
     for vt in data.vehicle_types:
         if vt not in valid_types:
             raise HTTPException(status_code=400, detail=f"Invalid vehicle type: {vt}. Valid types are: {valid_types}")
