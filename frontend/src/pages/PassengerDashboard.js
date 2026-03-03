@@ -1234,9 +1234,6 @@ const PassengerDashboard = () => {
                     <Car className="w-4 h-4" />
                     <span>Taxi Parisien - Tarif Réglementé</span>
                   </div>
-                  <p className="text-muted-foreground mb-2">
-                    Tarification officielle : Tarif A, B ou C selon horaires et zone.
-                  </p>
                   <p className="text-yellow-500/80 font-medium">
                     💡 Le prix affiché est une estimation. Le montant final sera celui du compteur.
                   </p>
@@ -1261,7 +1258,7 @@ const PassengerDashboard = () => {
                     </div>
                   </div>
                   <p className="text-[10px] text-muted-foreground mt-2 italic">
-                    Ces forfaits s'appliquent pour les trajets entre Paris intra-muros et les aéroports
+                    Ces forfaits s'appliquent pour les trajets directs entre Paris intra-muros et les aéroports
                   </p>
                 </div>
               </div>
@@ -1392,13 +1389,9 @@ const PassengerDashboard = () => {
                     <div>
                       <p className="font-semibold">
                         {vehicleType === 'taxi' ? 'Taxi Parisien' : vehicleType === 'van' ? 'Allogo Van' : 'Allogo VTC'}
-                        {estimate.fare_details?.is_airport_flat_rate ? (
+                        {estimate.fare_details?.is_airport_flat_rate && (
                           <span className="ml-2 text-xs px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full">
                             ✈️ Forfait Aéroport
-                          </span>
-                        ) : estimate.fare_details?.tariff_label && (
-                          <span className="ml-2 text-xs px-2 py-0.5 bg-yellow-500/20 text-yellow-500 rounded-full">
-                            {estimate.fare_details.tariff_label}
                           </span>
                         )}
                       </p>
@@ -1480,15 +1473,9 @@ const PassengerDashboard = () => {
                   </div>
                 )}
                 
-                {/* Fare breakdown */}
-                {estimate.fare_details && !estimate.fare_details.is_airport_flat_rate && (
+                {/* Fare breakdown - Only show for VTC, not for taxis */}
+                {estimate.fare_details && !estimate.fare_details.is_airport_flat_rate && vehicleType !== 'taxi' && (
                   <div className="space-y-2 pt-3 border-t border-white/10 text-sm">
-                    {/* Taxi specific: show tariff rates */}
-                    {vehicleType === 'taxi' && estimate.fare_details.price_per_km && (
-                      <div className="flex justify-between text-muted-foreground text-xs mb-2 pb-2 border-b border-white/5">
-                        <span>Prix au km: {estimate.fare_details.price_per_km}€ | Horaire: {estimate.fare_details.price_per_hour}€/h</span>
-                      </div>
-                    )}
                     <div className="flex justify-between text-muted-foreground">
                       <span>Prise en charge</span>
                       <span>{estimate.fare_details.prise_en_charge}€</span>
