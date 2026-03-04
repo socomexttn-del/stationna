@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Star, X, Send, ThumbsUp } from 'lucide-react';
 import { Button } from './ui/button';
 import { toast } from 'sonner';
@@ -9,6 +9,17 @@ const RatingModal = ({ ride, onClose, onSubmit, isOpen }) => {
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+
+  // Reset state when modal opens with a new ride
+  useEffect(() => {
+    if (isOpen && ride?.id) {
+      setRating(5);
+      setComment('');
+      setSubmitted(false);
+      setIsSubmitting(false);
+      setHoveredRating(0);
+    }
+  }, [isOpen, ride?.id]);
 
   const quickComments = [
     { emoji: '👍', text: 'Excellent chauffeur' },
@@ -21,16 +32,24 @@ const RatingModal = ({ ride, onClose, onSubmit, isOpen }) => {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
+      console.log('RatingModal - handleSubmit called');
+      console.log('RatingModal - ride object:', ride);
       console.log('RatingModal - Submitting:', { ride_id: ride?.id, rating, comment: comment.trim() || null });
+      
       if (!ride?.id) {
+        console.error('RatingModal - No ride.id found!');
         toast.error('Erreur: ID de course manquant');
+        setIsSubmitting(false);
         return;
       }
+      
       await onSubmit({
         ride_id: ride.id,
         rating,
         comment: comment.trim() || null
       });
+      
+      console.log('RatingModal - Submit successful');
       setSubmitted(true);
       toast.success('Merci pour votre évaluation !');
       setTimeout(() => {
@@ -38,6 +57,7 @@ const RatingModal = ({ ride, onClose, onSubmit, isOpen }) => {
       }, 1500);
     } catch (error) {
       console.error('RatingModal error:', error);
+      console.error('RatingModal error response:', error.response?.data);
       const errorMsg = error.response?.data?.detail || 'Erreur lors de l\'envoi';
       toast.error(errorMsg);
     } finally {

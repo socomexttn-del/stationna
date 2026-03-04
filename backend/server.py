@@ -2433,6 +2433,9 @@ async def create_rating(data: RatingCreate, current_user: dict = Depends(get_cur
     }
     await db.ratings.insert_one(rating)
     
+    # Remove _id added by MongoDB before returning
+    rating.pop("_id", None)
+    
     # Update user's average rating
     all_ratings = await db.ratings.find({"rated_user_id": rated_user_id}, {"_id": 0}).to_list(1000)
     avg_rating = sum(r["rating"] for r in all_ratings) / len(all_ratings)

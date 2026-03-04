@@ -66,7 +66,15 @@ Application taxi complète "Allogo" avec support multi-rôles (Passager, Chauffe
 - Endpoints FCM pour enregistrement tokens
 - Notifications automatiques lors des événements de course
 
-## Modifications Récentes (03/03/2026)
+## Modifications Récentes (04/03/2026)
+
+1. **Bug notation/commentaire CORRIGÉ** - Erreur ObjectId MongoDB résolue
+2. **Reset état RatingModal** - Ajout useEffect pour réinitialiser à chaque ouverture
+3. **Logs debugging ajoutés** - Console.log pour diagnostiquer les problèmes
+4. **Build React terminé** - Dossier `build/` prêt pour déploiement mobile
+5. **Configuration Android complète** - Capacitor, Firebase, google-services.json
+
+## Modifications (03/03/2026)
 
 1. **Suppression frais arrêts intermédiaires** - Plus de +3€ par arrêt
 2. **Tarif Taxi simplifié** - Affiche seulement "Tarif A, B ou C"
@@ -98,14 +106,22 @@ Application taxi complète "Allogo" avec support multi-rôles (Passager, Chauffe
 
 ## Backlog Priorité
 
-### P1 - Important
-- [ ] Bug envoi commentaire fin de course
-- [ ] Test notifications push Firebase sur appareil Android
+### P0 - Critique
+- [ ] Test notifications push Firebase sur appareil Android (APK via déploiement Emergent)
+
+### P1 - Important  
 - [ ] Finaliser refactoring backend (activer main.py)
+- [ ] Vérifier ordre des arrêts intermédiaires
 
 ### P2 - Normal
 - [ ] Stabilité build frontend
 - [ ] Tests automatisés Pytest
+- [ ] Drag-and-drop pour réordonner arrêts
+
+### ✅ TERMINÉ
+- [x] Bug notation/commentaire fin de course (04/03/2026)
+- [x] Types véhicules chauffeurs VTC/Van/Taxi (03/03/2026)
+- [x] Courses planifiées dispatch 15 min avant (03/03/2026)
 
 ## Notes Techniques
 - AppId Capacitor: `com.allogo.app`
