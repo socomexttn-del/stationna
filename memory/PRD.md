@@ -66,7 +66,14 @@ Application taxi complète "Allogo" avec support multi-rôles (Passager, Chauffe
 - Endpoints FCM pour enregistrement tokens
 - Notifications automatiques lors des événements de course
 
-## Modifications Récentes (04/03/2026)
+## Modifications Récentes (05/03/2026)
+
+1. **Passager - ETA vers destination** : Affichage du temps restant et distance pendant la course (in_progress)
+2. **Chauffeur - Isolation des courses** : Un chauffeur avec une course active ne reçoit plus de nouvelles demandes
+3. **Backend - Double protection** : Vérification avant accept_ride + filtrage dans get_available_rides
+4. **Synchronisation état chauffeur** : L'état "en ligne" se met automatiquement à false quand course active
+
+## Modifications (04/03/2026)
 
 1. **Bug notation/commentaire CORRIGÉ** - Erreur ObjectId MongoDB résolue
 2. **Reset état RatingModal** - Ajout useEffect pour réinitialiser à chaque ouverture

@@ -568,6 +568,11 @@ const DriverDashboard = () => {
     try {
       const response = await api.get('/rides/active');
       setActiveRide(response.data);
+      
+      // If there's an active ride, ensure driver is marked as unavailable
+      if (response.data && (response.data.status === 'accepted' || response.data.status === 'in_progress')) {
+        setIsAvailable(false);
+      }
     } catch (error) {
       console.error('Error fetching active ride:', error);
     }

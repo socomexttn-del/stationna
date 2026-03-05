@@ -1983,6 +1983,19 @@ async def create_ride(data: RideRequest, current_user: dict = Depends(get_curren
 async def get_available_rides(current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "driver":
         raise HTTPException(status_code=403, detail="Only drivers can view available rides")
+    
+    # Don't show available rides if driver already has an active ride
+    active_ride = await db.rides.find_one({
+        "driver_id": current_user["id"],
+        "status": {"$in": ["accepted", "in_progress"]}
+    })
+    if active_ride:
+        return []  # Driver has an active ride, don't show new ones
+    
+    # Check if driver is available
+    if not current_user.get("is_available", False):
+        return []  # Driver is offline
+    
     rides = await db.rides.find({"status": "pending"}, {"_id": 0}).to_list(100)
     return [RideResponse(**r) for r in rides]
 
@@ -2011,6 +2024,14 @@ async def get_scheduled_rides_early(current_user: dict = Depends(get_current_use
 async def accept_ride(ride_id: str, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "driver":
         raise HTTPException(status_code=403, detail="Only drivers can accept rides")
+    
+    # Check if driver already has an active ride
+    existing_active = await db.rides.find_one({
+        "driver_id": current_user["id"],
+        "status": {"$in": ["accepted", "in_progress"]}
+    })
+    if existing_active:
+        raise HTTPException(status_code=400, detail="Vous avez déjà une course en cours. Terminez-la d'abord.")
     
     ride = await db.rides.find_one({"id": ride_id, "status": "pending"}, {"_id": 0})
     if not ride:

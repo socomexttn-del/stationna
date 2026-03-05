@@ -50,6 +50,10 @@ const PassengerDashboard = () => {
   const [stops, setStops] = useState([]); // Intermediate stops
   const [passengers, setPassengers] = useState(1);
   const [vehicleType, setVehicleType] = useState('standard');
+  
+  // ETA to destination during ride
+  const [etaToDestination, setEtaToDestination] = useState(null);
+  const [routeToDestination, setRouteToDestination] = useState(null);
 
   // Keep AudioContext alive for sounds - initialized on first user interaction
   const audioContextRef = useRef(null);
@@ -602,6 +606,49 @@ const PassengerDashboard = () => {
     };
   }, [activeRide, fetchDriverLocation]);
 
+  // Calculate ETA to destination when ride is in progress
+  useEffect(() => {
+    const calculateEtaToDestination = async () => {
+      if (activeRide && activeRide.status === 'in_progress' && driverLocation && activeRide.destination) {
+        try {
+          const MAPBOX_TOKEN = process.env.REACT_APP_MAPBOX_TOKEN;
+          const destLat = activeRide.destination.lat;
+          const destLng = activeRide.destination.lng;
+          
+          const response = await fetch(
+            `https://api.mapbox.com/directions/v5/mapbox/driving/${driverLocation.lng},${driverLocation.lat};${destLng},${destLat}?access_token=${MAPBOX_TOKEN}&geometries=geojson`
+          );
+          const data = await response.json();
+          
+          if (data.routes && data.routes[0]) {
+            const route = data.routes[0];
+            const durationMinutes = Math.round(route.duration / 60);
+            const distanceKm = (route.distance / 1000).toFixed(1);
+            
+            setEtaToDestination({
+              minutes: durationMinutes,
+              distance: distanceKm
+            });
+            setRouteToDestination(route.geometry);
+          }
+        } catch (error) {
+          console.error('Error calculating ETA to destination:', error);
+        }
+      } else if (!activeRide || activeRide.status !== 'in_progress') {
+        setEtaToDestination(null);
+        setRouteToDestination(null);
+      }
+    };
+
+    calculateEtaToDestination();
+    // Recalculate every 30 seconds during ride
+    const etaInterval = activeRide?.status === 'in_progress' ? setInterval(calculateEtaToDestination, 30000) : null;
+    
+    return () => {
+      if (etaInterval) clearInterval(etaInterval);
+    };
+  }, [activeRide, driverLocation]);
+
   // Track previous ride status to detect changes
   const [prevRideStatus, setPrevRideStatus] = useState(null);
   const [prevDriverArrived, setPrevDriverArrived] = useState(false);
@@ -1014,6 +1061,27 @@ const PassengerDashboard = () => {
                   <p className="font-semibold text-primary">{activeRide.driver_eta_minutes} min</p>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+        
+        {/* ETA to destination badge - Show during ride in progress */}
+        {activeRide && activeRide.status === 'in_progress' && etaToDestination && (
+          <div className="absolute top-24 left-4 right-4 z-30">
+            <div className="glass rounded-xl p-3 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center animate-pulse">
+                  <Navigation className="w-5 h-5 text-blue-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Course en cours</p>
+                  <p className="font-semibold text-blue-400">{etaToDestination.distance} km restants</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">Arrivée dans</p>
+                <p className="font-semibold text-primary text-xl">{etaToDestination.minutes} min</p>
+              </div>
             </div>
           </div>
         )}
