@@ -191,6 +191,16 @@ const AuthPage = () => {
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
+                {isLogin && (
+                  <div className="text-right mt-1">
+                    <a 
+                      href="/forgot-password" 
+                      className="text-sm text-primary hover:underline"
+                    >
+                      Mot de passe oublié ?
+                    </a>
+                  </div>
+                )}
               </div>
 
               <Button

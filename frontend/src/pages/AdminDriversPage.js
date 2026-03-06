@@ -4,9 +4,10 @@ import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Switch } from '../components/ui/switch';
+import { Input } from '../components/ui/input';
 import { 
   Users, Car, ArrowLeft, RefreshCw, Star, MapPin, 
-  Phone, Mail, Check, Loader2, Truck
+  Phone, Mail, Check, Loader2, Truck, Key, X
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -17,6 +18,9 @@ const AdminDriversPage = () => {
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(null);
+  const [resetPasswordModal, setResetPasswordModal] = useState(null); // driver object or null
+  const [newPassword, setNewPassword] = useState('');
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   useEffect(() => {
     if (user?.role !== 'admin') {
@@ -77,6 +81,30 @@ const AdminDriversPage = () => {
     }
     
     updateVehicleTypes(driver.id, newTypes);
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetPasswordModal || !newPassword) return;
+    
+    if (newPassword.length < 6) {
+      toast.error('Le mot de passe doit contenir au moins 6 caractères');
+      return;
+    }
+    
+    setResettingPassword(true);
+    try {
+      await api.post('/admin/reset-user-password', {
+        user_id: resetPasswordModal.id,
+        new_password: newPassword
+      });
+      toast.success(`Mot de passe réinitialisé pour ${resetPasswordModal.email}`);
+      setResetPasswordModal(null);
+      setNewPassword('');
+    } catch (error) {
+      toast.error('Erreur lors de la réinitialisation');
+    } finally {
+      setResettingPassword(false);
+    }
   };
 
   return (
@@ -190,6 +218,15 @@ const AdminDriversPage = () => {
                             <span className="text-xs text-muted-foreground">
                               {driver.total_rides || 0} courses
                             </span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setResetPasswordModal(driver)}
+                              className="text-xs h-6 px-2"
+                            >
+                              <Key className="w-3 h-3 mr-1" />
+                              Réinitialiser MDP
+                            </Button>
                           </div>
                         </div>
                       </div>
@@ -250,6 +287,73 @@ const AdminDriversPage = () => {
           </div>
         )}
       </div>
+
+      {/* Reset Password Modal */}
+      {resetPasswordModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Key className="w-5 h-5 text-primary" />
+                Réinitialiser le mot de passe
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setResetPasswordModal(null);
+                  setNewPassword('');
+                }}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Réinitialiser le mot de passe pour :
+              </p>
+              <div className="bg-muted/30 rounded-lg p-3">
+                <p className="font-semibold">{resetPasswordModal.first_name} {resetPasswordModal.last_name}</p>
+                <p className="text-sm text-muted-foreground">{resetPasswordModal.email}</p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Nouveau mot de passe</label>
+                <Input
+                  type="text"
+                  placeholder="Nouveau mot de passe (min. 6 caractères)"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  minLength={6}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    setResetPasswordModal(null);
+                    setNewPassword('');
+                  }}
+                >
+                  Annuler
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={handleResetPassword}
+                  disabled={resettingPassword || newPassword.length < 6}
+                >
+                  {resettingPassword ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : (
+                    <Check className="w-4 h-4 mr-2" />
+                  )}
+                  Confirmer
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };

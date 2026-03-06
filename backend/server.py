@@ -649,6 +649,18 @@ class PaymentHistoryResponse(BaseModel):
     ride_pickup: str
     ride_destination: str
 
+# Password Reset Models
+class PasswordResetRequest(BaseModel):
+    email: str
+
+class PasswordResetConfirm(BaseModel):
+    token: str
+    new_password: str
+
+class AdminPasswordReset(BaseModel):
+    user_id: str
+    new_password: str
+
 # ======================== HELPERS ========================
 
 def hash_password(password: str) -> str:
@@ -1210,6 +1222,124 @@ async def login(credentials: UserLogin):
 @api_router.get("/auth/me", response_model=UserResponse)
 async def get_me(current_user: dict = Depends(get_current_user)):
     return UserResponse(**{k: v for k, v in current_user.items() if k != "password_hash"})
+
+# ======================== PASSWORD RESET ROUTES ========================
+
+@api_router.post("/auth/forgot-password")
+async def forgot_password(data: PasswordResetRequest):
+    """Request password reset - sends email with reset link"""
+    user = await db.users.find_one({"email": data.email.lower()}, {"_id": 0})
+    
+    # Always return success to prevent email enumeration
+    if not user:
+        return {"success": True, "message": "Si cet email existe, un lien de réinitialisation a été envoyé"}
+    
+    # Generate reset token
+    reset_token = str(uuid.uuid4())
+    expires_at = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
+    
+    # Store reset token
+    await db.password_resets.delete_many({"user_id": user["id"]})  # Remove old tokens
+    await db.password_resets.insert_one({
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "token": reset_token,
+        "expires_at": expires_at,
+        "used": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    # Send email with reset link
+    if RESEND_API_KEY:
+        try:
+            frontend_url = os.environ.get('FRONTEND_URL', 'https://taxi-connect-47.preview.emergentagent.com')
+            reset_link = f"{frontend_url}/reset-password?token={reset_token}"
+            
+            params = {
+                "from": SENDER_EMAIL,
+                "to": [user["email"]],
+                "subject": "Allogo - Réinitialisation de votre mot de passe",
+                "html": f"""
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #f59e0b;">Allogo</h2>
+                    <p>Bonjour {user.get('first_name', '')},</p>
+                    <p>Vous avez demandé la réinitialisation de votre mot de passe.</p>
+                    <p>Cliquez sur le bouton ci-dessous pour créer un nouveau mot de passe :</p>
+                    <a href="{reset_link}" style="display: inline-block; background-color: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 20px 0;">
+                        Réinitialiser mon mot de passe
+                    </a>
+                    <p style="color: #666; font-size: 12px;">Ce lien expire dans 1 heure.</p>
+                    <p style="color: #666; font-size: 12px;">Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</p>
+                </div>
+                """
+            }
+            await asyncio.to_thread(resend.Emails.send, params)
+            logger.info(f"Password reset email sent to {user['email']}")
+        except Exception as e:
+            logger.error(f"Failed to send password reset email: {e}")
+    
+    return {"success": True, "message": "Si cet email existe, un lien de réinitialisation a été envoyé"}
+
+@api_router.post("/auth/reset-password")
+async def reset_password(data: PasswordResetConfirm):
+    """Reset password using token from email"""
+    reset_record = await db.password_resets.find_one({
+        "token": data.token,
+        "used": False
+    }, {"_id": 0})
+    
+    if not reset_record:
+        raise HTTPException(status_code=400, detail="Lien invalide ou expiré")
+    
+    # Check expiration
+    expires_at = datetime.fromisoformat(reset_record["expires_at"].replace('Z', '+00:00'))
+    if datetime.now(timezone.utc) > expires_at:
+        raise HTTPException(status_code=400, detail="Ce lien a expiré. Veuillez faire une nouvelle demande.")
+    
+    # Validate password
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Le mot de passe doit contenir au moins 6 caractères")
+    
+    # Update password
+    hashed = hash_password(data.new_password)
+    await db.users.update_one(
+        {"id": reset_record["user_id"]},
+        {"$set": {"password_hash": hashed}}
+    )
+    
+    # Mark token as used
+    await db.password_resets.update_one(
+        {"token": data.token},
+        {"$set": {"used": True}}
+    )
+    
+    return {"success": True, "message": "Mot de passe modifié avec succès"}
+
+@api_router.post("/admin/reset-user-password")
+async def admin_reset_user_password(data: AdminPasswordReset, admin_user: dict = Depends(get_admin_user)):
+    """Admin can reset any user's password"""
+    user = await db.users.find_one({"id": data.user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+    
+    # Validate password
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Le mot de passe doit contenir au moins 6 caractères")
+    
+    # Update password
+    hashed = hash_password(data.new_password)
+    await db.users.update_one(
+        {"id": data.user_id},
+        {"$set": {"password_hash": hashed}}
+    )
+    
+    logger.info(f"Admin {admin_user['email']} reset password for user {user['email']}")
+    
+    return {
+        "success": True,
+        "message": f"Mot de passe réinitialisé pour {user['email']}",
+        "user_email": user["email"]
+    }
 
 # ======================== FCM TOKEN ROUTES ========================
 

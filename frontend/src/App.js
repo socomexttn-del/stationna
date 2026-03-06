@@ -18,6 +18,7 @@ import PaymentCancel from './pages/PaymentCancel';
 import ScheduledRidesPage from './pages/ScheduledRidesPage';
 import PaymentsPage from './pages/PaymentsPage';
 import WalletPage from './pages/WalletPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import './App.css';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -71,6 +72,8 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
       <Route path="/auth" element={<PublicRoute><AuthPage /></PublicRoute>} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/forgot-password" element={<ResetPasswordPage />} />
       <Route path="/passenger" element={<ProtectedRoute allowedRoles={['passenger']}><PassengerDashboard /></ProtectedRoute>} />
       <Route path="/driver" element={<ProtectedRoute allowedRoles={['driver']}><DriverDashboard /></ProtectedRoute>} />
       <Route path="/driver/vehicle" element={<ProtectedRoute allowedRoles={['driver']}><DriverVehiclePage /></ProtectedRoute>} />

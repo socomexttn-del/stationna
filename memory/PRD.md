@@ -74,6 +74,13 @@ Application taxi complète "Allogo" avec support multi-rôles (Passager, Chauffe
    - Un chauffeur VAN ne voit plus les courses TAXI
    - Un chauffeur TAXI ne voit plus les courses VAN
 
+2. **NOUVEAU - Réinitialisation mot de passe** :
+   - Page `/forgot-password` pour demande par email
+   - Email avec lien de réinitialisation (via Resend)
+   - Page `/reset-password?token=xxx` pour créer nouveau MDP
+   - Admin peut réinitialiser le MDP via `/admin/drivers`
+   - Endpoint `/api/admin/reset-user-password`
+
 ## Modifications (05/03/2026)
 
 1. **Passager - ETA vers destination** : Affichage du temps restant et distance pendant la course (in_progress)
