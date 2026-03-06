@@ -1883,8 +1883,8 @@ async def create_ride(data: RideRequest, current_user: dict = Depends(get_curren
     commission_amount = round(fare * commission_rate, 2)
     driver_earnings = round(fare - commission_amount, 2)
     
-    # Find nearest available driver
-    nearest_driver_info = await find_nearest_driver(pickup)
+    # Find nearest available driver filtered by vehicle type
+    nearest_driver_info = await find_nearest_driver(pickup, vehicle_type=data.vehicle_type)
     
     ride = {
         "id": ride_id,
@@ -1996,7 +1996,34 @@ async def get_available_rides(current_user: dict = Depends(get_current_user)):
     if not current_user.get("is_available", False):
         return []  # Driver is offline
     
-    rides = await db.rides.find({"status": "pending"}, {"_id": 0}).to_list(100)
+    # Get driver's vehicle types
+    driver_vehicle_types = current_user.get("driver_vehicle_types", ["vtc"])
+    
+    # Build query to filter rides by vehicle type compatibility
+    # Van rides -> only if driver has "van"
+    # Taxi rides -> only if driver has "taxi"
+    # VTC/Standard rides -> if driver has "vtc" OR "taxi"
+    vehicle_type_conditions = []
+    
+    if "van" in driver_vehicle_types:
+        vehicle_type_conditions.append({"vehicle_type": "van"})
+    
+    if "taxi" in driver_vehicle_types:
+        vehicle_type_conditions.append({"vehicle_type": "taxi"})
+    
+    if "vtc" in driver_vehicle_types or "taxi" in driver_vehicle_types:
+        # VTC drivers can take VTC/standard rides, Taxi drivers can also take VTC rides
+        vehicle_type_conditions.append({"vehicle_type": {"$in": ["vtc", "standard", None]}})
+    
+    if not vehicle_type_conditions:
+        return []  # Driver has no valid vehicle types configured
+    
+    # Query for pending rides matching driver's vehicle types
+    rides = await db.rides.find({
+        "status": "pending",
+        "$or": vehicle_type_conditions
+    }, {"_id": 0}).to_list(100)
+    
     return [RideResponse(**r) for r in rides]
 
 @api_router.get("/rides/active", response_model=Optional[RideResponse])

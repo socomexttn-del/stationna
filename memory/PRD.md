@@ -66,7 +66,15 @@ Application taxi complète "Allogo" avec support multi-rôles (Passager, Chauffe
 - Endpoints FCM pour enregistrement tokens
 - Notifications automatiques lors des événements de course
 
-## Modifications Récentes (05/03/2026)
+## Modifications Récentes (06/03/2026)
+
+1. **BUG CORRIGÉ - Filtrage courses par type véhicule** :
+   - `find_nearest_driver()` reçoit maintenant le `vehicle_type`
+   - `/rides/available` filtre les courses selon les types du chauffeur
+   - Un chauffeur VAN ne voit plus les courses TAXI
+   - Un chauffeur TAXI ne voit plus les courses VAN
+
+## Modifications (05/03/2026)
 
 1. **Passager - ETA vers destination** : Affichage du temps restant et distance pendant la course (in_progress)
 2. **Chauffeur - Isolation des courses** : Un chauffeur avec une course active ne reçoit plus de nouvelles demandes
