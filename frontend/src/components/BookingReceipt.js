@@ -64,6 +64,12 @@ const BookingReceipt = ({ ride, onClose, isOpen }) => {
             <div class="section-title">DÉTAILS DE LA COURSE</div>
             <div class="row"><span class="label">Date</span><span class="value">${formatDate(ride.created_at)}</span></div>
             <div class="row"><span class="label">Prise en charge</span><span class="value">${ride.pickup?.address || '-'}</span></div>
+            ${ride.stops && ride.stops.length > 0 ? ride.stops.map((stop, i) => `
+              <div class="row" style="color: #f59e0b;">
+                <span class="label">↳ Arrêt ${i + 1}</span>
+                <span class="value">${stop.address}</span>
+              </div>
+            `).join('') : ''}
             <div class="row"><span class="label">Destination</span><span class="value">${ride.destination?.address || '-'}</span></div>
             <div class="row"><span class="label">Distance</span><span class="value">${ride.distance_km} km</span></div>
             <div class="row"><span class="label">Passagers</span><span class="value">${ride.passenger_count}</span></div>
@@ -186,6 +192,24 @@ const BookingReceipt = ({ ride, onClose, isOpen }) => {
                 </div>
                 <span className="font-medium text-right max-w-[60%] text-sm">{ride.pickup?.address}</span>
               </div>
+              
+              {/* Intermediate Stops */}
+              {ride.stops && ride.stops.length > 0 && (
+                <div className="pl-2 border-l-2 border-amber-500/30 ml-2 space-y-2">
+                  {ride.stops.map((stop, index) => (
+                    <div key={index} className="flex items-start justify-between">
+                      <div className="flex items-center gap-2 text-sm">
+                        <div className="w-4 h-4 rounded-full bg-amber-500/30 flex items-center justify-center text-[10px] font-bold text-amber-500">
+                          {index + 1}
+                        </div>
+                        <span className="text-amber-500">Arrêt {index + 1}</span>
+                      </div>
+                      <span className="font-medium text-right max-w-[55%] text-sm text-amber-400">{stop.address}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2 text-sm">
                   <Navigation className="w-4 h-4 text-primary" />

@@ -1131,6 +1131,24 @@ const DriverDashboard = () => {
                     <p className="text-sm">{activeRide.pickup.address}</p>
                   </div>
                 </div>
+                
+                {/* Intermediate Stops */}
+                {activeRide.stops && activeRide.stops.length > 0 && (
+                  <div className="pl-4 border-l-2 border-amber-500/30 ml-2 space-y-2">
+                    {activeRide.stops.map((stop, index) => (
+                      <div key={index} className="flex items-start gap-3">
+                        <div className="w-5 h-5 rounded-full bg-amber-500/30 flex items-center justify-center text-xs font-bold text-amber-500 mt-0.5">
+                          {index + 1}
+                        </div>
+                        <div>
+                          <p className="text-xs text-amber-500">Arrêt {index + 1}</p>
+                          <p className="text-sm text-amber-400">{stop.address}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
                 <div className="flex items-start gap-3">
                   <Navigation className="w-5 h-5 text-primary mt-0.5" />
                   <div>

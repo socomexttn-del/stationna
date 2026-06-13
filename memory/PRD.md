@@ -143,8 +143,8 @@ Application taxi complète "Allogo" avec support multi-rôles (Passager, Chauffe
 - [ ] Test notifications push Firebase sur appareil Android (APK via déploiement Emergent)
 
 ### P1 - Important  
-- [ ] Finaliser refactoring backend (activer main.py)
-- [ ] Vérifier ordre des arrêts intermédiaires
+- [ ] Finaliser refactoring backend (activer main.py) - 25 endpoints manquants dans routers modulaires
+- [x] Vérifier ordre des arrêts intermédiaires - Vérifié OK, affichage ajouté dans BookingReceipt et DriverDashboard
 
 ### P2 - Normal
 - [ ] Stabilité build frontend
@@ -153,6 +153,8 @@ Application taxi complète "Allogo" avec support multi-rôles (Passager, Chauffe
 
 ### ✅ TERMINÉ
 - [x] Refus de course avec réassignation (13/06/2026)
+- [x] Arrêts intermédiaires: ordre vérifié OK, affichage ajouté dans reçu et dashboard chauffeur (13/06/2026)
+- [x] Tarifs aéroport: vérifiés conformes aux tarifs officiels 2025 (13/06/2026)
 - [x] Bug notation/commentaire fin de course (04/03/2026)
 - [x] Types véhicules chauffeurs VTC/Van/Taxi (03/03/2026)
 - [x] Courses planifiées dispatch 15 min avant (03/03/2026)
