@@ -66,7 +66,17 @@ Application taxi complète "Allogo" avec support multi-rôles (Passager, Chauffe
 - Endpoints FCM pour enregistrement tokens
 - Notifications automatiques lors des événements de course
 
-## Modifications Récentes (06/03/2026)
+## Modifications Récentes (13/06/2026)
+
+1. **NOUVEAU - Refus de course avec réassignation** :
+   - Endpoint POST `/api/rides/{ride_id}/refuse` pour refuser une course disponible
+   - Le chauffeur qui refuse est ajouté à la liste `refused_by` de la course
+   - La course disparaît de sa liste mais reste visible pour les autres chauffeurs
+   - Après 5 secondes, le backend propose la course au prochain chauffeur le plus proche
+   - Frontend: `dismissRide()` appelle maintenant l'API `/refuse`
+   - Filtrage `refused_by.$nin` dans `/rides/available` pour exclure les courses refusées
+
+## Modifications (06/03/2026)
 
 1. **BUG CORRIGÉ - Filtrage courses par type véhicule** :
    - `find_nearest_driver()` reçoit maintenant le `vehicle_type`
@@ -129,6 +139,7 @@ Application taxi complète "Allogo" avec support multi-rôles (Passager, Chauffe
 ## Backlog Priorité
 
 ### P0 - Critique
+- [x] Refus de course avec réassignation au prochain chauffeur après 5s (13/06/2026)
 - [ ] Test notifications push Firebase sur appareil Android (APK via déploiement Emergent)
 
 ### P1 - Important  
@@ -141,6 +152,7 @@ Application taxi complète "Allogo" avec support multi-rôles (Passager, Chauffe
 - [ ] Drag-and-drop pour réordonner arrêts
 
 ### ✅ TERMINÉ
+- [x] Refus de course avec réassignation (13/06/2026)
 - [x] Bug notation/commentaire fin de course (04/03/2026)
 - [x] Types véhicules chauffeurs VTC/Van/Taxi (03/03/2026)
 - [x] Courses planifiées dispatch 15 min avant (03/03/2026)
