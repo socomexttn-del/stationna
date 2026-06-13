@@ -550,7 +550,8 @@ const DriverDashboard = () => {
     }
     const interval = setInterval(() => {
       fetchActiveRide();
-      if (isAvailable && !activeRide) fetchAvailableRides();
+      // Always fetch available rides to show notifications
+      if (!activeRide) fetchAvailableRides();
     }, 5000);
     return () => clearInterval(interval);
   }, [isAvailable]);
@@ -1242,8 +1243,8 @@ const DriverDashboard = () => {
           onClose={() => setShowReceipt(false)}
         />
 
-        {/* Available Rides */}
-        {!activeRide && isAvailable && (
+        {/* Available Rides - Show when online OR when there are rides (to not miss notifications) */}
+        {!activeRide && (isAvailable || availableRides.length > 0) && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold" style={{ fontFamily: 'Space Grotesk' }}>Courses disponibles</h2>
@@ -1253,6 +1254,12 @@ const DriverDashboard = () => {
                 </span>
               )}
             </div>
+            
+            {!isAvailable && availableRides.length > 0 && (
+              <div className="bg-amber-500/20 border border-amber-500/50 rounded-lg p-3 text-amber-500 text-sm">
+                ⚠️ Vous êtes hors ligne. Passez en ligne pour accepter ces courses.
+              </div>
+            )}
             
             {availableRides.length === 0 ? (
               <Card className="bg-card border-border/50">
