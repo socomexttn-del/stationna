@@ -653,12 +653,21 @@ const DriverDashboard = () => {
     }
   };
 
-  const dismissRide = (rideId) => {
-    // Add to dismissed list so it won't show again
+  const dismissRide = async (rideId) => {
+    // Add to dismissed list so it won't show again locally
     setDismissedRides(prev => [...prev, rideId]);
     // Remove from available rides
     setAvailableRides(prev => prev.filter(r => r.id !== rideId));
-    toast.info('Course ignorée');
+    
+    // Call API to register refusal and trigger reassignment after 5 seconds
+    try {
+      await api.post(`/rides/${rideId}/refuse`);
+      toast.info('Course refusée - Elle sera proposée à un autre chauffeur');
+    } catch (error) {
+      // Still dismissed locally, just log the error
+      console.error('Error refusing ride:', error);
+      toast.info('Course ignorée');
+    }
   };
 
   const startRide = async () => {

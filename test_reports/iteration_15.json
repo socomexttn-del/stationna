@@ -1,0 +1,81 @@
+{
+  "summary": "End-to-end testing of ride refusal flow (POST /api/rides/{ride_id}/refuse + refused_by filtering + frontend dismissRide). All 7 backend tests PASS (100%). UI flow verified: 'Refuser' button triggers API call, ride disappears for refusing driver, remains visible for other drivers, toast 'Course refusée - Elle sera proposée à un autre chauffeur' shown.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "DriverDashboard", "issues": ["'Géolocalisation requise' warning shown even when driver is marked online via API - acceptable since UI prompts browser geo permission, but worth noting"]}
+    ]
+  },
+
+  "passed_tests": [
+    "Backend: POST /api/rides/{ride_id}/refuse returns 200 {success:true, message:'Course refusée...'}",
+    "Backend: GET /api/rides/available correctly filters out rides where current driver is in refused_by",
+    "Backend: Refused ride remains visible to OTHER drivers (refused_by is driver-specific)",
+    "Backend: /refuse returns 404 for non-existent ride id",
+    "Backend: /refuse returns 403 when called by a passenger (role check)",
+    "Backend: /refuse returns 401/403 when called without auth",
+    "Backend: Idempotent refuse (calling twice on same pending ride returns 200 or 404 gracefully)",
+    "Backend: Both test drivers (driver@test.com=['vtc'], driver3@test.com=['vtc','van']) login correctly",
+    "Frontend: Driver dashboard loads at /driver after auth",
+    "Frontend: dismiss-ride-{id} button present with correct data-testid",
+    "Frontend: Clicking 'Refuser' triggers POST /api/rides/{id}/refuse",
+    "Frontend: Ride card disappears from 'Courses disponibles' immediately after refuse",
+    "Frontend: Toast 'Course refusée - Elle sera proposée à un autre chauffeur' shown after refuse",
+    "Frontend: After refuse, 'Aucune course disponible pour le moment' empty state shown",
+    "Integration: After UI refuse, API GET /rides/available for driver1 returns 0 rides; driver2 still sees 1 ride - filtering works correctly"
+  ],
+
+  "failed_tests": [],
+
+  "test_report_links": [
+    "/app/backend/tests/test_refuse_ride.py",
+    "/app/test_reports/pytest/pytest_refuse_ride.xml"
+  ],
+
+  "action_items": [
+    "NOTE: Task description says driver@test.com is a 'Van' driver, but actual seed data has driver_vehicle_types=['vtc']. If van filtering needs testing, update seed for driver@test.com to include 'van' or use a dedicated van-only driver account.",
+    "OPTIONAL: The 5-second asyncio.create_task() reassignment is fire-and-forget; if backend is restarted within 5s after a refusal, the next-driver notification is lost. Consider using a persistent job queue (Celery / Mongo-backed scheduler) for production. Currently this is not a blocker."
+  ],
+
+  "critical_code_review_comments": [
+    "/api/rides/{ride_id}/refuse: Correctly uses $nin filter on refused_by; works for missing field and empty array (verified)",
+    "Background reassignment via asyncio.create_task() is non-persistent across backend restarts (server.py:2253) - acceptable for MVP but document as known limitation",
+    "dismissRide() in DriverDashboard.js:656 correctly optimistically removes ride from UI, then calls API; on API failure it shows fallback toast 'Course ignorée' but ride is already removed locally - this means a failed /refuse won't restore the card (driver loses ride from his view). Consider re-adding to availableRides on error.",
+    "find_nearest_driver in /refuse uses max_distance_km=20.0 - hardcoded; consider env var for tunability",
+    "server.py is 4504 lines - exceeds 700-line guideline; should be split into routers (auth, rides, drivers, admin, wallet, payments)"
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_refuse_ride.py (new)",
+    "/app/test_reports/pytest/pytest_refuse_ride.xml (new)"
+  ],
+
+  "success_rate": {
+    "backend": "100% (7/7 tests passed)",
+    "frontend": "100% (UI refuse flow fully verified)"
+  },
+
+  "test_credentials": {
+    "passenger": {"email": "passenger@test.com", "password": "password"},
+    "driver1_vtc": {"email": "driver@test.com", "password": "password", "vehicle_types": ["vtc"]},
+    "driver2_vtc_van": {"email": "driver3@test.com", "password": "password", "vehicle_types": ["vtc", "van"]},
+    "admin": {"email": "admin@volttaxi.com", "password": "admin123"}
+  },
+
+  "seed_data_creation": "None - test creates throwaway rides via API and cancels them in cleanup",
+
+  "retest_needed": false,
+
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Refuse flow fully working end-to-end. localStorage token key is 'volt_token' (not 'token'). Driver availability PUT endpoint is /api/users/availability (not /api/drivers/availability). Vehicle types for test drivers: driver@test.com=['vtc'], driver3@test.com=['vtc','van']. The 5-second async reassignment task (asyncio.create_task) was NOT directly tested by waiting 5s; only the immediate refused_by filtering was verified. If main agent wants to test the 5s reassignment, add a test that sleeps 6s and checks next_driver notification via websocket or notification_manager mock.",
+
+  "rca of the issue": "N/A - feature works as expected. Previous implementation issue (unused BackgroundTasks param + missing /refuse call from frontend + missing $nin filter) was correctly fixed per the agent_to_agent_context_note."
+}

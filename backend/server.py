@@ -209,12 +209,12 @@ class NotificationManager:
                 data={"type": notification_type, **{k: str(v) for k, v in data.items() if v is not None}}
             )
     
-    async def _send_push_to_all_drivers(self, notification_type: str, data: dict, vehicle_type: str = None):
+    async def _send_push_to_all_drivers(self, notification_type: str, data: dict, vehicle_type: str = None, exclude_driver_ids: list = None):
         """Send push notification to all available drivers filtered by vehicle type"""
         if not is_firebase_initialized():
             return
         
-        tokens = await self._get_all_driver_fcm_tokens(vehicle_type)
+        tokens = await self._get_all_driver_fcm_tokens(vehicle_type, exclude_driver_ids)
         if not tokens:
             return
         
@@ -245,7 +245,7 @@ class NotificationManager:
         
         return notification
     
-    async def notify_all_drivers(self, notification_type: str, data: dict, vehicle_type: str = None):
+    async def notify_all_drivers(self, notification_type: str, data: dict, vehicle_type: str = None, exclude_driver_ids: list = None):
         """Broadcast notification to available drivers filtered by vehicle type"""
         notification = {
             "id": str(uuid.uuid4()),
@@ -254,13 +254,14 @@ class NotificationManager:
             "type": notification_type,
             "data": data,
             "vehicle_type_filter": vehicle_type,  # Track which type this notification is for
+            "exclude_driver_ids": exclude_driver_ids or [],  # Drivers who refused
             "read": False,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.notifications.insert_one(notification)
         
         # Send push notification to filtered drivers
-        await self._send_push_to_all_drivers(notification_type, data, vehicle_type)
+        await self._send_push_to_all_drivers(notification_type, data, vehicle_type, exclude_driver_ids)
         
         return notification
     
@@ -744,13 +745,17 @@ def calculate_total_distance_with_stops(pickup: Dict, destination: Dict, stops: 
     
     return round(total_distance, 2), stop_distances
 
-async def find_nearest_driver(pickup_location: Dict, max_distance_km: float = 15.0, vehicle_type: str = None) -> Optional[Dict]:
+async def find_nearest_driver(pickup_location: Dict, max_distance_km: float = 15.0, vehicle_type: str = None, exclude_driver_ids: list = None) -> Optional[Dict]:
     """Find the nearest available driver to the pickup location, optionally filtered by vehicle type"""
     query = {
         "role": "driver",
         "is_available": True,
         "location": {"$ne": None}
     }
+    
+    # Exclude drivers who refused
+    if exclude_driver_ids:
+        query["id"] = {"$nin": exclude_driver_ids}
     
     # Filter by vehicle type capability
     if vehicle_type:
@@ -2149,9 +2154,12 @@ async def get_available_rides(current_user: dict = Depends(get_current_user)):
         return []  # Driver has no valid vehicle types configured
     
     # Query for pending rides matching driver's vehicle types
+    # Also exclude rides this driver has already refused
+    # $nin works correctly: returns true if refused_by doesn't exist OR doesn't contain driver id
     rides = await db.rides.find({
         "status": "pending",
-        "$or": vehicle_type_conditions
+        "$or": vehicle_type_conditions,
+        "refused_by": {"$nin": [current_user["id"]]}
     }, {"_id": 0}).to_list(100)
     
     return [RideResponse(**r) for r in rides]
@@ -2176,6 +2184,75 @@ async def get_scheduled_rides_early(current_user: dict = Depends(get_current_use
         query["passenger_id"] = current_user["id"]
     rides = await db.rides.find(query, {"_id": 0}).sort("scheduled_time", 1).to_list(50)
     return [RideResponse(**r) for r in rides]
+
+@api_router.post("/rides/{ride_id}/refuse")
+async def refuse_ride(ride_id: str, current_user: dict = Depends(get_current_user)):
+    """Driver refuses a ride - it will be offered to the next nearest driver after 5 seconds"""
+    if current_user["role"] != "driver":
+        raise HTTPException(status_code=403, detail="Only drivers can refuse rides")
+    
+    ride = await db.rides.find_one({"id": ride_id, "status": "pending"}, {"_id": 0})
+    if not ride:
+        raise HTTPException(status_code=404, detail="Course non trouvée ou déjà prise")
+    
+    # Add this driver to the list of drivers who refused
+    refused_by = ride.get("refused_by", [])
+    if current_user["id"] not in refused_by:
+        refused_by.append(current_user["id"])
+    
+    await db.rides.update_one(
+        {"id": ride_id},
+        {"$set": {"refused_by": refused_by}}
+    )
+    
+    # Find next nearest driver (excluding those who refused)
+    async def propose_to_next_driver():
+        await asyncio.sleep(5)  # Wait 5 seconds
+        
+        # Check if ride is still pending
+        current_ride = await db.rides.find_one({"id": ride_id}, {"_id": 0})
+        if not current_ride or current_ride.get("status") != "pending":
+            return  # Ride already taken or cancelled
+        
+        refused_list = current_ride.get("refused_by", [])
+        pickup = current_ride.get("pickup", {})
+        vehicle_type = current_ride.get("vehicle_type", "standard")
+        
+        # Find next nearest available driver
+        next_driver = await find_nearest_driver(
+            pickup, 
+            max_distance_km=20.0, 
+            vehicle_type=vehicle_type,
+            exclude_driver_ids=refused_list
+        )
+        
+        if next_driver:
+            # Notify the next driver
+            await notification_manager.notify_driver(next_driver["driver"]["id"], "ride_available", {
+                "ride_id": ride_id,
+                "pickup": pickup.get("address", ""),
+                "destination": current_ride.get("destination", {}).get("address", ""),
+                "estimated_fare": current_ride.get("estimated_fare", 0),
+                "distance_km": current_ride.get("distance_km", 0),
+                "vehicle_type": vehicle_type
+            })
+            logger.info(f"Ride {ride_id} proposed to next driver {next_driver['driver']['id']} after refusal")
+        else:
+            # No more drivers available - notify all remaining drivers
+            await notification_manager.notify_all_drivers("ride_available", {
+                "ride_id": ride_id,
+                "pickup": pickup.get("address", ""),
+                "destination": current_ride.get("destination", {}).get("address", ""),
+                "estimated_fare": current_ride.get("estimated_fare", 0),
+                "distance_km": current_ride.get("distance_km", 0),
+                "vehicle_type": vehicle_type
+            }, vehicle_type=vehicle_type, exclude_driver_ids=refused_list)
+            logger.info(f"Ride {ride_id} broadcast to all drivers after refusal")
+    
+    # Schedule the task
+    asyncio.create_task(propose_to_next_driver())
+    
+    return {"success": True, "message": "Course refusée. Elle sera proposée à un autre chauffeur."}
 
 @api_router.post("/rides/{ride_id}/accept", response_model=RideResponse)
 async def accept_ride(ride_id: str, current_user: dict = Depends(get_current_user)):
