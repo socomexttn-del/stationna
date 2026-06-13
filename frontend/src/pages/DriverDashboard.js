@@ -24,6 +24,7 @@ const DriverDashboard = () => {
   
   const [isAvailable, setIsAvailable] = useState(user?.is_available || false);
   const [availableRides, setAvailableRides] = useState([]);
+  const [dismissedRides, setDismissedRides] = useState([]); // Rides the driver refused/ignored
   const [activeRide, setActiveRide] = useState(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
@@ -585,7 +586,10 @@ const DriverDashboard = () => {
   const fetchAvailableRides = async () => {
     try {
       const response = await api.get('/rides/available');
-      const newRides = response.data || [];
+      const allRides = response.data || [];
+      
+      // Filter out dismissed rides
+      const newRides = allRides.filter(r => !dismissedRides.includes(r.id));
       
       // Check if there are new rides
       if (newRides.length > prevRidesCount && prevRidesCount > 0) {
@@ -647,6 +651,14 @@ const DriverDashboard = () => {
       toast.error(error.response?.data?.detail || 'Erreur lors de l\'acceptation');
       fetchAvailableRides();
     }
+  };
+
+  const dismissRide = (rideId) => {
+    // Add to dismissed list so it won't show again
+    setDismissedRides(prev => [...prev, rideId]);
+    // Remove from available rides
+    setAvailableRides(prev => prev.filter(r => r.id !== rideId));
+    toast.info('Course ignorée');
   };
 
   const startRide = async () => {
@@ -1313,13 +1325,23 @@ const DriverDashboard = () => {
                         <span>•</span>
                         <span>{ride.passenger_count || 1} passager{(ride.passenger_count || 1) > 1 ? 's' : ''}</span>
                       </div>
-                      <Button 
-                        onClick={() => acceptRide(ride.id)}
-                        data-testid={`accept-ride-${ride.id}`}
-                        className={`${ride.is_scheduled ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'} text-white font-bold`}
-                      >
-                        <Check className="w-4 h-4 mr-2" /> Accepter
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline"
+                          onClick={() => dismissRide(ride.id)}
+                          data-testid={`dismiss-ride-${ride.id}`}
+                          className="border-red-500/50 text-red-500 hover:bg-red-500/10"
+                        >
+                          <X className="w-4 h-4 mr-1" /> Refuser
+                        </Button>
+                        <Button 
+                          onClick={() => acceptRide(ride.id)}
+                          data-testid={`accept-ride-${ride.id}`}
+                          className={`${ride.is_scheduled ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'} text-white font-bold`}
+                        >
+                          <Check className="w-4 h-4 mr-2" /> Accepter
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
