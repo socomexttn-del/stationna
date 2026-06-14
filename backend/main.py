@@ -1,5 +1,5 @@
 """
-Allogo Taxi API - Main Application Entry Point (Refactored)
+StationCab Taxi API - Main Application Entry Point (Refactored)
 
 This is the refactored version of the API using modular routers.
 """
@@ -47,8 +47,8 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI application
 app = FastAPI(
-    title="Allogo Taxi API",
-    description="API for Allogo Taxi application with VTC and regulated Paris taxi services",
+    title="StationCab Taxi API",
+    description="API for StationCab Taxi application with VTC and regulated Paris taxi services",
     version="2.0.0",
     lifespan=lifespan
 )
@@ -96,7 +96,7 @@ app.include_router(promo_router, prefix="/api")
 async def root():
     """API root endpoint"""
     return {
-        "message": "Allogo Taxi API",
+        "message": "StationCab Taxi API",
         "version": "2.0.0",
         "status": "running"
     }

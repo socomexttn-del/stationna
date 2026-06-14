@@ -76,8 +76,8 @@ const PaymentsPage = () => {
   const shareReferralCode = () => {
     if (navigator.share) {
       navigator.share({
-        title: 'Allogo - Code parrainage',
-        text: `Utilise mon code ${referralCode} pour obtenir 10% de réduction sur ta première course Allogo!`,
+        title: 'StationCab - Code parrainage',
+        text: `Utilise mon code ${referralCode} pour obtenir 10% de réduction sur ta première course StationCab!`,
       });
     } else {
       copyReferralCode();

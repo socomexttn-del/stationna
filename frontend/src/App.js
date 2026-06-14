@@ -7,10 +7,12 @@ import AuthPage from './pages/AuthPage';
 import PassengerDashboard from './pages/PassengerDashboard';
 import DriverDashboard from './pages/DriverDashboard';
 import DriverVehiclePage from './pages/DriverVehiclePage';
+import DriverRegistrationPage from './pages/DriverRegistrationPage';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminClientsPage from './pages/AdminClientsPage';
 import AdminPromoCodesPage from './pages/AdminPromoCodesPage';
 import AdminDriversPage from './pages/AdminDriversPage';
+import AdminDriverValidationPage from './pages/AdminDriverValidationPage';
 import RideHistory from './pages/RideHistory';
 import ProfilePage from './pages/ProfilePage';
 import PaymentSuccess from './pages/PaymentSuccess';
@@ -72,6 +74,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
       <Route path="/auth" element={<PublicRoute><AuthPage /></PublicRoute>} />
+      <Route path="/devenir-chauffeur" element={<PublicRoute><DriverRegistrationPage /></PublicRoute>} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/forgot-password" element={<ResetPasswordPage />} />
       <Route path="/passenger" element={<ProtectedRoute allowedRoles={['passenger']}><PassengerDashboard /></ProtectedRoute>} />
@@ -81,6 +84,7 @@ function AppRoutes() {
       <Route path="/admin/clients" element={<ProtectedRoute allowedRoles={['admin']}><AdminClientsPage /></ProtectedRoute>} />
       <Route path="/admin/promo-codes" element={<ProtectedRoute allowedRoles={['admin']}><AdminPromoCodesPage /></ProtectedRoute>} />
       <Route path="/admin/drivers" element={<ProtectedRoute allowedRoles={['admin']}><AdminDriversPage /></ProtectedRoute>} />
+      <Route path="/admin/driver-validation" element={<ProtectedRoute allowedRoles={['admin']}><AdminDriverValidationPage /></ProtectedRoute>} />
       <Route path="/history" element={<ProtectedRoute><RideHistory /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
       <Route path="/scheduled" element={<ProtectedRoute allowedRoles={['passenger']}><ScheduledRidesPage /></ProtectedRoute>} />

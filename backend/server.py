@@ -106,7 +106,7 @@ NOTIFICATION_TEMPLATES = {
     },
     "ride_completed": {
         "title": "🏁 Course terminée!",
-        "body": "Merci d'avoir utilisé Allogo"
+        "body": "Merci d'avoir utilisé StationCab"
     },
     "ride_assigned": {
         "title": "📋 Course assignée!",
@@ -132,7 +132,7 @@ class NotificationManager:
     def _get_notification_content(self, notification_type: str, data: dict) -> tuple:
         """Get title and body for push notification based on type"""
         template = NOTIFICATION_TEMPLATES.get(notification_type, {})
-        title = template.get("title", "Allogo")
+        title = template.get("title", "StationCab")
         body = template.get("body", "Vous avez une nouvelle notification")
         
         # Format body with data if available
@@ -541,19 +541,25 @@ class VehicleDocuments(BaseModel):
 
 # Extended driver document types
 DRIVER_DOCUMENT_TYPES = {
-    # Vehicle documents
-    "carte_grise": {"name": "Carte Grise", "category": "vehicle", "required": True, "has_expiry": False},
-    "assurance": {"name": "Assurance Véhicule", "category": "vehicle", "required": True, "has_expiry": True},
-    "controle_technique": {"name": "Contrôle Technique", "category": "vehicle", "required": True, "has_expiry": True},
     # Personal documents  
     "permis_conduire": {"name": "Permis de Conduire", "category": "personal", "required": True, "has_expiry": True},
-    "carte_vtc": {"name": "Carte VTC", "category": "professional", "required": True, "has_expiry": True},
-    "cni": {"name": "Carte Nationale d'Identité", "category": "personal", "required": True, "has_expiry": True},
-    "justificatif_domicile": {"name": "Justificatif de Domicile", "category": "personal", "required": True, "has_expiry": False},
+    "cni": {"name": "Pièce d'Identité (CNI/Passeport)", "category": "personal", "required": True, "has_expiry": True},
+    "photo_visage": {"name": "Photo du Visage", "category": "personal", "required": True, "has_expiry": False},
+    
+    # Vehicle documents
+    "assurance_vehicule": {"name": "Assurance Véhicule", "category": "vehicle", "required": True, "has_expiry": True},
+    "controle_technique": {"name": "Contrôle Technique", "category": "vehicle", "required": True, "has_expiry": True},
+    "photo_voiture_avant": {"name": "Photo Voiture - Avant", "category": "vehicle", "required": True, "has_expiry": False},
+    "photo_voiture_arriere": {"name": "Photo Voiture - Arrière", "category": "vehicle", "required": True, "has_expiry": False},
+    "photo_voiture_profil": {"name": "Photo Voiture - Profil", "category": "vehicle", "required": True, "has_expiry": False},
+    
     # Professional documents
-    "rc_pro": {"name": "RC Professionnelle", "category": "professional", "required": True, "has_expiry": True},
-    "kbis": {"name": "Extrait KBIS", "category": "professional", "required": False, "has_expiry": False},
-    "attestation_vigilance": {"name": "Attestation de Vigilance URSSAF", "category": "professional", "required": False, "has_expiry": True},
+    "carte_professionnelle": {"name": "Carte Professionnelle VTC/Taxi", "category": "professional", "required": True, "has_expiry": True},
+    "assurance_transport": {"name": "Assurance Transport à Titre Onéreux", "category": "professional", "required": True, "has_expiry": True},
+    "licence_transport": {"name": "Licence de Transport", "category": "professional", "required": True, "has_expiry": True},
+    "kbis": {"name": "Extrait KBIS", "category": "professional", "required": True, "has_expiry": True},
+    
+    # Financial documents
     "rib": {"name": "RIB (Relevé d'Identité Bancaire)", "category": "financial", "required": True, "has_expiry": False},
 }
 
@@ -1192,6 +1198,10 @@ async def register(user: UserCreate):
         raise HTTPException(status_code=400, detail="Email already registered")
     
     user_id = str(uuid.uuid4())
+    
+    # For drivers, account is pending validation until admin approves all documents
+    validation_status = "pending_validation" if user.role == "driver" else "active"
+    
     user_dict = {
         "id": user_id,
         "email": user.email,
@@ -1205,7 +1215,13 @@ async def register(user: UserCreate):
         "is_available": False,
         "vehicle_info": None,
         "location": None,
-        "driver_vehicle_types": ["vtc"] if user.role == "driver" else None,  # Default to VTC for drivers
+        "driver_vehicle_types": ["vtc"] if user.role == "driver" else None,
+        "validation_status": validation_status,  # pending_validation, active, suspended
+        "documents": {},  # Will store document info with validation status
+        "company_name": None,
+        "siret": None,
+        "address": None,
+        "tva_number": None,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.users.insert_one(user_dict)
@@ -1263,10 +1279,10 @@ async def forgot_password(data: PasswordResetRequest):
             params = {
                 "from": SENDER_EMAIL,
                 "to": [user["email"]],
-                "subject": "Allogo - Réinitialisation de votre mot de passe",
+                "subject": "StationCab - Réinitialisation de votre mot de passe",
                 "html": f"""
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <h2 style="color: #f59e0b;">Allogo</h2>
+                    <h2 style="color: #f59e0b;">StationCab</h2>
                     <p>Bonjour {user.get('first_name', '')},</p>
                     <p>Vous avez demandé la réinitialisation de votre mot de passe.</p>
                     <p>Cliquez sur le bouton ci-dessous pour créer un nouveau mot de passe :</p>
@@ -1651,7 +1667,7 @@ def create_expiry_email_html(driver_name: str, documents: List[dict]) -> str:
     html = f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #1a1a1a; color: #ffffff; padding: 20px; border-radius: 10px;">
         <div style="text-align: center; margin-bottom: 20px;">
-            <h1 style="color: #facc15; margin: 0;">🚕 Allogo</h1>
+            <h1 style="color: #facc15; margin: 0;">🚕 StationCab</h1>
             <p style="color: #9ca3af; margin: 5px 0;">Notification Documents</p>
         </div>
         
@@ -1681,15 +1697,15 @@ def create_expiry_email_html(driver_name: str, documents: List[dict]) -> str:
         html += "</ul></div>"
     
     html += """
-        <p style="margin-top: 20px;">Veuillez mettre à jour vos documents dès que possible pour continuer à utiliser Allogo.</p>
+        <p style="margin-top: 20px;">Veuillez mettre à jour vos documents dès que possible pour continuer à utiliser StationCab.</p>
         
         <div style="text-align: center; margin-top: 30px;">
             <a href="#" style="background: #facc15; color: #000; padding: 12px 30px; text-decoration: none; border-radius: 25px; font-weight: bold;">Mettre à jour mes documents</a>
         </div>
         
         <p style="color: #6b7280; font-size: 12px; margin-top: 30px; text-align: center;">
-            Cet email a été envoyé automatiquement par Allogo.<br>
-            © 2025 Allogo - Votre partenaire VTC
+            Cet email a été envoyé automatiquement par StationCab.<br>
+            © 2025 StationCab - Votre partenaire VTC
         </p>
     </div>
     """
@@ -1751,7 +1767,7 @@ async def send_expiry_email_alerts(
         html_content = create_expiry_email_html(driver_name, expiring_docs)
         
         expired_count = len([d for d in expiring_docs if d["is_expired"]])
-        subject = f"⚠️ {'Documents expirés' if expired_count else 'Documents à renouveler'} - Allogo"
+        subject = f"⚠️ {'Documents expirés' if expired_count else 'Documents à renouveler'} - StationCab"
         
         try:
             params = {
@@ -1836,6 +1852,107 @@ async def update_driver_status(
         "driver_id": driver_id,
         "is_active": data.is_active,
         "message": f"Chauffeur {'activé' if data.is_active else 'désactivé'}"
+    }
+
+@api_router.put("/admin/drivers/{driver_id}/validate")
+async def validate_driver_account(
+    driver_id: str,
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Validate a driver account after all documents are approved (admin only)"""
+    driver = await db.users.find_one({"id": driver_id, "role": "driver"}, {"_id": 0})
+    if not driver:
+        raise HTTPException(status_code=404, detail="Chauffeur non trouvé")
+    
+    # Check if all required documents are approved
+    documents = driver.get("documents", {})
+    required_docs = [k for k, v in DRIVER_DOCUMENT_TYPES.items() if v["required"]]
+    
+    missing_docs = []
+    pending_docs = []
+    rejected_docs = []
+    
+    for doc_type in required_docs:
+        doc = documents.get(doc_type)
+        if not doc or not doc.get("url"):
+            missing_docs.append(DRIVER_DOCUMENT_TYPES[doc_type]["name"])
+        elif doc.get("status") == "pending":
+            pending_docs.append(DRIVER_DOCUMENT_TYPES[doc_type]["name"])
+        elif doc.get("status") == "rejected":
+            rejected_docs.append(DRIVER_DOCUMENT_TYPES[doc_type]["name"])
+    
+    if missing_docs:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Documents manquants: {', '.join(missing_docs)}"
+        )
+    
+    if rejected_docs:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Documents rejetés: {', '.join(rejected_docs)}"
+        )
+    
+    if pending_docs:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Documents en attente de validation: {', '.join(pending_docs)}"
+        )
+    
+    # All documents approved - activate the account
+    await db.users.update_one(
+        {"id": driver_id},
+        {"$set": {
+            "validation_status": "active",
+            "is_active": True,
+            "validated_at": datetime.now(timezone.utc).isoformat(),
+            "validated_by": admin_user["id"]
+        }}
+    )
+    
+    # Notify driver
+    await notification_manager.notify_driver(driver_id, "account_validated", {
+        "message": "Votre compte a été validé ! Vous pouvez maintenant recevoir des courses."
+    })
+    
+    return {
+        "status": "ok",
+        "driver_id": driver_id,
+        "message": "Compte chauffeur validé et activé"
+    }
+
+@api_router.get("/admin/drivers/pending-validation")
+async def get_pending_validation_drivers(admin_user: dict = Depends(get_admin_user)):
+    """Get all drivers pending account validation (admin only)"""
+    drivers = await db.users.find(
+        {
+            "role": "driver",
+            "$or": [
+                {"validation_status": "pending_validation"},
+                {"validation_status": {"$exists": False}}
+            ]
+        },
+        {"_id": 0, "password_hash": 0}
+    ).to_list(100)
+    
+    # Enrich with document status
+    for driver in drivers:
+        documents = driver.get("documents", {})
+        required_docs = [k for k, v in DRIVER_DOCUMENT_TYPES.items() if v["required"]]
+        
+        uploaded = sum(1 for d in required_docs if d in documents and documents[d].get("url"))
+        approved = sum(1 for d in required_docs if documents.get(d, {}).get("status") == "approved")
+        
+        driver["document_progress"] = {
+            "total_required": len(required_docs),
+            "uploaded": uploaded,
+            "approved": approved,
+            "completion_percent": round((approved / len(required_docs)) * 100) if required_docs else 0
+        }
+    
+    return {
+        "total": len(drivers),
+        "drivers": drivers
     }
 
 @api_router.get("/drivers/available", response_model=List[UserResponse])
@@ -2578,7 +2695,7 @@ async def export_ride_history_pdf(
     header_style = ParagraphStyle('Header', parent=styles['Heading2'], fontSize=14, textColor=colors.HexColor('#1a1a1a'), spaceBefore=15, spaceAfter=10)
     
     # Title
-    elements.append(Paragraph("🚕 Allogo", title_style))
+    elements.append(Paragraph("🚕 StationCab", title_style))
     elements.append(Paragraph(f"Historique des courses - {current_user['first_name']} {current_user['last_name']}", subtitle_style))
     elements.append(Paragraph(f"Généré le {datetime.now().strftime('%d/%m/%Y à %H:%M')}", subtitle_style))
     elements.append(Spacer(1, 10*mm))
@@ -4306,7 +4423,7 @@ async def generate_invoice(ride_id: str, admin_user: dict = Depends(get_admin_us
         "driver_name": ride.get("driver_name"),
         "driver_company": ride.get("driver_company"),
         "company_info": {
-            "name": "Allogo",
+            "name": "StationCab",
             "address": "Paris, France",
             "siret": "XXX XXX XXX XXXXX",
             "tva": "FR XX XXXXXXXXX"
@@ -4315,7 +4432,321 @@ async def generate_invoice(ride_id: str, admin_user: dict = Depends(get_admin_us
     
     return invoice_data
 
-@api_router.get("/admin/scheduled-rides")
+# ======================== DRIVER INVOICE & REFUND ========================
+
+@api_router.get("/rides/{ride_id}/invoice/pdf")
+async def generate_driver_invoice_pdf(ride_id: str, current_user: dict = Depends(get_current_user)):
+    """Generate PDF invoice from driver's company to the client"""
+    ride = await db.rides.find_one({"id": ride_id}, {"_id": 0})
+    if not ride:
+        raise HTTPException(status_code=404, detail="Course non trouvée")
+    
+    # Only completed rides can have invoices
+    if ride.get("status") != "completed":
+        raise HTTPException(status_code=400, detail="La course doit être terminée pour générer une facture")
+    
+    # Get driver info with company details
+    driver = await db.users.find_one(
+        {"id": ride.get("driver_id")},
+        {"_id": 0, "password_hash": 0}
+    )
+    
+    # Get client info
+    client = await db.users.find_one(
+        {"id": ride["passenger_id"]},
+        {"_id": 0, "password_hash": 0}
+    )
+    
+    if not driver:
+        raise HTTPException(status_code=404, detail="Chauffeur non trouvé")
+    
+    # Generate invoice number
+    ride_date = ride.get("created_at", "")[:10].replace("-", "")
+    invoice_number = f"FACT-{ride_date}-{ride_id[:8].upper()}"
+    
+    # Get fare
+    fare = ride.get("final_fare") or ride.get("estimated_fare", 0)
+    
+    # Calculate TVA (20% for transport services)
+    ht_amount = round(fare / 1.20, 2)  # Prix HT
+    tva_amount = round(fare - ht_amount, 2)  # TVA
+    
+    # Create PDF
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=20*mm, bottomMargin=20*mm)
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # Custom styles
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=18, textColor=colors.HexColor('#FFD700'), alignment=TA_CENTER)
+    header_style = ParagraphStyle('Header', parent=styles['Normal'], fontSize=10, textColor=colors.HexColor('#666666'))
+    normal_style = ParagraphStyle('Normal', parent=styles['Normal'], fontSize=10)
+    bold_style = ParagraphStyle('Bold', parent=styles['Normal'], fontSize=10, fontName='Helvetica-Bold')
+    
+    # Header - Driver Company Info
+    driver_company = driver.get("company_name") or f"{driver.get('first_name', '')} {driver.get('last_name', '')} (Auto-entrepreneur)"
+    driver_siret = driver.get("siret", "SIRET à renseigner")
+    driver_address = driver.get("address", "Adresse à renseigner")
+    driver_tva = driver.get("tva_number", "TVA non applicable (Article 293B du CGI)")
+    
+    elements.append(Paragraph(driver_company, title_style))
+    elements.append(Spacer(1, 5*mm))
+    elements.append(Paragraph(f"SIRET: {driver_siret}", header_style))
+    elements.append(Paragraph(f"Adresse: {driver_address}", header_style))
+    elements.append(Paragraph(f"TVA: {driver_tva}", header_style))
+    elements.append(Spacer(1, 10*mm))
+    
+    # Invoice Title
+    elements.append(Paragraph(f"FACTURE N° {invoice_number}", ParagraphStyle('InvoiceTitle', parent=styles['Heading2'], fontSize=14, alignment=TA_CENTER)))
+    elements.append(Paragraph(f"Date: {ride.get('completed_at', ride.get('created_at', ''))[:10]}", ParagraphStyle('Date', parent=styles['Normal'], fontSize=10, alignment=TA_CENTER)))
+    elements.append(Spacer(1, 10*mm))
+    
+    # Client Info
+    client_name = ride.get("passenger_name") or (f"{client.get('first_name', '')} {client.get('last_name', '')}" if client else "Client")
+    client_phone = client.get("phone", "") if client else ""
+    client_email = client.get("email", "") if client else ""
+    
+    elements.append(Paragraph("FACTURÉ À:", bold_style))
+    elements.append(Paragraph(client_name, normal_style))
+    if client_phone:
+        elements.append(Paragraph(f"Tél: {client_phone}", normal_style))
+    if client_email:
+        elements.append(Paragraph(f"Email: {client_email}", normal_style))
+    elements.append(Spacer(1, 10*mm))
+    
+    # Ride Details
+    elements.append(Paragraph("DÉTAILS DE LA PRESTATION:", bold_style))
+    elements.append(Spacer(1, 3*mm))
+    
+    # Table with ride details
+    ride_data = [
+        ["Description", "Détails"],
+        ["Date de la course", ride.get("created_at", "")[:10]],
+        ["Prise en charge", ride.get("pickup", {}).get("address", "")],
+        ["Destination", ride.get("destination", {}).get("address", "")],
+        ["Distance", f"{ride.get('distance_km', 0)} km"],
+        ["Type de véhicule", ride.get("vehicle_type", "standard").upper()],
+        ["Passagers", str(ride.get("passenger_count", 1))],
+    ]
+    
+    # Add intermediate stops if any
+    if ride.get("stops"):
+        for i, stop in enumerate(ride["stops"]):
+            ride_data.append([f"Arrêt {i+1}", stop.get("address", "")])
+    
+    ride_table = Table(ride_data, colWidths=[150, 300])
+    ride_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#FFD700')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('PADDING', (0, 0), (-1, -1), 6),
+    ]))
+    elements.append(ride_table)
+    elements.append(Spacer(1, 10*mm))
+    
+    # Pricing Table
+    elements.append(Paragraph("FACTURATION:", bold_style))
+    elements.append(Spacer(1, 3*mm))
+    
+    pricing_data = [
+        ["Désignation", "Montant"],
+        ["Transport de personnes", f"{ht_amount:.2f} €"],
+        ["TVA (20%)", f"{tva_amount:.2f} €"],
+        ["TOTAL TTC", f"{fare:.2f} €"],
+    ]
+    
+    pricing_table = Table(pricing_data, colWidths=[350, 100])
+    pricing_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#333333')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#FFD700')),
+        ('TEXTCOLOR', (0, -1), (-1, -1), colors.black),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('PADDING', (0, 0), (-1, -1), 8),
+    ]))
+    elements.append(pricing_table)
+    elements.append(Spacer(1, 15*mm))
+    
+    # Payment Status
+    payment_status = "Payé" if ride.get("payment_status") == "completed" else "En attente de paiement"
+    elements.append(Paragraph(f"Statut du paiement: {payment_status}", bold_style))
+    elements.append(Spacer(1, 10*mm))
+    
+    # Footer
+    footer_style = ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, textColor=colors.grey, alignment=TA_CENTER)
+    elements.append(Paragraph("Facture générée automatiquement par la plateforme StationCab", footer_style))
+    elements.append(Paragraph(f"N° de course: {ride.get('reservation_number', ride_id)}", footer_style))
+    
+    # Build PDF
+    doc.build(elements)
+    buffer.seek(0)
+    
+    # Return PDF
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=facture_{invoice_number}.pdf"}
+    )
+
+class RefundRequest(BaseModel):
+    reason: str
+    amount: Optional[float] = None  # If None, full refund
+
+@api_router.post("/rides/{ride_id}/refund")
+async def request_refund(ride_id: str, data: RefundRequest, current_user: dict = Depends(get_current_user)):
+    """Request a refund for a completed ride"""
+    ride = await db.rides.find_one({"id": ride_id}, {"_id": 0})
+    if not ride:
+        raise HTTPException(status_code=404, detail="Course non trouvée")
+    
+    # Check if user is authorized (passenger or admin)
+    if current_user["role"] == "passenger" and ride.get("passenger_id") != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Vous ne pouvez pas demander un remboursement pour cette course")
+    
+    # Only completed and paid rides can be refunded
+    if ride.get("status") != "completed":
+        raise HTTPException(status_code=400, detail="Seules les courses terminées peuvent être remboursées")
+    
+    if ride.get("payment_status") != "completed":
+        raise HTTPException(status_code=400, detail="Le paiement n'a pas été effectué pour cette course")
+    
+    # Check if already refunded
+    if ride.get("refund_status") == "refunded":
+        raise HTTPException(status_code=400, detail="Cette course a déjà été remboursée")
+    
+    # Calculate refund amount
+    total_fare = ride.get("final_fare") or ride.get("estimated_fare", 0)
+    refund_amount = data.amount if data.amount and data.amount <= total_fare else total_fare
+    
+    # Create refund request
+    refund_id = str(uuid.uuid4())
+    refund_data = {
+        "id": refund_id,
+        "ride_id": ride_id,
+        "passenger_id": ride.get("passenger_id"),
+        "passenger_name": ride.get("passenger_name"),
+        "driver_id": ride.get("driver_id"),
+        "driver_name": ride.get("driver_name"),
+        "original_amount": total_fare,
+        "refund_amount": refund_amount,
+        "reason": data.reason,
+        "status": "pending",  # pending, approved, rejected, processed
+        "requested_by": current_user["id"],
+        "requested_at": datetime.now(timezone.utc).isoformat(),
+        "processed_at": None,
+        "processed_by": None
+    }
+    
+    await db.refunds.insert_one(refund_data)
+    
+    # Update ride with refund info
+    await db.rides.update_one(
+        {"id": ride_id},
+        {"$set": {
+            "refund_status": "pending",
+            "refund_id": refund_id,
+            "refund_requested_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Notify admin
+    await notification_manager.notify_user("admin", "refund_requested", {
+        "ride_id": ride_id,
+        "passenger_name": ride.get("passenger_name"),
+        "amount": refund_amount,
+        "reason": data.reason
+    })
+    
+    return {
+        "status": "pending",
+        "refund_id": refund_id,
+        "message": "Demande de remboursement envoyée. Un administrateur la traitera sous peu.",
+        "refund_amount": refund_amount
+    }
+
+@api_router.get("/admin/refunds")
+async def get_refund_requests(admin_user: dict = Depends(get_admin_user)):
+    """Get all refund requests"""
+    refunds = await db.refunds.find({}, {"_id": 0}).sort("requested_at", -1).to_list(100)
+    
+    pending = [r for r in refunds if r.get("status") == "pending"]
+    processed = [r for r in refunds if r.get("status") != "pending"]
+    
+    return {
+        "pending": pending,
+        "processed": processed,
+        "total_pending": len(pending)
+    }
+
+@api_router.post("/admin/refunds/{refund_id}/process")
+async def process_refund(refund_id: str, approved: bool, admin_user: dict = Depends(get_admin_user)):
+    """Approve or reject a refund request"""
+    refund = await db.refunds.find_one({"id": refund_id}, {"_id": 0})
+    if not refund:
+        raise HTTPException(status_code=404, detail="Demande de remboursement non trouvée")
+    
+    if refund.get("status") != "pending":
+        raise HTTPException(status_code=400, detail="Cette demande a déjà été traitée")
+    
+    new_status = "approved" if approved else "rejected"
+    
+    # Update refund
+    await db.refunds.update_one(
+        {"id": refund_id},
+        {"$set": {
+            "status": new_status,
+            "processed_at": datetime.now(timezone.utc).isoformat(),
+            "processed_by": admin_user["id"]
+        }}
+    )
+    
+    # Update ride
+    ride_refund_status = "refunded" if approved else "refund_rejected"
+    await db.rides.update_one(
+        {"id": refund["ride_id"]},
+        {"$set": {"refund_status": ride_refund_status}}
+    )
+    
+    # If approved, process the actual refund (add to wallet or Stripe refund)
+    if approved:
+        # Add refund amount to passenger's wallet
+        await db.users.update_one(
+            {"id": refund["passenger_id"]},
+            {"$inc": {"wallet_balance": refund["refund_amount"]}}
+        )
+        
+        # Deduct from driver's earnings (if applicable)
+        if refund.get("driver_id"):
+            driver_deduction = round(refund["refund_amount"] * 0.82, 2)  # Driver's share (minus commission)
+            await db.users.update_one(
+                {"id": refund["driver_id"]},
+                {"$inc": {"total_earnings": -driver_deduction}}
+            )
+    
+    # Notify passenger
+    notification_type = "refund_approved" if approved else "refund_rejected"
+    await notification_manager.notify_passenger(refund["passenger_id"], notification_type, {
+        "ride_id": refund["ride_id"],
+        "amount": refund["refund_amount"],
+        "status": new_status
+    })
+    
+    return {
+        "status": new_status,
+        "message": f"Remboursement {'approuvé' if approved else 'rejeté'}",
+        "refund_amount": refund["refund_amount"] if approved else 0
+    }
+
+@api_router.get("/scheduled-rides")
 async def get_scheduled_rides(admin_user: dict = Depends(get_admin_user)):
     """Get all scheduled rides with their status"""
     rides = await db.rides.find(

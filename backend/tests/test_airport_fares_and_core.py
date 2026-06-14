@@ -1,5 +1,5 @@
 """
-Backend API Tests for Allogo Taxi App
+Backend API Tests for StationCab Taxi App
 Focus: Airport Flat Rates, Authentication, VTC Fares, Driver Availability, Rides, Wallet, Promo Codes
 """
 import pytest

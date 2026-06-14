@@ -1,5 +1,5 @@
 """
-Tests for the Intermediate Stops feature in Allogo Taxi App
+Tests for the Intermediate Stops feature in StationCab Taxi App
 
 Features tested:
 - POST /rides/estimate with stops - calculates total distance and fare with stop supplements

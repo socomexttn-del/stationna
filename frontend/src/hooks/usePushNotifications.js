@@ -148,7 +148,7 @@ export const usePushNotifications = () => {
   const notifyRideCompleted = useCallback((fare) => {
     showNotification(
       'Course terminée',
-      `Montant: ${fare}€ - Merci d'avoir voyagé avec Allogo`,
+      `Montant: ${fare}€ - Merci d'avoir voyagé avec StationCab`,
       { type: 'ride_completed' }
     );
   }, [showNotification]);

@@ -1,5 +1,5 @@
 /**
- * Push Notification Service for Allogo
+ * Push Notification Service for StationCab
  * Handles Firebase Cloud Messaging (FCM) for native push notifications
  */
 

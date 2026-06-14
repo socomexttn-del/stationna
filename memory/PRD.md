@@ -1,7 +1,7 @@
-# Allogo - Application Taxi PRD
+# StationCab - Application Taxi PRD
 
 ## Problème Original
-Application taxi complète "Allogo" avec support multi-rôles (Passager, Chauffeur, Admin), fonctionnalités temps réel, cycle de vie complet des courses, GPS, chat in-app, paiements Stripe, et tarifs réglementés parisiens.
+Application taxi complète "StationCab" avec support multi-rôles (Passager, Chauffeur, Admin), fonctionnalités temps réel, cycle de vie complet des courses, GPS, chat in-app, paiements Stripe, et tarifs réglementés parisiens.
 
 ## Architecture Technique
 - **Backend**: FastAPI + MongoDB (motor) + JWT
@@ -160,7 +160,7 @@ Application taxi complète "Allogo" avec support multi-rôles (Passager, Chauffe
 - [x] Courses planifiées dispatch 15 min avant (03/03/2026)
 
 ## Notes Techniques
-- AppId Capacitor: `com.allogo.app`
-- Firebase Project: `allogo-43fd4`
+- AppId Capacitor: `com.stationcab.app`
+- Firebase Project: `stationcab-43fd4`
 - Scheduled rides checker: Runs every 60 seconds
 - Rides proposed 15 minutes before scheduled_time (13-17 min window)

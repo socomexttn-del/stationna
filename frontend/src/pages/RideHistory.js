@@ -4,8 +4,18 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
-import { ArrowLeft, MapPin, Navigation, Clock, Star, CreditCard, Check, X, Download, Loader2 } from 'lucide-react';
+import { ArrowLeft, MapPin, Navigation, Clock, Star, CreditCard, Check, X, Download, Loader2, RefreshCcw, FileText } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../components/ui/dialog';
+import { Textarea } from '../components/ui/textarea';
+import { Label } from '../components/ui/label';
 
 const RideHistory = () => {
   const { t } = useTranslation();
@@ -13,6 +23,9 @@ const RideHistory = () => {
   const [rides, setRides] = useState([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [refundDialog, setRefundDialog] = useState({ open: false, ride: null });
+  const [refundReason, setRefundReason] = useState('');
+  const [refundLoading, setRefundLoading] = useState(false);
 
   useEffect(() => {
     fetchHistory();
@@ -41,7 +54,7 @@ const RideHistory = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `allogo_historique_${new Date().toISOString().split('T')[0]}.pdf`;
+      link.download = `stationcab_historique_${new Date().toISOString().split('T')[0]}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -56,6 +69,57 @@ const RideHistory = () => {
     }
   };
 
+  const downloadInvoice = async (rideId) => {
+    try {
+      const response = await api.get(`/rides/${rideId}/invoice/pdf`, {
+        responseType: 'blob'
+      });
+      
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `facture_${rideId.substring(0, 8)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Facture téléchargée !');
+    } catch (error) {
+      console.error('Error downloading invoice:', error);
+      toast.error('Erreur lors du téléchargement de la facture');
+    }
+  };
+
+  const openRefundDialog = (ride) => {
+    setRefundDialog({ open: true, ride });
+    setRefundReason('');
+  };
+
+  const submitRefund = async () => {
+    if (!refundReason.trim()) {
+      toast.error('Veuillez indiquer le motif du remboursement');
+      return;
+    }
+    
+    setRefundLoading(true);
+    try {
+      await api.post(`/rides/${refundDialog.ride.id}/refund`, {
+        reason: refundReason
+      });
+      
+      toast.success('Demande de remboursement envoyée');
+      setRefundDialog({ open: false, ride: null });
+      fetchHistory(); // Refresh to show updated status
+    } catch (error) {
+      console.error('Error requesting refund:', error);
+      toast.error(error.response?.data?.detail || 'Erreur lors de la demande');
+    } finally {
+      setRefundLoading(false);
+    }
+  };
+
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('fr-FR', {
       day: 'numeric',
@@ -66,7 +130,21 @@ const RideHistory = () => {
     });
   };
 
-  const getStatusBadge = (status, paymentStatus) => {
+  const getStatusBadge = (status, paymentStatus, refundStatus) => {
+    if (refundStatus === 'pending') {
+      return (
+        <span className="flex items-center gap-1 text-sm text-amber-500">
+          <RefreshCcw className="w-4 h-4" /> Remboursement en cours
+        </span>
+      );
+    }
+    if (refundStatus === 'refunded') {
+      return (
+        <span className="flex items-center gap-1 text-sm text-green-500">
+          <Check className="w-4 h-4" /> Remboursée
+        </span>
+      );
+    }
     if (status === 'cancelled') {
       return (
         <span className="flex items-center gap-1 text-sm text-destructive">
@@ -75,7 +153,7 @@ const RideHistory = () => {
       );
     }
     if (status === 'completed') {
-      if (paymentStatus === 'paid') {
+      if (paymentStatus === 'paid' || paymentStatus === 'completed') {
         return (
           <span className="flex items-center gap-1 text-sm text-green-500">
             <Check className="w-4 h-4" /> Payée
@@ -157,7 +235,7 @@ const RideHistory = () => {
                       <p className="text-xl font-bold text-primary">
                         {ride.final_fare || ride.estimated_fare}€
                       </p>
-                      {getStatusBadge(ride.status, ride.payment_status)}
+                      {getStatusBadge(ride.status, ride.payment_status, ride.refund_status)}
                     </div>
                   </div>
                   
@@ -174,6 +252,38 @@ const RideHistory = () => {
                   
                   <div className="flex items-center justify-between pt-2 text-sm text-muted-foreground">
                     <span>{ride.distance_km} km</span>
+                    
+                    {/* Actions for completed rides */}
+                    {ride.status === 'completed' && (
+                      <div className="flex items-center gap-2">
+                        {/* Invoice button */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => downloadInvoice(ride.id)}
+                          className="gap-1 h-8"
+                          data-testid={`invoice-btn-${ride.id}`}
+                        >
+                          <FileText className="w-3 h-3" />
+                          Facture
+                        </Button>
+                        
+                        {/* Refund button - only if paid and not already refunded */}
+                        {(ride.payment_status === 'paid' || ride.payment_status === 'completed') && 
+                         !ride.refund_status && user?.role === 'passenger' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openRefundDialog(ride)}
+                            className="gap-1 h-8 text-amber-500 border-amber-500/30 hover:bg-amber-500/10"
+                            data-testid={`refund-btn-${ride.id}`}
+                          >
+                            <RefreshCcw className="w-3 h-3" />
+                            Remboursement
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -181,6 +291,60 @@ const RideHistory = () => {
           </div>
         )}
       </div>
+      
+      {/* Refund Dialog */}
+      <Dialog open={refundDialog.open} onOpenChange={(open) => !open && setRefundDialog({ open: false, ride: null })}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Demande de remboursement</DialogTitle>
+            <DialogDescription>
+              Vous demandez un remboursement pour la course du {refundDialog.ride && formatDate(refundDialog.ride.created_at)}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="bg-muted/30 rounded-lg p-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Montant</span>
+                <span className="font-bold text-lg text-primary">
+                  {refundDialog.ride?.final_fare || refundDialog.ride?.estimated_fare}€
+                </span>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="refund-reason">Motif du remboursement *</Label>
+              <Textarea
+                id="refund-reason"
+                value={refundReason}
+                onChange={(e) => setRefundReason(e.target.value)}
+                placeholder="Décrivez la raison de votre demande de remboursement..."
+                className="min-h-[100px]"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRefundDialog({ open: false, ride: null })}
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={submitRefund}
+              disabled={refundLoading || !refundReason.trim()}
+              className="bg-amber-500 hover:bg-amber-600"
+            >
+              {refundLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                'Envoyer la demande'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

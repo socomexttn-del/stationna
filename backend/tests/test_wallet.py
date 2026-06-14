@@ -1,5 +1,5 @@
 """
-Wallet Feature Tests for Allogo Taxi App
+Wallet Feature Tests for StationCab Taxi App
 Tests wallet balance, top-up, transactions, and payment endpoints
 """
 

@@ -1,5 +1,5 @@
 """
-Allogo Taxi App - Core Backend API Tests
+StationCab Taxi App - Core Backend API Tests
 Tests: Authentication, Passenger booking, Driver operations, Admin dashboard
 """
 import pytest

@@ -149,7 +149,7 @@ const AdminClientsPage = () => {
               <th style="text-align:right">Montant</th>
             </tr>
             <tr>
-              <td>Course Allogo (${invoiceData.distance_km} km)</td>
+              <td>Course StationCab (${invoiceData.distance_km} km)</td>
               <td style="text-align:right">${invoiceData.fare_details.subtotal.toFixed(2)} €</td>
             </tr>
             <tr>
@@ -585,7 +585,7 @@ const AdminClientsPage = () => {
               {/* Pricing */}
               <div className="space-y-2">
                 <div className="flex justify-between py-2 border-b border-border/30">
-                  <span>Course Allogo ({invoiceData.distance_km} km)</span>
+                  <span>Course StationCab ({invoiceData.distance_km} km)</span>
                   <span>{invoiceData.fare_details.subtotal.toFixed(2)} €</span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-border/30 text-muted-foreground">

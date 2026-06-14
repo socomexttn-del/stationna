@@ -235,7 +235,7 @@ const WalletPage = () => {
             <h1 className="text-2xl font-bold" style={{ fontFamily: 'Space Grotesk' }}>
               Mon Portefeuille
             </h1>
-            <p className="text-sm text-muted-foreground">Gérez votre solde Allogo</p>
+            <p className="text-sm text-muted-foreground">Gérez votre solde StationCab</p>
           </div>
         </div>
 

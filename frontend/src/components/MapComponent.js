@@ -366,7 +366,7 @@ const MapComponent = ({
     }
   }, [driverPath, mapLoaded]);
 
-  // Update available drivers markers (yellow Allogo cars)
+  // Update available drivers markers (yellow StationCab cars)
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 

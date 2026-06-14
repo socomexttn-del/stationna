@@ -238,7 +238,7 @@ const PaymentMethodSelector = ({
                   <Wallet className="w-5 h-5 text-primary" />
                 </div>
                 <div className="text-left">
-                  <p className="font-medium">Portefeuille Allogo</p>
+                  <p className="font-medium">Portefeuille StationCab</p>
                   <p className="text-xs text-muted-foreground">
                     Solde: {walletBalance.toFixed(2)}€
                     {!canUseWallet && <span className="text-red-400 ml-1">(insuffisant)</span>}

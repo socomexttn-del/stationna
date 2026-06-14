@@ -98,7 +98,7 @@ async def create_topup(data: WalletTopUpRequest, current_user: dict = Depends(ge
                     'currency': 'eur',
                     'unit_amount': data.amount * 100,
                     'product_data': {
-                        'name': f'Rechargement Portefeuille Allogo',
+                        'name': f'Rechargement Portefeuille StationCab',
                         'description': f'Rechargement de {data.amount}€' + (f' + {bonus_info["bonus"]}€ offerts' if bonus_info["bonus"] > 0 else ''),
                     },
                 },

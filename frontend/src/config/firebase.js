@@ -1,5 +1,5 @@
 /**
- * Firebase Configuration for Allogo
+ * Firebase Configuration for StationCab
  */
 
 // Firebase configuration from google-services.json

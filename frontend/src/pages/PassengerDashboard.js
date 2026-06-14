@@ -883,7 +883,7 @@ const PassengerDashboard = () => {
             <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
               <Car className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold" style={{ fontFamily: 'Space Grotesk' }}>Allogo</span>
+            <span className="text-xl font-bold" style={{ fontFamily: 'Space Grotesk' }}>StationCab</span>
           </div>
           
           <div className="flex items-center gap-2">
@@ -1456,7 +1456,7 @@ const PassengerDashboard = () => {
                     </div>
                     <div>
                       <p className="font-semibold">
-                        {vehicleType === 'taxi' ? 'Taxi Parisien' : vehicleType === 'van' ? 'Allogo Van' : 'Allogo VTC'}
+                        {vehicleType === 'taxi' ? 'Taxi Parisien' : vehicleType === 'van' ? 'StationCab Van' : 'StationCab VTC'}
                         {estimate.fare_details?.is_airport_flat_rate && (
                           <span className="ml-2 text-xs px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full">
                             ✈️ Forfait Aéroport

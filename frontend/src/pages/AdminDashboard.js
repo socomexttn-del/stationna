@@ -182,7 +182,7 @@ const AdminDashboard = () => {
               <h1 className="text-xl font-bold" style={{ fontFamily: 'Space Grotesk' }}>
                 Admin Dashboard
               </h1>
-              <p className="text-sm text-muted-foreground">Allogo</p>
+              <p className="text-sm text-muted-foreground">StationCab</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -204,6 +204,16 @@ const AdminDashboard = () => {
                 data-testid="admin-drivers-link"
               >
                 <Car className="w-4 h-4" /> Chauffeurs
+              </Button>
+            </Link>
+            <Link to="/admin/driver-validation">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="gap-2 border-amber-500/50 text-amber-500 hover:bg-amber-500/10"
+                data-testid="admin-validation-link"
+              >
+                <FileText className="w-4 h-4" /> Validation Documents
               </Button>
             </Link>
             <Link to="/admin/promo-codes">

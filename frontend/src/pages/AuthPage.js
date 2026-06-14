@@ -73,7 +73,7 @@ const AuthPage = () => {
                 {isLogin ? t('auth.login') : t('auth.register')}
               </CardTitle>
               <CardDescription className="text-muted-foreground mt-2">
-                {isLogin ? t('auth.loginSubtitle', 'Accédez à votre compte Allogo') : t('auth.registerSubtitle', 'Créez votre compte Allogo')}
+                {isLogin ? t('auth.loginSubtitle', 'Accédez à votre compte StationCab') : t('auth.registerSubtitle', 'Créez votre compte StationCab')}
               </CardDescription>
             </div>
           </CardHeader>

@@ -17,7 +17,7 @@ const LandingPage = () => {
             <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
               <Car className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-2xl font-bold text-foreground" style={{ fontFamily: 'Space Grotesk' }}>Allogo</span>
+            <span className="text-2xl font-bold text-foreground" style={{ fontFamily: 'Space Grotesk' }}>StationCab</span>
           </div>
           <div className="flex items-center gap-2">
             <LanguageSelector />
@@ -66,7 +66,7 @@ const LandingPage = () => {
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
-            <Link to="/auth?role=driver">
+            <Link to="/devenir-chauffeur">
               <Button 
                 data-testid="hero-driver-btn"
                 variant="outline"
@@ -90,7 +90,7 @@ const LandingPage = () => {
       <section className="py-24 relative">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-semibold tracking-tight text-center mb-4" style={{ fontFamily: 'Space Grotesk' }}>
-            Pourquoi choisir <span className="text-primary">Allogo</span> ?
+            Pourquoi choisir <span className="text-primary">StationCab</span> ?
           </h2>
           <p className="text-muted-foreground text-center mb-16 max-w-xl mx-auto">
             Une expérience de transport moderne, sécurisée et efficace
@@ -160,12 +160,12 @@ const LandingPage = () => {
         <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-2xl">
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-6" style={{ fontFamily: 'Space Grotesk' }}>
-              Devenez chauffeur <span className="text-primary">Allogo</span>
+              Devenez chauffeur <span className="text-primary">StationCab</span>
             </h2>
             <p className="text-lg text-muted-foreground mb-8">
-              Gagnez de l'argent en conduisant avec Allogo. Choisissez vos horaires, acceptez les courses qui vous conviennent et suivez vos gains en temps réel.
+              Gagnez de l'argent en conduisant avec StationCab. Choisissez vos horaires, acceptez les courses qui vous conviennent et suivez vos gains en temps réel.
             </p>
-            <Link to="/auth?role=driver">
+            <Link to="/devenir-chauffeur">
               <Button 
                 data-testid="cta-driver-btn"
                 className="bg-primary text-primary-foreground hover:bg-primary/90 h-14 px-8 rounded-full font-bold text-lg"
@@ -186,10 +186,10 @@ const LandingPage = () => {
               <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
                 <Car className="w-4 h-4 text-primary-foreground" />
               </div>
-              <span className="text-xl font-bold" style={{ fontFamily: 'Space Grotesk' }}>Allogo</span>
+              <span className="text-xl font-bold" style={{ fontFamily: 'Space Grotesk' }}>StationCab</span>
             </div>
             <p className="text-muted-foreground text-sm">
-              © 2024 Allogo. Tous droits réservés.
+              © 2024 StationCab. Tous droits réservés.
             </p>
           </div>
         </div>
