@@ -13,6 +13,7 @@ import IntermediateStops from '../components/IntermediateStops';
 import ChatComponent from '../components/ChatComponent';
 import RatingModal from '../components/RatingModal';
 import PaymentMethodSelector from '../components/PaymentMethodSelector';
+import StationCabLogo from '../components/StationCabLogo';
 import { 
   Car, MapPin, Navigation, Star, Clock, CreditCard, 
   Menu, User, History, LogOut, Phone, X, Route, MessageCircle,
@@ -879,12 +880,7 @@ const PassengerDashboard = () => {
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 glass p-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
-              <Car className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold" style={{ fontFamily: 'Space Grotesk' }}>StationCab</span>
-          </div>
+          <StationCabLogo size="small" darkMode={true} />
           
           <div className="flex items-center gap-2">
             {/* Refresh button */}

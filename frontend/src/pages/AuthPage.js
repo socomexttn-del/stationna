@@ -7,6 +7,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import StationCabLogo from '../components/StationCabLogo';
 import { Car, User, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -65,8 +66,8 @@ const AuthPage = () => {
       <div className="flex-1 flex items-center justify-center p-4">
         <Card className="w-full max-w-md bg-card border-border/50">
           <CardHeader className="text-center space-y-4">
-            <div className="mx-auto w-16 h-16 bg-primary rounded-full flex items-center justify-center">
-              <Car className="w-8 h-8 text-primary-foreground" />
+            <div className="mx-auto flex justify-center">
+              <StationCabLogo size="large" showText={false} darkMode={true} />
             </div>
             <div>
               <CardTitle className="text-2xl font-bold" style={{ fontFamily: 'Space Grotesk' }}>
