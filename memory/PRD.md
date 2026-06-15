@@ -66,7 +66,20 @@ Application taxi complète "StationCab" avec support multi-rôles (Passager, Cha
 - Endpoints FCM pour enregistrement tokens
 - Notifications automatiques lors des événements de course
 
-## Modifications Récentes (13/06/2026)
+## Modifications Récentes (15/06/2026)
+
+1. **NOUVEAU - Calculateur de prix sur Landing Page amélioré** :
+   - Autocomplétion d'adresses avec Mapbox (recherche temps réel)
+   - Géolocalisation automatique au chargement de la page
+   - Bouton de localisation manuelle (icône crosshair)
+   - Lieux populaires avec badge "Populaire" (Gare du Nord, CDG, Orly, etc.)
+   - Affichage des prix pour les 3 types de véhicules (VTC, Van, Taxi)
+   - Distance et durée estimées du trajet
+   - Badge "Forfait Aéroport" pour les trajets vers/depuis CDG et Orly
+   - Interface responsive (mobile et desktop)
+   - Clic sur une option redirige vers la connexion/réservation
+
+## Modifications (13/06/2026)
 
 1. **NOUVEAU - Refus de course avec réassignation** :
    - Endpoint POST `/api/rides/{ride_id}/refuse` pour refuser une course disponible
@@ -139,6 +152,7 @@ Application taxi complète "StationCab" avec support multi-rôles (Passager, Cha
 ## Backlog Priorité
 
 ### P0 - Critique
+- [x] Calculateur de prix landing page avec autocomplétion et géolocalisation (15/06/2026)
 - [x] Refus de course avec réassignation au prochain chauffeur après 5s (13/06/2026)
 - [ ] Test notifications push Firebase sur appareil Android (APK via déploiement Emergent)
 
@@ -150,8 +164,10 @@ Application taxi complète "StationCab" avec support multi-rôles (Passager, Cha
 - [ ] Stabilité build frontend
 - [ ] Tests automatisés Pytest
 - [ ] Drag-and-drop pour réordonner arrêts
+- [ ] Configuration Resend pour domaine stationcab.fr
 
 ### ✅ TERMINÉ
+- [x] Calculateur de prix landing page avec autocomplétion, géolocalisation et prix VTC/Van/Taxi (15/06/2026)
 - [x] Refus de course avec réassignation (13/06/2026)
 - [x] Arrêts intermédiaires: ordre vérifié OK, affichage ajouté dans reçu et dashboard chauffeur (13/06/2026)
 - [x] Tarifs aéroport: vérifiés conformes aux tarifs officiels 2025 (13/06/2026)
