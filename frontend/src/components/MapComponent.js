@@ -387,16 +387,16 @@ const MapComponent = ({
             <div style="
               width: 36px;
               height: 36px;
-              background: linear-gradient(135deg, #facc15 0%, #eab308 100%);
+              background: linear-gradient(135deg, #00a693 0%, #1f3f6b 100%);
               border-radius: 8px;
               border: 2px solid white;
-              box-shadow: 0 2px 8px rgba(250, 204, 21, 0.4);
+              box-shadow: 0 2px 8px rgba(0, 166, 147, 0.4);
               display: flex;
               align-items: center;
               justify-content: center;
               transform: rotate(-15deg);
             ">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="#1a1a1a" style="transform: rotate(15deg);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="#ffffff" style="transform: rotate(15deg);">
                 <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
               </svg>
             </div>
@@ -406,14 +406,14 @@ const MapComponent = ({
               left: 50%;
               transform: translateX(-50%);
               background: rgba(26, 26, 26, 0.9);
-              color: #facc15;
-              font-size: 10px;
+              color: #00a693;
+              font-size: 9px;
               font-weight: bold;
               padding: 2px 6px;
               border-radius: 4px;
               white-space: nowrap;
               font-family: 'Space Grotesk', sans-serif;
-            ">ALLOGO</div>
+            ">STATIONCAB</div>
           </div>
         `;
         

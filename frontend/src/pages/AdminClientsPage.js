@@ -118,7 +118,7 @@ const AdminClientsPage = () => {
         </head>
         <body>
           <div class="header">
-            <div class="logo">ALLOGO</div>
+            <div class="logo">STATIONCAB</div>
             <div class="invoice-info">
               <h2>FACTURE</h2>
               <p><strong>N°:</strong> ${invoiceData.invoice_number}</p>
@@ -534,7 +534,7 @@ const AdminClientsPage = () => {
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-2xl font-bold text-primary" style={{ fontFamily: 'Space Grotesk' }}>ALLOGO</p>
+                  <p className="text-2xl font-bold text-primary" style={{ fontFamily: 'Space Grotesk' }}>STATIONCAB</p>
                   <p className="text-sm text-muted-foreground">Facture</p>
                 </div>
                 <div className="text-right">
