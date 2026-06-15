@@ -21,28 +21,34 @@ code {
 
 @layer base {
   :root {
-    --background: 240 6% 4%;
-    --foreground: 240 5% 96%;
-    --card: 240 6% 7%;
-    --card-foreground: 240 5% 96%;
-    --popover: 240 6% 7%;
-    --popover-foreground: 240 5% 96%;
-    --primary: 48 96% 53%;
-    --primary-foreground: 0 0% 0%;
-    --secondary: 240 4% 16%;
-    --secondary-foreground: 240 5% 98%;
-    --muted: 240 4% 10%;
-    --muted-foreground: 240 5% 65%;
-    --accent: 217 91% 60%;
+    /* StationCab Brand Colors */
+    /* Navy Blue: #1f3f6b | Teal: #00a693 */
+    --background: 220 30% 6%;
+    --foreground: 210 20% 98%;
+    --card: 220 30% 8%;
+    --card-foreground: 210 20% 98%;
+    --popover: 220 30% 8%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 168 100% 33%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 218 55% 27%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 220 25% 12%;
+    --muted-foreground: 210 15% 65%;
+    --accent: 168 100% 33%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 4% 16%;
-    --input: 240 4% 16%;
-    --ring: 48 96% 53%;
+    --border: 220 20% 18%;
+    --input: 220 20% 18%;
+    --ring: 168 100% 33%;
     --radius: 0.75rem;
-    --success: 142 71% 45%;
+    --success: 168 100% 33%;
     --warning: 38 92% 50%;
+    
+    /* Brand specific */
+    --stationcab-navy: 218 55% 27%;
+    --stationcab-teal: 168 100% 33%;
   }
 }
 

@@ -32,31 +32,42 @@ const LandingPage = () => {
 
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
-        <div className="absolute inset-0 hero-glow" />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #0a1628 0%, #0d2137 50%, #0a1628 100%)' }} />
         <div 
-          className="absolute inset-0 opacity-20"
+          className="absolute inset-0 opacity-15"
           style={{
             backgroundImage: 'url(https://images.pexels.com/photos/26604738/pexels-photo-26604738.jpeg)',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
-            filter: 'brightness(0.3)'
+            filter: 'brightness(0.4)'
           }}
         />
         
+        {/* Gradient overlay */}
+        <div className="absolute inset-0" style={{ 
+          background: 'radial-gradient(ellipse at center, transparent 0%, rgba(10,22,40,0.8) 70%)'
+        }} />
+        
         <div className="container mx-auto px-4 relative z-10 text-center">
+          {/* Large centered logo */}
+          <div className="flex justify-center mb-8">
+            <StationCabLogo size="hero" showText={false} darkMode={true} />
+          </div>
+          
           <h1 className="text-5xl md:text-7xl font-bold tracking-tighter leading-none mb-6" style={{ fontFamily: 'Space Grotesk' }}>
-            <span className="text-foreground">{t('landing.heroTitle1', 'Votre course,')}</span>
+            <span className="text-white">{t('landing.heroTitle1', 'Votre course,')}</span>
             <br />
-            <span className="text-primary">{t('landing.heroTitle2', 'en un éclair')}</span>
+            <span style={{ color: '#00a693' }}>{t('landing.heroTitle2', 'en un éclair')}</span>
           </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
+          <p className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto mb-10">
             {t('landing.heroSubtitle', 'Réservez un chauffeur en quelques secondes. Suivez votre trajet en temps réel. Payez en toute sécurité.')}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/auth?role=passenger">
               <Button 
                 data-testid="hero-passenger-btn"
-                className="bg-primary text-primary-foreground hover:bg-primary/90 h-14 px-8 rounded-full font-bold text-lg shadow-[0_0_30px_rgba(250,204,21,0.3)] transition-all hover:shadow-[0_0_40px_rgba(250,204,21,0.5)]"
+                className="h-14 px-8 rounded-full font-bold text-lg shadow-[0_0_30px_rgba(0,166,147,0.4)] transition-all hover:shadow-[0_0_40px_rgba(0,166,147,0.6)]"
+                style={{ backgroundColor: '#00a693', color: '#ffffff' }}
               >
                 {t('ride.bookRide')}
                 <ArrowRight className="ml-2 w-5 h-5" />
@@ -66,7 +77,8 @@ const LandingPage = () => {
               <Button 
                 data-testid="hero-driver-btn"
                 variant="outline"
-                className="h-14 px-8 rounded-full font-bold text-lg border-white/20 hover:bg-white/5"
+                className="h-14 px-8 rounded-full font-bold text-lg transition-all"
+                style={{ borderColor: '#1f3f6b', color: '#ffffff', backgroundColor: 'rgba(31,63,107,0.3)' }}
               >
                 {t('landing.becomeDriver')}
               </Button>
@@ -83,12 +95,12 @@ const LandingPage = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-24 relative">
+      <section className="py-24 relative" style={{ background: 'linear-gradient(180deg, #0a1628 0%, #0d1f2d 100%)' }}>
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-semibold tracking-tight text-center mb-4" style={{ fontFamily: 'Space Grotesk' }}>
-            Pourquoi choisir <span className="text-primary">StationCab</span> ?
+            Pourquoi choisir <span style={{ color: '#00a693' }}>StationCab</span> ?
           </h2>
-          <p className="text-muted-foreground text-center mb-16 max-w-xl mx-auto">
+          <p className="text-gray-400 text-center mb-16 max-w-xl mx-auto">
             Une expérience de transport moderne, sécurisée et efficace
           </p>
           
@@ -141,35 +153,46 @@ const LandingPage = () => {
       </section>
 
       {/* Driver CTA Section */}
-      <section className="py-24 relative overflow-hidden">
+      <section className="py-24 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #1f3f6b 0%, #0d2137 100%)' }}>
         <div 
-          className="absolute inset-0 opacity-30"
+          className="absolute inset-0 opacity-20"
           style={{
             backgroundImage: 'url(https://images.pexels.com/photos/31335088/pexels-photo-31335088.jpeg)',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
-            filter: 'brightness(0.3)'
+            filter: 'brightness(0.4)'
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-background" />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgba(31,63,107,0.95) 0%, rgba(31,63,107,0.7) 50%, rgba(31,63,107,0.95) 100%)' }} />
         
         <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-2xl">
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-6" style={{ fontFamily: 'Space Grotesk' }}>
-              Devenez chauffeur <span className="text-primary">StationCab</span>
+          <div className="max-w-2xl mx-auto text-center">
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-6 text-white" style={{ fontFamily: 'Space Grotesk' }}>
+              Devenez chauffeur <span style={{ color: '#00a693' }}>StationCab</span>
             </h2>
-            <p className="text-lg text-muted-foreground mb-8">
+            <p className="text-lg text-gray-300 mb-8">
               Gagnez de l'argent en conduisant avec StationCab. Choisissez vos horaires, acceptez les courses qui vous conviennent et suivez vos gains en temps réel.
             </p>
-            <Link to="/devenir-chauffeur">
-              <Button 
-                data-testid="cta-driver-btn"
-                className="bg-primary text-primary-foreground hover:bg-primary/90 h-14 px-8 rounded-full font-bold text-lg"
-              >
-                Commencer à conduire
-                <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link to="/devenir-chauffeur">
+                <Button 
+                  data-testid="cta-driver-btn"
+                  className="h-14 px-8 rounded-full font-bold text-lg"
+                  style={{ backgroundColor: '#00a693', color: '#ffffff' }}
+                >
+                  Commencer à conduire
+                  <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
+              </Link>
+              <Link to="/auth">
+                <Button 
+                  variant="outline"
+                  className="h-14 px-8 rounded-full font-bold text-lg border-white/30 text-white hover:bg-white/10"
+                >
+                  Se connecter
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </section>
