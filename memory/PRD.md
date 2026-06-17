@@ -72,11 +72,17 @@ Application taxi complète "StationCab" avec support multi-rôles (Passager, Cha
    - Page Mentions Légales (`/mentions-legales`) avec infos complètes A&S Prestige
    - Page CGV (`/cgv`) avec 11 articles détaillés (annulation, remboursement, tarifs)
    - Case à cocher obligatoire pour inscription passagers
-   - Case à cocher obligatoire pour inscription chauffeurs
+   - Case à cocher obligatoire pour inscription chauffeurs (CGV + Mentions Légales)
    - Liens dans le footer de la landing page
    - Copyright "A&S Prestige SASU" dans le footer
 
-2. **Calculateur de prix sur Landing Page** :
+2. **NOUVEAU - Standards de Qualité Chauffeurs** :
+   - Texte complet des 6 articles des Standards de Qualité StationCab
+   - Affiché dans une zone scrollable à l'étape "Vérification"
+   - Case à cocher obligatoire séparée pour accepter les Standards
+   - Le chauffeur ne peut pas soumettre sans accepter les deux (CGV + Standards)
+
+3. **Calculateur de prix sur Landing Page** :
    - Autocomplétion d'adresses avec Mapbox
    - Affichage des prix pour VTC, Van, Taxi
    - Distance et durée estimées

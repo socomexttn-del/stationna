@@ -54,6 +54,8 @@ const DriverRegistrationPage = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [acceptedCGV, setAcceptedCGV] = useState(false);
+  const [acceptedStandards, setAcceptedStandards] = useState(false);
+  const [showStandardsModal, setShowStandardsModal] = useState(false);
   
   // Personal info
   const [formData, setFormData] = useState({
@@ -73,6 +75,57 @@ const DriverRegistrationPage = () => {
   const [documents, setDocuments] = useState({});
   const [expiryDates, setExpiryDates] = useState({});
   const [uploadingDoc, setUploadingDoc] = useState(null);
+
+  // Standards de qualité text
+  const STANDARDS_TEXT = `STANDARDS DE QUALITÉ ET CONDITIONS D'ACCÈS AUX SERVICES STATIONCAB
+(Règlement d'usage de la Plateforme)
+
+En cochant la case « J'accepte les standards de qualité StationCab », le Partenaire indépendant atteste que son entreprise répond aux critères de service et de standing exigés par les utilisateurs de la plateforme.
+
+1. Standards de présentation des Partenaires
+
+Afin de répondre aux attentes de la clientèle de la plateforme, les standards de présentation suivants sont requis lors des mises en relation :
+
+• Pour l'accès aux demandes des gammes BERLINE et VAN : Le service attendu par les clients implique une présentation haut de gamme (tenue de ville classique de type chemise, cravate, pantalon de costume et chaussures de ville fermées). Les tenues de type sportswear (jeans, joggings, shorts) ne permettent pas l'accès à ces gammes spécifiques.
+
+• Pour l'accès aux AUTRES gammes : Une tenue propre, décente et professionnelle est requise.
+
+• Pour l'ensemble des services : Neutralité de la présentation (absence de signes ostentatoires).
+
+2. Spécifications et entretien des véhicules
+
+Le Partenaire réalise ses prestations avec un véhicule conforme aux standards techniques et visuels de l'application :
+
+• Véhicule de couleur sombre.
+• Parfait état mécanique, de carrosserie, de propreté intérieure et extérieure.
+• Signalétique StationCab installée conformément aux besoins de repérage des clients.
+• Habitacle aéré régulièrement, notamment durant la phase d'approche.
+
+3. Standards d'exécution de la prestation et confort à bord
+
+Les utilisateurs de l'application évaluent les prestations reçues selon les critères de confort suivants :
+
+• Bagages et accueil : Aide spontanée au chargement et déchargement des bagages ordinaires (moins de 15 kg), et assistance à l'installation à bord si le client le souhaite.
+
+• Atmosphère à bord : Prise en compte immédiate des souhaits du client (volume ou arrêt de la radio, réglage thermique, ouverture des vitres).
+
+• Sécurité : Conduite fluide, sereine et conforme aux règles de sécurité routière.
+
+4. Traitement des demandes de mise en relation
+
+Le Partenaire est entièrement libre d'accepter ou de refuser les propositions de courses transmises par l'application StationCab. Toutefois, l'acceptation d'une course par le Partenaire valide son exécution, laquelle doit s'effectuer sans discrimination.
+
+Arrivé sur le lieu de prise en charge, le Partenaire suit les indications de l'application pour localiser le client (notamment en gare et aéroport) et signale sa présence via l'outil dédié.
+
+5. Options de règlement
+
+Pour le confort des utilisateurs, le Partenaire s'assure d'être en mesure de traiter l'ensemble des moyens de paiement techniquement intégrés ou acceptés par StationCab (cartes bancaires, paiement intégré à l'application), et ce dès le premier euro, en veillant au bon fonctionnement de ses équipements personnels de paiement.
+
+6. Modalités de fin d'accès aux services
+
+La plateforme StationCab agit comme un intermédiaire numérique de mise en relation. Le maintien de l'accès aux services applicatifs est conditionné par la satisfaction des clients et le respect des présents standards de qualité.
+
+En cas de signalements répétés d'utilisateurs, de réclamations graves ou de notes moyennes inférieures aux standards de l'application, StationCab se réserve le droit, sans que cela ne revête un caractère de sanction disciplinaire, de suspendre temporairement ou de résilier définitivement l'accès du Partenaire à l'application StationCab, entraînant la fin du contrat de services.`;
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -174,6 +227,12 @@ const DriverRegistrationPage = () => {
     // Vérification CGV
     if (!acceptedCGV) {
       toast.error('Vous devez accepter les Conditions Générales de Vente pour vous inscrire');
+      return;
+    }
+    
+    // Vérification Standards de qualité
+    if (!acceptedStandards) {
+      toast.error('Vous devez accepter les Standards de Qualité StationCab pour vous inscrire');
       return;
     }
     
@@ -687,6 +746,43 @@ const DriverRegistrationPage = () => {
             </Button>
           ) : (
             <div className="flex-1 space-y-4">
+              {/* Standards de Qualité - Texte complet */}
+              <div className="bg-muted/30 rounded-xl border border-border overflow-hidden">
+                <div className="p-3 bg-primary/10 border-b border-border">
+                  <h3 className="font-semibold text-white flex items-center gap-2">
+                    <FileText className="w-5 h-5" style={{ color: '#00a693' }} />
+                    Standards de Qualité StationCab
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Veuillez lire attentivement avant de continuer
+                  </p>
+                </div>
+                <div className="p-4 max-h-48 overflow-y-auto text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
+                  {STANDARDS_TEXT}
+                </div>
+              </div>
+              
+              {/* Standards Checkbox */}
+              <div className="flex items-start space-x-3 p-4 bg-primary/5 rounded-xl border-2 border-primary/30">
+                <Checkbox
+                  id="accept-standards-driver"
+                  checked={acceptedStandards}
+                  onCheckedChange={setAcceptedStandards}
+                  data-testid="accept-standards-driver-checkbox"
+                  className="mt-0.5"
+                />
+                <label
+                  htmlFor="accept-standards-driver"
+                  className="text-sm text-white leading-relaxed cursor-pointer"
+                >
+                  <strong>J&apos;accepte les Standards de Qualité StationCab</strong>
+                  <br />
+                  <span className="text-muted-foreground text-xs">
+                    Je certifie que mon entreprise répond aux critères de service et de standing exigés.
+                  </span>
+                </label>
+              </div>
+
               {/* CGV Checkbox */}
               <div className="flex items-start space-x-3 p-4 bg-muted/50 rounded-xl border border-border">
                 <Checkbox
@@ -707,14 +803,13 @@ const DriverRegistrationPage = () => {
                   et les{' '}
                   <Link to="/mentions-legales" target="_blank" className="text-primary hover:underline">
                     Mentions Légales
-                  </Link>
-                  . Je m&apos;engage à respecter les obligations du statut de chauffeur VTC/Taxi partenaire StationCab.
+                  </Link>.
                 </label>
               </div>
               
               <Button
                 onClick={handleSubmit}
-                disabled={loading || !acceptedCGV || !STEPS.slice(0, -1).every(s => isStepComplete(s.id))}
+                disabled={loading || !acceptedCGV || !acceptedStandards || !STEPS.slice(0, -1).every(s => isStepComplete(s.id))}
                 className="w-full h-12 bg-green-600 hover:bg-green-700 text-white"
               >
                 {loading ? (
