@@ -46,11 +46,11 @@ JWT_ALGORITHM = os.environ.get('JWT_ALGORITHM', 'HS256')
 JWT_EXPIRATION_HOURS = int(os.environ.get('JWT_EXPIRATION_HOURS', 24))
 
 # Stripe Configuration
-STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY')
+STRIPE_API_KEY = os.environ.get('STRIPE_SECRET_KEY') or os.environ.get('STRIPE_API_KEY')
 stripe.api_key = STRIPE_API_KEY
 
-# Stripe publishable key for frontend (test mode)
-STRIPE_PUBLISHABLE_KEY = "pk_test_51J5B0aIhFRBc7tGx0JDKBKeJkqwUnUIud8an11Pw16H2O3zx6OcvobFGwzHMHO1sL2Zf1L9AKW9lLJmDa1Umxzyd00f17O26XT"
+# Stripe publishable key for frontend
+STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', "pk_live_51J5B0aIhFRBc7tGxbkNUnMyYfrSEGJpSc1DzoxUASi6guCIYeaYGEeA2Cf9Ce7ZiYa2vSJEsjtnvJ1mKxQc8xhJI006tIB0hKE")
 
 # Create the main app
 app = FastAPI(title="Volt Taxi API")
