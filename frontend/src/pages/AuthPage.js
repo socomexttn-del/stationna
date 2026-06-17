@@ -7,6 +7,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Checkbox } from '../components/ui/checkbox';
 import StationCabLogo from '../components/StationCabLogo';
 import { Car, User, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
@@ -21,6 +22,7 @@ const AuthPage = () => {
   const [role, setRole] = useState(defaultRole);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [acceptedCGV, setAcceptedCGV] = useState(false);
   
   const [formData, setFormData] = useState({
     email: '',
@@ -36,6 +38,13 @@ const AuthPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Vérification CGV pour inscription
+    if (!isLogin && !acceptedCGV) {
+      toast.error('Vous devez accepter les Conditions Générales de Vente pour vous inscrire');
+      return;
+    }
+    
     setLoading(true);
     
     try {
@@ -203,6 +212,38 @@ const AuthPage = () => {
                   </div>
                 )}
               </div>
+
+              {/* Case à cocher CGV pour inscription */}
+              {!isLogin && (
+                <div className="flex items-start space-x-3 pt-2">
+                  <Checkbox
+                    id="accept-cgv"
+                    checked={acceptedCGV}
+                    onCheckedChange={setAcceptedCGV}
+                    data-testid="accept-cgv-checkbox"
+                    className="mt-0.5"
+                  />
+                  <label
+                    htmlFor="accept-cgv"
+                    className="text-sm text-muted-foreground leading-relaxed cursor-pointer"
+                  >
+                    J&apos;ai lu et j&apos;accepte les{' '}
+                    <Link to="/cgv" target="_blank" className="text-primary hover:underline">
+                      Conditions Générales de Vente
+                    </Link>{' '}
+                    et les{' '}
+                    <Link to="/mentions-legales" target="_blank" className="text-primary hover:underline">
+                      Mentions Légales
+                    </Link>
+                    {role === 'driver' && (
+                      <span>
+                        , ainsi que les obligations du statut de chauffeur VTC/Taxi partenaire
+                      </span>
+                    )}
+                    .
+                  </label>
+                </div>
+              )}
 
               <Button
                 type="submit"

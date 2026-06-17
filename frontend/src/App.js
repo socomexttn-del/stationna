@@ -21,6 +21,8 @@ import ScheduledRidesPage from './pages/ScheduledRidesPage';
 import PaymentsPage from './pages/PaymentsPage';
 import WalletPage from './pages/WalletPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import MentionsLegales from './pages/MentionsLegales';
+import CGV from './pages/CGV';
 import './App.css';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -92,6 +94,8 @@ function AppRoutes() {
       <Route path="/wallet" element={<ProtectedRoute allowedRoles={['passenger']}><WalletPage /></ProtectedRoute>} />
       <Route path="/payment/success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
       <Route path="/payment/cancel" element={<ProtectedRoute><PaymentCancel /></ProtectedRoute>} />
+      <Route path="/mentions-legales" element={<MentionsLegales />} />
+      <Route path="/cgv" element={<CGV />} />
     </Routes>
   );
 }

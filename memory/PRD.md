@@ -68,16 +68,18 @@ Application taxi complète "StationCab" avec support multi-rôles (Passager, Cha
 
 ## Modifications Récentes (15/06/2026)
 
-1. **NOUVEAU - Calculateur de prix sur Landing Page amélioré** :
-   - Autocomplétion d'adresses avec Mapbox (recherche temps réel)
-   - Géolocalisation automatique au chargement de la page
-   - Bouton de localisation manuelle (icône crosshair)
-   - Lieux populaires avec badge "Populaire" (Gare du Nord, CDG, Orly, etc.)
-   - Affichage des prix pour les 3 types de véhicules (VTC, Van, Taxi)
-   - Distance et durée estimées du trajet
-   - Badge "Forfait Aéroport" pour les trajets vers/depuis CDG et Orly
-   - Interface responsive (mobile et desktop)
-   - Clic sur une option redirige vers la connexion/réservation
+1. **NOUVEAU - CGV et Mentions Légales** :
+   - Page Mentions Légales (`/mentions-legales`) avec infos complètes A&S Prestige
+   - Page CGV (`/cgv`) avec 11 articles détaillés (annulation, remboursement, tarifs)
+   - Case à cocher obligatoire pour inscription passagers
+   - Case à cocher obligatoire pour inscription chauffeurs
+   - Liens dans le footer de la landing page
+   - Copyright "A&S Prestige SASU" dans le footer
+
+2. **Calculateur de prix sur Landing Page** :
+   - Autocomplétion d'adresses avec Mapbox
+   - Affichage des prix pour VTC, Van, Taxi
+   - Distance et durée estimées
 
 ## Modifications (13/06/2026)
 
@@ -152,6 +154,7 @@ Application taxi complète "StationCab" avec support multi-rôles (Passager, Cha
 ## Backlog Priorité
 
 ### P0 - Critique
+- [x] CGV et Mentions Légales avec case à cocher obligatoire (15/06/2026)
 - [x] Calculateur de prix landing page avec autocomplétion et géolocalisation (15/06/2026)
 - [x] Refus de course avec réassignation au prochain chauffeur après 5s (13/06/2026)
 - [ ] Test notifications push Firebase sur appareil Android (APK via déploiement Emergent)
@@ -167,8 +170,19 @@ Application taxi complète "StationCab" avec support multi-rôles (Passager, Cha
 - [ ] Configuration Resend pour domaine stationcab.fr
 
 ### ✅ TERMINÉ
+- [x] CGV et Mentions Légales complètes avec case obligatoire (15/06/2026)
 - [x] Calculateur de prix landing page avec autocomplétion, géolocalisation et prix VTC/Van/Taxi (15/06/2026)
 - [x] Refus de course avec réassignation (13/06/2026)
+
+## Informations Légales (A&S Prestige)
+- **Société**: A&S Prestige (SASU)
+- **Capital**: 1 500 €
+- **SIRET**: 827 808 866 00012
+- **RCS**: Meaux
+- **Adresse**: 9 rue Victor Baltard, 77410 Claye-Souilly
+- **Email**: contact@stationcab.fr
+- **TVA**: Non assujetti (Article 293B du CGI)
+- **Hébergeur**: OVH SAS
 - [x] Arrêts intermédiaires: ordre vérifié OK, affichage ajouté dans reçu et dashboard chauffeur (13/06/2026)
 - [x] Tarifs aéroport: vérifiés conformes aux tarifs officiels 2025 (13/06/2026)
 - [x] Bug notation/commentaire fin de course (04/03/2026)

@@ -5,6 +5,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
+import { Checkbox } from '../components/ui/checkbox';
 import { 
   Car, ArrowLeft, ArrowRight, Upload, Check, X, User, FileText, 
   CreditCard, Camera, Building, Calendar, Phone, Mail, Lock, Eye, EyeOff,
@@ -52,6 +53,7 @@ const DriverRegistrationPage = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [acceptedCGV, setAcceptedCGV] = useState(false);
   
   // Personal info
   const [formData, setFormData] = useState({
@@ -169,6 +171,12 @@ const DriverRegistrationPage = () => {
   };
 
   const handleSubmit = async () => {
+    // Vérification CGV
+    if (!acceptedCGV) {
+      toast.error('Vous devez accepter les Conditions Générales de Vente pour vous inscrire');
+      return;
+    }
+    
     setLoading(true);
     
     try {
@@ -678,20 +686,47 @@ const DriverRegistrationPage = () => {
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           ) : (
-            <Button
-              onClick={handleSubmit}
-              disabled={loading || !STEPS.slice(0, -1).every(s => isStepComplete(s.id))}
-              className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white"
-            >
-              {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <>
-                  <Check className="w-4 h-4 mr-2" />
-                  Soumettre mon inscription
-                </>
-              )}
-            </Button>
+            <div className="flex-1 space-y-4">
+              {/* CGV Checkbox */}
+              <div className="flex items-start space-x-3 p-4 bg-muted/50 rounded-xl border border-border">
+                <Checkbox
+                  id="accept-cgv-driver"
+                  checked={acceptedCGV}
+                  onCheckedChange={setAcceptedCGV}
+                  data-testid="accept-cgv-driver-checkbox"
+                  className="mt-0.5"
+                />
+                <label
+                  htmlFor="accept-cgv-driver"
+                  className="text-sm text-muted-foreground leading-relaxed cursor-pointer"
+                >
+                  J&apos;ai lu et j&apos;accepte les{' '}
+                  <Link to="/cgv" target="_blank" className="text-primary hover:underline">
+                    Conditions Générales de Vente
+                  </Link>{' '}
+                  et les{' '}
+                  <Link to="/mentions-legales" target="_blank" className="text-primary hover:underline">
+                    Mentions Légales
+                  </Link>
+                  . Je m&apos;engage à respecter les obligations du statut de chauffeur VTC/Taxi partenaire StationCab.
+                </label>
+              </div>
+              
+              <Button
+                onClick={handleSubmit}
+                disabled={loading || !acceptedCGV || !STEPS.slice(0, -1).every(s => isStepComplete(s.id))}
+                className="w-full h-12 bg-green-600 hover:bg-green-700 text-white"
+              >
+                {loading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    <Check className="w-4 h-4 mr-2" />
+                    Soumettre mon inscription
+                  </>
+                )}
+              </Button>
+            </div>
           )}
         </div>
       </div>
