@@ -7,17 +7,19 @@ import { usePushNotifications } from '../hooks/usePushNotifications';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import MapComponent from '../components/MapComponent';
 import AddressAutocomplete from '../components/AddressAutocomplete';
 import IntermediateStops from '../components/IntermediateStops';
 import ChatComponent from '../components/ChatComponent';
 import RatingModal from '../components/RatingModal';
 import PaymentMethodSelector from '../components/PaymentMethodSelector';
+import SavedCardManager from '../components/SavedCardManager';
 import StationCabLogo from '../components/StationCabLogo';
 import { 
   Car, MapPin, Navigation, Star, Clock, CreditCard, 
   Menu, User, History, LogOut, Phone, X, Route, MessageCircle,
-  Calendar, Gift, Users, Truck, Bookmark, Plus, Trash2, Zap, Bell, Crosshair, Loader2, Wallet, RefreshCw
+  Calendar, Gift, Users, Truck, Bookmark, Plus, Trash2, Zap, Bell, Crosshair, Loader2, Wallet, RefreshCw, AlertCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -45,6 +47,9 @@ const PassengerDashboard = () => {
   const [availableDrivers, setAvailableDrivers] = useState([]);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [loadingPayment, setLoadingPayment] = useState(false);
+  const [savedCard, setSavedCard] = useState(null);
+  const [showAddCardModal, setShowAddCardModal] = useState(false);
+  const [checkingCard, setCheckingCard] = useState(true);
   
   const [pickup, setPickup] = useState({ lat: 48.8566, lng: 2.3522, address: '' });
   const [destination, setDestination] = useState({ lat: 48.8738, lng: 2.2950, address: '' });
@@ -357,6 +362,22 @@ const PassengerDashboard = () => {
       throw error; // Re-throw so RatingModal can handle it
     }
   };
+
+  // Check for saved payment card on mount
+  useEffect(() => {
+    const checkSavedCard = async () => {
+      try {
+        const response = await api.get('/payments/saved-card');
+        if (response.data.has_card) {
+          setSavedCard(response.data.card);
+        }
+      } catch (err) {
+        console.log('No saved card or error:', err);
+      }
+      setCheckingCard(false);
+    };
+    checkSavedCard();
+  }, [api]);
 
   // Reset page to initial booking state
   const resetBookingState = useCallback(() => {
@@ -777,113 +798,90 @@ const PassengerDashboard = () => {
   };
 
   const createRide = async () => {
+    // Check if user has a saved card
+    if (!savedCard) {
+      setShowAddCardModal(true);
+      toast.error('Veuillez d\'abord enregistrer un moyen de paiement');
+      return;
+    }
+    
     // Filter valid stops
     const validStops = stops.filter(s => s.address && s.lat && s.lng);
     
-    // First, create a payment checkout session
     try {
       setLoadingPayment(true);
       
-      // Create checkout session for payment BEFORE booking
-      const checkoutResponse = await api.post('/payments/pre-booking-checkout', {
+      // Charge the saved card automatically
+      const paymentResponse = await api.post('/payments/charge-saved-card', {
         amount: Math.round(estimate.estimated_fare * 100), // Convert to cents
-        description: `Course ${pickup.address} → ${destination.address}`,
-        success_url: `${window.location.origin}/passenger?payment_success=true`,
-        cancel_url: `${window.location.origin}/passenger?payment_cancelled=true`,
+        description: `Course StationCab: ${pickup.address} → ${destination.address}`,
         metadata: {
-          pickup: JSON.stringify(pickup),
-          destination: JSON.stringify(destination),
-          stops: JSON.stringify(validStops),
           vehicle_type: vehicleType,
           passenger_count: passengers.toString()
         }
       });
       
-      // Redirect to Stripe Checkout
-      if (checkoutResponse.data.checkout_url) {
-        // Save booking data in localStorage before redirect
-        localStorage.setItem('pendingBooking', JSON.stringify({
-          pickup,
+      if (paymentResponse.data.success) {
+        // Payment successful, create the ride
+        const response = await api.post('/rides', { 
+          pickup, 
           destination,
-          stops: validStops,
+          stops: validStops.length > 0 ? validStops : null,
           vehicle_type: vehicleType,
           passenger_count: passengers,
-          session_id: checkoutResponse.data.session_id
-        }));
+          payment_status: 'paid',
+          payment_intent_id: paymentResponse.data.payment_intent_id
+        });
         
-        window.location.href = checkoutResponse.data.checkout_url;
-      } else {
-        throw new Error('No checkout URL received');
+        setActiveRide(response.data);
+        setStep('searching');
+        toast.success('Paiement accepté ! Recherche d\'un chauffeur...');
+        
+        // Start polling for driver acceptance
+        const checkInterval = setInterval(async () => {
+          try {
+            const check = await api.get(`/rides/${response.data.id}`);
+            if (check.data.status === 'accepted') {
+              clearInterval(checkInterval);
+              setActiveRide(check.data);
+              setStep('ride_active');
+              toast.success('Chauffeur trouvé!');
+            }
+          } catch (err) {
+            console.error('Error checking ride:', err);
+          }
+        }, 3000);
+        
+        // Clear after 2 minutes if no driver found
+        setTimeout(() => clearInterval(checkInterval), 120000);
       }
     } catch (error) {
       console.error('Payment error:', error);
-      toast.error('Erreur lors de la création du paiement. Veuillez réessayer.');
-      setLoadingPayment(false);
+      const errorMsg = error.response?.data?.detail || 'Erreur lors du paiement';
+      toast.error(errorMsg);
+      
+      // If card error, suggest to add a new card
+      if (errorMsg.includes('carte') || errorMsg.includes('card')) {
+        setShowAddCardModal(true);
+      }
     }
+    setLoadingPayment(false);
   };
   
-  // Handle payment success callback
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const paymentSuccess = urlParams.get('payment_success');
-    const paymentCancelled = urlParams.get('payment_cancelled');
-    
-    if (paymentSuccess === 'true') {
-      // Payment was successful, now create the ride
-      const pendingBooking = localStorage.getItem('pendingBooking');
-      if (pendingBooking) {
-        const bookingData = JSON.parse(pendingBooking);
-        localStorage.removeItem('pendingBooking');
-        
-        // Create the ride after successful payment
-        const createPaidRide = async () => {
-          try {
-            const response = await api.post('/rides', { 
-              pickup: bookingData.pickup, 
-              destination: bookingData.destination,
-              stops: bookingData.stops?.length > 0 ? bookingData.stops : null,
-              vehicle_type: bookingData.vehicle_type,
-              passenger_count: bookingData.passenger_count,
-              payment_status: 'paid',
-              payment_session_id: bookingData.session_id
-            });
-            setActiveRide(response.data);
-            setStep('searching');
-            toast.success('Paiement accepté ! Recherche d\'un chauffeur...');
-            
-            // Clear URL params
-            window.history.replaceState({}, '', '/passenger');
-            
-            // Start polling for driver acceptance
-            const checkInterval = setInterval(async () => {
-              try {
-                const check = await api.get(`/rides/${response.data.id}`);
-                if (check.data.status === 'accepted') {
-                  clearInterval(checkInterval);
-                  setActiveRide(check.data);
-                  setStep('ride_active');
-                  toast.success('Chauffeur trouvé!');
-                }
-              } catch (err) {
-                console.error('Error checking ride:', err);
-              }
-            }, 3000);
-            
-            // Clear after 2 minutes if no driver found
-            setTimeout(() => clearInterval(checkInterval), 120000);
-          } catch (error) {
-            toast.error('Erreur lors de la création de la course');
-          }
-        };
-        
-        createPaidRide();
+  // Callback when card is saved
+  const handleCardSaved = async () => {
+    setShowAddCardModal(false);
+    // Refresh saved card info
+    try {
+      const response = await api.get('/payments/saved-card');
+      if (response.data.has_card) {
+        setSavedCard(response.data.card);
+        toast.success('Carte enregistrée ! Vous pouvez maintenant réserver.');
       }
-    } else if (paymentCancelled === 'true') {
-      localStorage.removeItem('pendingBooking');
-      toast.error('Paiement annulé');
-      window.history.replaceState({}, '', '/passenger');
+    } catch (err) {
+      console.error('Error refreshing card:', err);
     }
-  }, []);
+  };
 
   const cancelRide = async () => {
     if (!activeRide) return;
@@ -1660,25 +1658,67 @@ const PassengerDashboard = () => {
               </CardContent>
             </Card>
             
+            {/* Saved Card Info or Add Card Button */}
+            {!savedCard ? (
+              <div 
+                onClick={() => setShowAddCardModal(true)}
+                className="flex items-center justify-between p-4 mb-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl cursor-pointer hover:bg-yellow-500/20 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <AlertCircle className="w-5 h-5 text-yellow-500" />
+                  <div>
+                    <p className="text-sm font-medium text-yellow-500">Aucune carte enregistrée</p>
+                    <p className="text-xs text-muted-foreground">Ajoutez une carte pour réserver</p>
+                  </div>
+                </div>
+                <CreditCard className="w-5 h-5 text-yellow-500" />
+              </div>
+            ) : (
+              <div className="flex items-center justify-between p-3 mb-4 bg-muted/30 rounded-xl border border-border">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                    <CreditCard className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium capitalize">{savedCard.brand} •••• {savedCard.last4}</p>
+                    <p className="text-xs text-muted-foreground">Expire {savedCard.exp_month}/{savedCard.exp_year}</p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAddCardModal(true)}
+                  className="text-xs"
+                >
+                  Modifier
+                </Button>
+              </div>
+            )}
+            
             <Button 
               onClick={createRide}
-              disabled={loadingPayment}
+              disabled={loadingPayment || !savedCard}
               data-testid="book-ride-btn"
               className={`w-full h-14 hover:opacity-90 rounded-full font-bold text-lg pulse-glow ${
                 vehicleType === 'taxi' 
                   ? 'bg-yellow-500 text-black' 
                   : 'bg-primary text-primary-foreground'
-              }`}
+              } ${!savedCard ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {loadingPayment ? (
                 <span className="flex items-center justify-center">
                   <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  Redirection vers le paiement...
+                  Paiement en cours...
+                </span>
+              ) : !savedCard ? (
+                <span className="flex items-center justify-center">
+                  <CreditCard className="w-5 h-5 mr-2" />
+                  Ajoutez une carte pour réserver
                 </span>
               ) : (
                 <span className="flex items-center justify-center">
                   <CreditCard className="w-5 h-5 mr-2" />
-                  Payer et réserver ({estimate?.estimated_fare}€)
+                  Payer {estimate?.estimated_fare}€ et réserver
                 </span>
               )}
             </Button>
@@ -1852,6 +1892,22 @@ const PassengerDashboard = () => {
           </div>
         </div>
       )}
+
+      {/* Add Card Modal */}
+      <Dialog open={showAddCardModal} onOpenChange={setShowAddCardModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-primary" />
+              Enregistrer une carte bancaire
+            </DialogTitle>
+          </DialogHeader>
+          <SavedCardManager 
+            onCardSaved={handleCardSaved}
+            showTitle={false}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

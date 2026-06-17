@@ -2965,6 +2965,195 @@ async def create_pre_booking_checkout(data: PreBookingPaymentRequest, request: R
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Payment error: {str(e)}")
 
+# ======================== SAVED PAYMENT METHODS ========================
+
+class SetupIntentResponse(BaseModel):
+    client_secret: str
+    setup_intent_id: str
+    stripe_customer_id: str = ""
+    publishable_key: str
+
+@api_router.post("/payments/create-setup-intent")
+async def create_setup_intent(current_user: dict = Depends(get_current_user)):
+    """Create a Setup Intent to save a card for future payments"""
+    try:
+        # Check if user already has a Stripe customer ID
+        stripe_customer_id = current_user.get("stripe_customer_id")
+        
+        if not stripe_customer_id:
+            # Create a new Stripe customer
+            customer = stripe.Customer.create(
+                email=current_user["email"],
+                name=f"{current_user.get('first_name', '')} {current_user.get('last_name', '')}".strip(),
+                metadata={
+                    "user_id": current_user["id"],
+                    "role": current_user["role"]
+                }
+            )
+            stripe_customer_id = customer.id
+            
+            # Save Stripe customer ID to user
+            await db.users.update_one(
+                {"id": current_user["id"]},
+                {"$set": {"stripe_customer_id": stripe_customer_id}}
+            )
+        
+        # Create a Setup Intent
+        setup_intent = stripe.SetupIntent.create(
+            customer=stripe_customer_id,
+            payment_method_types=["card"],
+            metadata={
+                "user_id": current_user["id"]
+            }
+        )
+        
+        return {
+            "client_secret": setup_intent.client_secret,
+            "setup_intent_id": setup_intent.id,
+            "stripe_customer_id": stripe_customer_id,
+            "publishable_key": STRIPE_PUBLISHABLE_KEY
+        }
+        
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
+
+class SavePaymentMethodRequest(BaseModel):
+    payment_method_id: str
+
+@api_router.post("/payments/save-payment-method")
+async def save_payment_method(data: SavePaymentMethodRequest, current_user: dict = Depends(get_current_user)):
+    """Save a payment method as the default for the user"""
+    try:
+        stripe_customer_id = current_user.get("stripe_customer_id")
+        if not stripe_customer_id:
+            raise HTTPException(status_code=400, detail="No Stripe customer found. Please create a setup intent first.")
+        
+        # Attach the payment method to the customer
+        stripe.PaymentMethod.attach(
+            data.payment_method_id,
+            customer=stripe_customer_id,
+        )
+        
+        # Set as default payment method
+        stripe.Customer.modify(
+            stripe_customer_id,
+            invoice_settings={"default_payment_method": data.payment_method_id}
+        )
+        
+        # Get card details
+        payment_method = stripe.PaymentMethod.retrieve(data.payment_method_id)
+        card_info = {
+            "payment_method_id": data.payment_method_id,
+            "brand": payment_method.card.brand,
+            "last4": payment_method.card.last4,
+            "exp_month": payment_method.card.exp_month,
+            "exp_year": payment_method.card.exp_year
+        }
+        
+        # Save to user
+        await db.users.update_one(
+            {"id": current_user["id"]},
+            {"$set": {"default_payment_method": card_info}}
+        )
+        
+        return {
+            "success": True,
+            "card": card_info
+        }
+        
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
+
+@api_router.get("/payments/saved-card")
+async def get_saved_card(current_user: dict = Depends(get_current_user)):
+    """Get the user's saved card info"""
+    card_info = current_user.get("default_payment_method")
+    if not card_info:
+        return {"has_card": False, "card": None}
+    
+    return {
+        "has_card": True,
+        "card": {
+            "brand": card_info.get("brand"),
+            "last4": card_info.get("last4"),
+            "exp_month": card_info.get("exp_month"),
+            "exp_year": card_info.get("exp_year")
+        }
+    }
+
+@api_router.delete("/payments/remove-card")
+async def remove_saved_card(current_user: dict = Depends(get_current_user)):
+    """Remove the user's saved card"""
+    card_info = current_user.get("default_payment_method")
+    if card_info and card_info.get("payment_method_id"):
+        try:
+            stripe.PaymentMethod.detach(card_info["payment_method_id"])
+        except:
+            pass  # Ignore errors if card already detached
+    
+    await db.users.update_one(
+        {"id": current_user["id"]},
+        {"$unset": {"default_payment_method": 1}}
+    )
+    
+    return {"success": True}
+
+class ChargeCardRequest(BaseModel):
+    amount: int  # Amount in cents
+    description: str
+    metadata: dict = {}
+
+@api_router.post("/payments/charge-saved-card")
+async def charge_saved_card(data: ChargeCardRequest, current_user: dict = Depends(get_current_user)):
+    """Charge the user's saved card automatically"""
+    card_info = current_user.get("default_payment_method")
+    stripe_customer_id = current_user.get("stripe_customer_id")
+    
+    if not card_info or not stripe_customer_id:
+        raise HTTPException(status_code=400, detail="Aucune carte enregistrée. Veuillez ajouter un moyen de paiement.")
+    
+    try:
+        # Create a PaymentIntent with the saved payment method
+        payment_intent = stripe.PaymentIntent.create(
+            amount=data.amount,
+            currency="eur",
+            customer=stripe_customer_id,
+            payment_method=card_info["payment_method_id"],
+            off_session=True,
+            confirm=True,
+            description=data.description,
+            metadata={
+                **data.metadata,
+                "user_id": current_user["id"]
+            }
+        )
+        
+        # Record the transaction
+        transaction = {
+            "id": str(uuid.uuid4()),
+            "payment_intent_id": payment_intent.id,
+            "user_id": current_user["id"],
+            "amount": data.amount / 100,
+            "currency": "eur",
+            "status": payment_intent.status,
+            "description": data.description,
+            "metadata": data.metadata,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.payment_transactions.insert_one(transaction)
+        
+        return {
+            "success": True,
+            "payment_intent_id": payment_intent.id,
+            "status": payment_intent.status,
+            "amount": data.amount / 100
+        }
+        
+    except stripe.error.CardError as e:
+        raise HTTPException(status_code=400, detail=f"Erreur de carte: {e.user_message}")
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=400, detail=f"Erreur de paiement: {str(e)}")
+
 # Payment Intent endpoint for inline card form
 class PaymentIntentRequest(BaseModel):
     ride_id: str
