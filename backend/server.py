@@ -586,6 +586,13 @@ class PaymentCreateRequest(BaseModel):
     ride_id: str
     origin_url: str
 
+class PreBookingPaymentRequest(BaseModel):
+    amount: int  # Amount in cents
+    description: str
+    success_url: str
+    cancel_url: str
+    metadata: dict = {}
+
 class ChatMessage(BaseModel):
     ride_id: str
     message: str
@@ -2898,6 +2905,65 @@ async def create_checkout(data: PaymentCreateRequest, request: Request, current_
     await db.payment_transactions.insert_one(transaction)
     
     return {"url": session.url, "session_id": session.session_id}
+
+# Pre-booking payment endpoint - payment BEFORE ride creation
+@api_router.post("/payments/pre-booking-checkout")
+async def create_pre_booking_checkout(data: PreBookingPaymentRequest, request: Request, current_user: dict = Depends(get_current_user)):
+    """Create a Stripe checkout session for payment BEFORE booking a ride"""
+    
+    host_url = str(request.base_url).rstrip('/')
+    webhook_url = f"{host_url}/api/webhook/stripe"
+    
+    try:
+        # Create Stripe checkout session directly
+        session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[{
+                'price_data': {
+                    'currency': 'eur',
+                    'product_data': {
+                        'name': 'Course StationCab',
+                        'description': data.description,
+                    },
+                    'unit_amount': data.amount,  # Amount in cents
+                },
+                'quantity': 1,
+            }],
+            mode='payment',
+            success_url=data.success_url,
+            cancel_url=data.cancel_url,
+            metadata={
+                **data.metadata,
+                'user_id': current_user['id'],
+                'user_email': current_user['email'],
+                'type': 'pre_booking'
+            }
+        )
+        
+        # Create payment transaction record
+        transaction = {
+            "id": str(uuid.uuid4()),
+            "session_id": session.id,
+            "user_id": current_user["id"],
+            "user_email": current_user["email"],
+            "amount": data.amount / 100,  # Convert back to euros for storage
+            "currency": "eur",
+            "payment_status": "pending",
+            "type": "pre_booking",
+            "metadata": data.metadata,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.payment_transactions.insert_one(transaction)
+        
+        return {
+            "checkout_url": session.url, 
+            "session_id": session.id
+        }
+        
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Payment error: {str(e)}")
 
 # Payment Intent endpoint for inline card form
 class PaymentIntentRequest(BaseModel):

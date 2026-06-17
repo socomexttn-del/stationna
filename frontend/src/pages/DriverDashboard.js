@@ -1343,17 +1343,18 @@ const DriverDashboard = () => {
                       </div>
                     </div>
                     
-                    <div className="flex items-center justify-between pt-2">
-                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+                      <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
                         <span>{ride.distance_km} km</span>
                         <span>•</span>
                         <span>{ride.vehicle_type === 'van' ? 'Van' : ride.vehicle_type === 'taxi' ? 'Taxi' : 'Standard'}</span>
                         <span>•</span>
                         <span>{ride.passenger_count || 1} passager{(ride.passenger_count || 1) > 1 ? 's' : ''}</span>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-shrink-0">
                         <Button 
                           variant="outline"
+                          size="sm"
                           onClick={() => dismissRide(ride.id)}
                           data-testid={`dismiss-ride-${ride.id}`}
                           className="border-red-500/50 text-red-500 hover:bg-red-500/10"
@@ -1361,11 +1362,12 @@ const DriverDashboard = () => {
                           <X className="w-4 h-4 mr-1" /> Refuser
                         </Button>
                         <Button 
+                          size="sm"
                           onClick={() => acceptRide(ride.id)}
                           data-testid={`accept-ride-${ride.id}`}
                           className={`${ride.is_scheduled ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'} text-white font-bold`}
                         >
-                          <Check className="w-4 h-4 mr-2" /> Accepter
+                          <Check className="w-4 h-4 mr-1" /> Accepter
                         </Button>
                       </div>
                     </div>

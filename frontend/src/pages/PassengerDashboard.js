@@ -780,35 +780,110 @@ const PassengerDashboard = () => {
     // Filter valid stops
     const validStops = stops.filter(s => s.address && s.lat && s.lng);
     
+    // First, create a payment checkout session
     try {
-      const response = await api.post('/rides', { 
-        pickup, 
-        destination,
-        stops: validStops.length > 0 ? validStops : null,
-        vehicle_type: vehicleType,
-        passenger_count: passengers
-      });
-      setActiveRide(response.data);
-      setStep('searching');
-      toast.success('Recherche d\'un chauffeur...');
+      setLoadingPayment(true);
       
-      // Start polling for driver acceptance
-      const checkInterval = setInterval(async () => {
-        const check = await api.get(`/rides/${response.data.id}`);
-        if (check.data.status === 'accepted') {
-          clearInterval(checkInterval);
-          setActiveRide(check.data);
-          setStep('ride_active');
-          toast.success('Chauffeur trouvé!');
+      // Create checkout session for payment BEFORE booking
+      const checkoutResponse = await api.post('/payments/pre-booking-checkout', {
+        amount: Math.round(estimate.estimated_fare * 100), // Convert to cents
+        description: `Course ${pickup.address} → ${destination.address}`,
+        success_url: `${window.location.origin}/passenger?payment_success=true`,
+        cancel_url: `${window.location.origin}/passenger?payment_cancelled=true`,
+        metadata: {
+          pickup: JSON.stringify(pickup),
+          destination: JSON.stringify(destination),
+          stops: JSON.stringify(validStops),
+          vehicle_type: vehicleType,
+          passenger_count: passengers.toString()
         }
-      }, 3000);
+      });
       
-      // Clear after 2 minutes if no driver found
-      setTimeout(() => clearInterval(checkInterval), 120000);
+      // Redirect to Stripe Checkout
+      if (checkoutResponse.data.checkout_url) {
+        // Save booking data in localStorage before redirect
+        localStorage.setItem('pendingBooking', JSON.stringify({
+          pickup,
+          destination,
+          stops: validStops,
+          vehicle_type: vehicleType,
+          passenger_count: passengers,
+          session_id: checkoutResponse.data.session_id
+        }));
+        
+        window.location.href = checkoutResponse.data.checkout_url;
+      } else {
+        throw new Error('No checkout URL received');
+      }
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Erreur lors de la réservation');
+      console.error('Payment error:', error);
+      toast.error('Erreur lors de la création du paiement. Veuillez réessayer.');
+      setLoadingPayment(false);
     }
   };
+  
+  // Handle payment success callback
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentSuccess = urlParams.get('payment_success');
+    const paymentCancelled = urlParams.get('payment_cancelled');
+    
+    if (paymentSuccess === 'true') {
+      // Payment was successful, now create the ride
+      const pendingBooking = localStorage.getItem('pendingBooking');
+      if (pendingBooking) {
+        const bookingData = JSON.parse(pendingBooking);
+        localStorage.removeItem('pendingBooking');
+        
+        // Create the ride after successful payment
+        const createPaidRide = async () => {
+          try {
+            const response = await api.post('/rides', { 
+              pickup: bookingData.pickup, 
+              destination: bookingData.destination,
+              stops: bookingData.stops?.length > 0 ? bookingData.stops : null,
+              vehicle_type: bookingData.vehicle_type,
+              passenger_count: bookingData.passenger_count,
+              payment_status: 'paid',
+              payment_session_id: bookingData.session_id
+            });
+            setActiveRide(response.data);
+            setStep('searching');
+            toast.success('Paiement accepté ! Recherche d\'un chauffeur...');
+            
+            // Clear URL params
+            window.history.replaceState({}, '', '/passenger');
+            
+            // Start polling for driver acceptance
+            const checkInterval = setInterval(async () => {
+              try {
+                const check = await api.get(`/rides/${response.data.id}`);
+                if (check.data.status === 'accepted') {
+                  clearInterval(checkInterval);
+                  setActiveRide(check.data);
+                  setStep('ride_active');
+                  toast.success('Chauffeur trouvé!');
+                }
+              } catch (err) {
+                console.error('Error checking ride:', err);
+              }
+            }, 3000);
+            
+            // Clear after 2 minutes if no driver found
+            setTimeout(() => clearInterval(checkInterval), 120000);
+          } catch (error) {
+            toast.error('Erreur lors de la création de la course');
+          }
+        };
+        
+        createPaidRide();
+      }
+    } else if (paymentCancelled === 'true') {
+      localStorage.removeItem('pendingBooking');
+      toast.error('Paiement annulé');
+      window.history.replaceState({}, '', '/passenger');
+    }
+  }, []);
 
   const cancelRide = async () => {
     if (!activeRide) return;
@@ -1587,6 +1662,7 @@ const PassengerDashboard = () => {
             
             <Button 
               onClick={createRide}
+              disabled={loadingPayment}
               data-testid="book-ride-btn"
               className={`w-full h-14 hover:opacity-90 rounded-full font-bold text-lg pulse-glow ${
                 vehicleType === 'taxi' 
@@ -1594,7 +1670,17 @@ const PassengerDashboard = () => {
                   : 'bg-primary text-primary-foreground'
               }`}
             >
-              {vehicleType === 'taxi' ? 'Réserver un Taxi' : 'Réserver maintenant'}
+              {loadingPayment ? (
+                <span className="flex items-center justify-center">
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  Redirection vers le paiement...
+                </span>
+              ) : (
+                <span className="flex items-center justify-center">
+                  <CreditCard className="w-5 h-5 mr-2" />
+                  Payer et réserver ({estimate?.estimated_fare}€)
+                </span>
+              )}
             </Button>
           </div>
         )}
