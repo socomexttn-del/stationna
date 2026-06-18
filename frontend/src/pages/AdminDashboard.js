@@ -226,6 +226,16 @@ const AdminDashboard = () => {
                 <Tag className="w-4 h-4" /> Promos
               </Button>
             </Link>
+            <Link to="/admin/cancellations">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="gap-2 border-red-500/50 text-red-500 hover:bg-red-500/10"
+                data-testid="admin-cancellations-link"
+              >
+                <DollarSign className="w-4 h-4" /> Annulations
+              </Button>
+            </Link>
             <Button 
               variant="outline" 
               size="sm"

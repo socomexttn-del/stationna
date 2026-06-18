@@ -94,6 +94,15 @@ Application taxi complète "StationCab" avec support multi-rôles (Passager, Cha
    - Confirmation demandée au passager avant annulation avec affichage du montant
    - Nouveaux champs dans RideResponse: `cancelled_by`, `cancelled_at`, `cancellation_fee`, `cancellation_fee_charged`
 
+4. **Page Admin "Frais d'annulation" (Comptabilité)** :
+   - Nouvelle route `/admin/cancellations`
+   - Endpoint API `GET /api/admin/cancellation-fees` avec filtres date et pagination
+   - Cartes récapitulatives: Total encaissé, Non prélevé, Total frais, Nombre d'annulations
+   - Répartition par type de véhicule (VTC, Van, Taxi)
+   - Tableau détaillé avec: Date, Réservation, Client, Véhicule, Frais, Statut (Prélevé/Échec), Trajet
+   - Export CSV pour comptabilité
+   - Bouton "Annulations" ajouté dans le header du dashboard Admin
+
 ### Session 1 - Flux de course et paiements
 
 1. **Correction du flux de course complet** :

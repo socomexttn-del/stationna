@@ -13,6 +13,7 @@ import AdminClientsPage from './pages/AdminClientsPage';
 import AdminPromoCodesPage from './pages/AdminPromoCodesPage';
 import AdminDriversPage from './pages/AdminDriversPage';
 import AdminDriverValidationPage from './pages/AdminDriverValidationPage';
+import AdminCancellationsPage from './pages/AdminCancellationsPage';
 import RideHistory from './pages/RideHistory';
 import ProfilePage from './pages/ProfilePage';
 import PaymentSuccess from './pages/PaymentSuccess';
@@ -87,6 +88,7 @@ function AppRoutes() {
       <Route path="/admin/promo-codes" element={<ProtectedRoute allowedRoles={['admin']}><AdminPromoCodesPage /></ProtectedRoute>} />
       <Route path="/admin/drivers" element={<ProtectedRoute allowedRoles={['admin']}><AdminDriversPage /></ProtectedRoute>} />
       <Route path="/admin/driver-validation" element={<ProtectedRoute allowedRoles={['admin']}><AdminDriverValidationPage /></ProtectedRoute>} />
+      <Route path="/admin/cancellations" element={<ProtectedRoute allowedRoles={['admin']}><AdminCancellationsPage /></ProtectedRoute>} />
       <Route path="/history" element={<ProtectedRoute><RideHistory /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
       <Route path="/scheduled" element={<ProtectedRoute allowedRoles={['passenger']}><ScheduledRidesPage /></ProtectedRoute>} />

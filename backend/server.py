@@ -4546,6 +4546,88 @@ async def get_admin_recent_rides(
     
     return {"rides": rides}
 
+# ======================== ADMIN CANCELLATION FEES ========================
+
+@api_router.get("/admin/cancellation-fees")
+async def get_admin_cancellation_fees(
+    page: int = 1,
+    limit: int = 20,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Get all cancelled rides with fees for accounting"""
+    query = {
+        "status": "cancelled",
+        "cancellation_fee": {"$gt": 0}
+    }
+    
+    # Date filters
+    if date_from or date_to:
+        query["cancelled_at"] = {}
+        if date_from:
+            query["cancelled_at"]["$gte"] = date_from
+        if date_to:
+            query["cancelled_at"]["$lte"] = date_to
+    
+    # Get total count
+    total_count = await db.rides.count_documents(query)
+    
+    # Get paginated results
+    skip = (page - 1) * limit
+    cancellations = await db.rides.find(
+        query,
+        {"_id": 0}
+    ).sort("cancelled_at", -1).skip(skip).to_list(limit)
+    
+    # Calculate totals
+    totals_pipeline = [
+        {"$match": query},
+        {"$group": {
+            "_id": None,
+            "total_fees": {"$sum": "$cancellation_fee"},
+            "total_charged": {"$sum": {"$cond": [{"$eq": ["$cancellation_fee_charged", True]}, "$cancellation_fee", 0]}},
+            "total_not_charged": {"$sum": {"$cond": [{"$ne": ["$cancellation_fee_charged", True]}, "$cancellation_fee", 0]}},
+            "count": {"$sum": 1}
+        }}
+    ]
+    totals_result = await db.rides.aggregate(totals_pipeline).to_list(1)
+    totals = totals_result[0] if totals_result else {
+        "total_fees": 0,
+        "total_charged": 0,
+        "total_not_charged": 0,
+        "count": 0
+    }
+    
+    # Group by vehicle type
+    by_vehicle_pipeline = [
+        {"$match": query},
+        {"$group": {
+            "_id": "$vehicle_type",
+            "count": {"$sum": 1},
+            "total_fees": {"$sum": "$cancellation_fee"},
+            "charged": {"$sum": {"$cond": [{"$eq": ["$cancellation_fee_charged", True]}, 1, 0]}}
+        }}
+    ]
+    by_vehicle = await db.rides.aggregate(by_vehicle_pipeline).to_list(10)
+    
+    return {
+        "cancellations": cancellations,
+        "pagination": {
+            "page": page,
+            "limit": limit,
+            "total": total_count,
+            "pages": (total_count + limit - 1) // limit
+        },
+        "totals": {
+            "total_fees": totals.get("total_fees", 0),
+            "total_charged": totals.get("total_charged", 0),
+            "total_not_charged": totals.get("total_not_charged", 0),
+            "count": totals.get("count", 0)
+        },
+        "by_vehicle_type": {item["_id"]: item for item in by_vehicle}
+    }
+
 # ======================== ADMIN CLIENT DATABASE ========================
 
 class ClientResponse(BaseModel):
