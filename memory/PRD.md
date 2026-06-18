@@ -68,7 +68,7 @@ Application taxi complète "StationCab" avec support multi-rôles (Passager, Cha
 
 ## Modifications Récentes (18/06/2026)
 
-### Session 2 - Corrections P0 Dashboard Chauffeur
+### Session 2 - Corrections P0 Dashboard Chauffeur + Frais d'annulation
 
 1. **UI Dashboard Chauffeur - Boutons en haut** :
    - Réorganisation de la carte "Course active" pour mettre les boutons d'action EN PREMIER
@@ -84,6 +84,15 @@ Application taxi complète "StationCab" avec support multi-rôles (Passager, Cha
      - Remise en disponibilité automatique
    - Backend: endpoint `/api/rides/{id}/cancel` amélioré avec notifications Firebase
    - Le chauffeur ne crash/déconnecte plus lors d'une annulation passager
+
+3. **Frais d'annulation implémentés** :
+   - **VTC Standard** : 8€
+   - **Van** : 15€
+   - **Taxi** : 8€
+   - Frais appliqués uniquement si le passager annule APRÈS acceptation chauffeur
+   - Paiement automatique via Stripe (carte enregistrée)
+   - Confirmation demandée au passager avant annulation avec affichage du montant
+   - Nouveaux champs dans RideResponse: `cancelled_by`, `cancelled_at`, `cancellation_fee`, `cancellation_fee_charged`
 
 ### Session 1 - Flux de course et paiements
 

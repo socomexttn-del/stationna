@@ -885,12 +885,37 @@ const PassengerDashboard = () => {
 
   const cancelRide = async () => {
     if (!activeRide) return;
+    
+    // Check if cancellation fee applies (ride accepted/arrived/in_progress)
+    const hasDriver = activeRide.driver_id && ['accepted', 'arrived', 'in_progress'].includes(activeRide.status);
+    
+    if (hasDriver) {
+      // Calculate fee based on vehicle type
+      const fee = activeRide.vehicle_type === 'van' ? 15 : 8;
+      const confirmed = window.confirm(
+        `⚠️ Attention: Votre chauffeur a déjà accepté la course.\n\n` +
+        `Des frais d'annulation de ${fee}€ seront prélevés sur votre carte enregistrée.\n\n` +
+        `Voulez-vous vraiment annuler ?`
+      );
+      if (!confirmed) return;
+    }
+    
     try {
-      await api.post(`/rides/${activeRide.id}/cancel`);
+      const response = await api.post(`/rides/${activeRide.id}/cancel`);
       setActiveRide(null);
       setStep('idle');
       setEstimate(null);
-      toast.success('Course annulée');
+      
+      // Show appropriate message based on fee
+      if (response.data?.cancellation_fee > 0) {
+        if (response.data?.cancellation_fee_charged) {
+          toast.success(`Course annulée. Frais d'annulation: ${response.data.cancellation_fee}€`);
+        } else {
+          toast.warning(`Course annulée. Frais d'annulation de ${response.data.cancellation_fee}€ non débités (problème de paiement)`);
+        }
+      } else {
+        toast.success('Course annulée');
+      }
     } catch (error) {
       toast.error('Erreur lors de l\'annulation');
     }

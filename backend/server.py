@@ -514,6 +514,11 @@ class RideResponse(BaseModel):
     driver_distance_km: Optional[float] = None
     driver_arrived: Optional[bool] = False  # Driver has arrived at pickup
     driver_arrived_at: Optional[str] = None
+    # Cancellation fields
+    cancelled_by: Optional[str] = None  # "passenger" or "driver"
+    cancelled_at: Optional[str] = None
+    cancellation_fee: Optional[float] = None  # VTC/Taxi: 8€, Van: 15€
+    cancellation_fee_charged: Optional[bool] = None
 
 class RatingCreate(BaseModel):
     ride_id: str
@@ -2540,10 +2545,61 @@ async def cancel_ride(ride_id: str, current_user: dict = Depends(get_current_use
     # Determine who cancelled (passenger or driver)
     cancelled_by = "passenger" if current_user["id"] == ride["passenger_id"] else "driver"
     
+    # Calculate cancellation fee (only if passenger cancels after driver accepted)
+    cancellation_fee = 0.0
+    cancellation_fee_charged = False
+    
+    if cancelled_by == "passenger" and ride.get("driver_id") and ride["status"] in ["accepted", "arrived", "in_progress"]:
+        # Cancellation fees by vehicle type: VTC=8€, Van=15€, Taxi=8€
+        vehicle_type = ride.get("vehicle_type", "standard")
+        if vehicle_type == "van":
+            cancellation_fee = 15.0
+        else:
+            # VTC (standard) and Taxi both have 8€ fee
+            cancellation_fee = 8.0
+        
+        # Try to charge the cancellation fee via Stripe
+        passenger = await db.users.find_one({"id": ride["passenger_id"]}, {"_id": 0})
+        if passenger and passenger.get("stripe_customer_id"):
+            try:
+                # Get default payment method
+                customer = stripe.Customer.retrieve(passenger["stripe_customer_id"])
+                default_pm = customer.get("invoice_settings", {}).get("default_payment_method")
+                
+                if default_pm:
+                    # Create and confirm a PaymentIntent for the cancellation fee
+                    payment_intent = stripe.PaymentIntent.create(
+                        amount=int(cancellation_fee * 100),  # Convert to cents
+                        currency="eur",
+                        customer=passenger["stripe_customer_id"],
+                        payment_method=default_pm,
+                        off_session=True,
+                        confirm=True,
+                        description=f"Frais d'annulation course {ride_id}",
+                        metadata={
+                            "ride_id": ride_id,
+                            "type": "cancellation_fee",
+                            "vehicle_type": vehicle_type
+                        }
+                    )
+                    if payment_intent.status == "succeeded":
+                        cancellation_fee_charged = True
+                        logger.info(f"Cancellation fee {cancellation_fee}€ charged for ride {ride_id}")
+                    else:
+                        logger.warning(f"Cancellation fee payment status: {payment_intent.status}")
+                else:
+                    logger.warning(f"No default payment method for passenger {ride['passenger_id']}")
+            except stripe.error.CardError as e:
+                logger.error(f"Card error charging cancellation fee: {e}")
+            except Exception as e:
+                logger.error(f"Error charging cancellation fee: {e}")
+    
     await db.rides.update_one({"id": ride_id}, {"$set": {
         "status": "cancelled",
         "cancelled_by": cancelled_by,
-        "cancelled_at": datetime.now(timezone.utc).isoformat()
+        "cancelled_at": datetime.now(timezone.utc).isoformat(),
+        "cancellation_fee": cancellation_fee,
+        "cancellation_fee_charged": cancellation_fee_charged
     }})
     
     # If there was a driver assigned, make them available again and notify them
@@ -2552,14 +2608,16 @@ async def cancel_ride(ride_id: str, current_user: dict = Depends(get_current_use
         
         # Notify the driver that the ride was cancelled (if cancelled by passenger)
         if cancelled_by == "passenger":
+            fee_msg = f" (frais: {cancellation_fee}€)" if cancellation_fee > 0 else ""
             try:
                 await notification_manager.notify_driver(
                     ride["driver_id"],
                     "ride_cancelled",
                     {
                         "ride_id": ride_id,
-                        "message": "Le client a annulé la course",
-                        "pickup_address": ride.get("pickup", {}).get("address", "")
+                        "message": f"Le client a annulé la course{fee_msg}",
+                        "pickup_address": ride.get("pickup", {}).get("address", ""),
+                        "cancellation_fee": cancellation_fee
                     }
                 )
             except Exception as e:
