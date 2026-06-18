@@ -1,4 +1,4 @@
-# Allogo Test Credentials
+# StationCab Test Credentials
 
 ## Admin
 - **Email**: admin@volttaxi.com

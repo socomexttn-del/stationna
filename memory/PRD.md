@@ -68,6 +68,25 @@ Application taxi complète "StationCab" avec support multi-rôles (Passager, Cha
 
 ## Modifications Récentes (18/06/2026)
 
+### Session 2 - Corrections P0 Dashboard Chauffeur
+
+1. **UI Dashboard Chauffeur - Boutons en haut** :
+   - Réorganisation de la carte "Course active" pour mettre les boutons d'action EN PREMIER
+   - Ordre: Boutons d'action → Navigation (Waze/GMaps) → Prix → Passager → Adresses → Bon de réservation
+   - Le chauffeur n'a plus besoin de scroller pour accéder aux boutons "Je suis arrivé", "Démarrer", "Terminer"
+   - Tests validés: boutons visibles dans viewport 390x844 sans scroll
+
+2. **Bug Annulation Passager - Corrigé** :
+   - Ajout de `prevActiveRideRef` dans DriverDashboard pour détecter quand une course disparaît
+   - Si le passager annule une course acceptée/arrivée/en_progress, le chauffeur voit:
+     - Toast "⚠️ Course annulée par le client"
+     - Son de notification
+     - Remise en disponibilité automatique
+   - Backend: endpoint `/api/rides/{id}/cancel` amélioré avec notifications Firebase
+   - Le chauffeur ne crash/déconnecte plus lors d'une annulation passager
+
+### Session 1 - Flux de course et paiements
+
 1. **Correction du flux de course complet** :
    - Ajout du statut "arrived" (chauffeur arrivé)
    - Flux : pending → accepted → arrived → in_progress → completed
