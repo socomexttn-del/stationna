@@ -571,13 +571,39 @@ const DriverDashboard = () => {
     }
   };
 
+  // Track previous active ride to detect cancellations
+  const prevActiveRideRef = useRef(null);
+  
   const fetchActiveRide = async () => {
     try {
       const response = await api.get('/rides/active');
-      setActiveRide(response.data);
+      const newRide = response.data;
+      
+      // Detect if passenger cancelled the ride (had active ride, now gone)
+      if (prevActiveRideRef.current && !newRide) {
+        // Check if it was cancelled (not completed by us)
+        const prevStatus = prevActiveRideRef.current.status;
+        if (prevStatus === 'accepted' || prevStatus === 'arrived' || prevStatus === 'in_progress') {
+          // The ride disappeared - likely cancelled by passenger
+          toast.error(
+            <div className="flex flex-col gap-1">
+              <span className="font-semibold">⚠️ Course annulée par le client</span>
+              <span className="text-sm">La course a été annulée. Vous êtes de nouveau disponible.</span>
+            </div>,
+            { duration: 8000 }
+          );
+          // Play a notification sound
+          playNotificationSound(2);
+          // Set driver back to available
+          setIsAvailable(true);
+        }
+      }
+      
+      prevActiveRideRef.current = newRide;
+      setActiveRide(newRide);
       
       // If there's an active ride, ensure driver is marked as unavailable
-      if (response.data && (response.data.status === 'accepted' || response.data.status === 'in_progress')) {
+      if (newRide && (newRide.status === 'accepted' || newRide.status === 'arrived' || newRide.status === 'in_progress')) {
         setIsAvailable(false);
       }
     } catch (error) {
@@ -1089,12 +1115,116 @@ const DriverDashboard = () => {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg" style={{ fontFamily: 'Space Grotesk' }}>Course active</CardTitle>
                 <span className={`text-sm font-medium ${getStatusColor(activeRide.status)}`}>
-                  {activeRide.status === 'accepted' ? 'En route vers client' : 'En course'}
+                  {activeRide.status === 'accepted' ? 'En route vers client' : 
+                   activeRide.status === 'arrived' ? 'Arrivé - En attente' : 'En course'}
                 </span>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
+              {/* === BOUTONS D'ACTION EN PREMIER (visible sans scroll) === */}
+              <div className="flex flex-col gap-3">
+                {/* Status: accepted - show arrived button */}
+                {activeRide.status === 'accepted' && (
+                  <>
+                    <Button 
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white h-14 text-lg font-bold"
+                      onClick={async () => {
+                        try {
+                          await api.post(`/rides/${activeRide.id}/arrived`);
+                          toast.success('Client notifié de votre arrivée!');
+                          playNotificationSound(1);
+                          fetchActiveRide();
+                        } catch (error) {
+                          toast.error('Erreur lors de la notification');
+                        }
+                      }}
+                      data-testid="driver-arrived-btn"
+                    >
+                      <MapPin className="w-5 h-5 mr-2" /> Je suis arrivé
+                    </Button>
+                  </>
+                )}
+                
+                {/* Status: arrived - client à bord, démarrer la course */}
+                {activeRide.status === 'arrived' && (
+                  <>
+                    <div className="text-center py-2 bg-blue-500/20 rounded-lg text-blue-400 text-sm font-medium">
+                      ✓ En attente du client
+                    </div>
+                    <Button 
+                      className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-14 text-lg font-bold"
+                      onClick={startRide}
+                      data-testid="start-ride-btn"
+                    >
+                      <Play className="w-5 h-5 mr-2" /> Démarrer la course
+                    </Button>
+                  </>
+                )}
+                
+                {/* Status: in_progress - terminer la course */}
+                {activeRide.status === 'in_progress' && (
+                  <Button 
+                    className="w-full bg-green-600 hover:bg-green-700 text-white h-14 text-lg font-bold"
+                    onClick={completeRide}
+                    data-testid="complete-ride-btn"
+                  >
+                    <Check className="w-5 h-5 mr-2" /> Terminer la course
+                  </Button>
+                )}
+              </div>
+
+              {/* Navigation Buttons - Waze & Google Maps (toujours visible en haut) */}
+              <div className="flex gap-3">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 h-12 bg-[#33ccff]/10 border-[#33ccff]/30 hover:bg-[#33ccff]/20"
+                  onClick={() => {
+                    const dest = activeRide.status === 'accepted' ? activeRide.pickup : activeRide.destination;
+                    const url = `https://waze.com/ul?ll=${dest.lat},${dest.lng}&navigate=yes`;
+                    window.open(url, '_blank');
+                  }}
+                  data-testid="open-waze-btn"
+                >
+                  <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="#33ccff">
+                    <path d="M12 2C6.48 2 2 6.48 2 12c0 4.54 3.04 8.37 7.2 9.57.14-.78.3-1.98-.06-2.83-.33-.77-2.09-4.89-2.09-4.89s-.53-1.06.37-1.06c.9 0 1.47 1.43 1.47 1.43s.78 1.34 1.83.89c1.05-.45.74-1.78.74-1.78s-.15-1.12.74-1.12c.89 0 1.04 1.12 1.04 1.12s.3 2.68 2.09 2.68c1.79 0 2.68-1.34 2.68-1.34s.89-1.49 1.64-.74c.74.74.15 1.64.15 1.64s-1.49 2.24-.15 3.58c1.34 1.34 3.13.45 3.13.45s1.79-1.04 1.79-2.83c0-1.79-1.04-3.28-1.04-3.28S22 13.54 22 12c0-5.52-4.48-10-10-10z"/>
+                  </svg>
+                  Waze
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="flex-1 h-12 bg-[#4285f4]/10 border-[#4285f4]/30 hover:bg-[#4285f4]/20"
+                  onClick={() => {
+                    const dest = activeRide.status === 'accepted' ? activeRide.pickup : activeRide.destination;
+                    const url = `https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}&travelmode=driving`;
+                    window.open(url, '_blank');
+                  }}
+                  data-testid="open-gmaps-btn"
+                >
+                  <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="#4285f4">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                  </svg>
+                  Google Maps
+                </Button>
+              </div>
+
+              {/* Prix et distance - résumé rapide */}
+              <div className="flex items-center justify-between py-2 px-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Clock className="w-4 h-4" />
+                  <span className="text-sm font-medium">{activeRide.distance_km} km</span>
+                </div>
+                <div className="text-right">
+                  <p className="text-xl font-bold text-primary">{activeRide.estimated_fare}€</p>
+                  <p className="text-xs text-green-500">
+                    Vos gains: {activeRide.driver_earnings || (activeRide.estimated_fare * 0.82).toFixed(2)}€
+                  </p>
+                </div>
+              </div>
+
+              {/* === INFOS DÉTAILLÉES (scrollables) === */}
+              
+              {/* Passager + contact */}
+              <div className="flex items-center justify-between py-2 border-t border-border">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
                     <User className="w-5 h-5" />
@@ -1105,7 +1235,6 @@ const DriverDashboard = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {/* Chat Button */}
                   <Button 
                     variant="outline" 
                     size="icon" 
@@ -1126,12 +1255,13 @@ const DriverDashboard = () => {
                 </div>
               </div>
 
+              {/* Adresses */}
               <div className="space-y-2 py-2">
                 <div className="flex items-start gap-3">
-                  <MapPin className="w-5 h-5 text-green-500 mt-0.5" />
-                  <div>
+                  <MapPin className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                  <div className="min-w-0">
                     <p className="text-xs text-muted-foreground">Départ</p>
-                    <p className="text-sm">{activeRide.pickup.address}</p>
+                    <p className="text-sm truncate">{activeRide.pickup.address}</p>
                   </div>
                 </div>
                 
@@ -1140,12 +1270,12 @@ const DriverDashboard = () => {
                   <div className="pl-4 border-l-2 border-amber-500/30 ml-2 space-y-2">
                     {activeRide.stops.map((stop, index) => (
                       <div key={index} className="flex items-start gap-3">
-                        <div className="w-5 h-5 rounded-full bg-amber-500/30 flex items-center justify-center text-xs font-bold text-amber-500 mt-0.5">
+                        <div className="w-5 h-5 rounded-full bg-amber-500/30 flex items-center justify-center text-xs font-bold text-amber-500 mt-0.5 flex-shrink-0">
                           {index + 1}
                         </div>
-                        <div>
+                        <div className="min-w-0">
                           <p className="text-xs text-amber-500">Arrêt {index + 1}</p>
-                          <p className="text-sm text-amber-400">{stop.address}</p>
+                          <p className="text-sm text-amber-400 truncate">{stop.address}</p>
                         </div>
                       </div>
                     ))}
@@ -1153,138 +1283,34 @@ const DriverDashboard = () => {
                 )}
                 
                 <div className="flex items-start gap-3">
-                  <Navigation className="w-5 h-5 text-primary mt-0.5" />
-                  <div>
+                  <Navigation className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                  <div className="min-w-0">
                     <p className="text-xs text-muted-foreground">Destination</p>
-                    <p className="text-sm">{activeRide.destination.address}</p>
+                    <p className="text-sm truncate">{activeRide.destination.address}</p>
                   </div>
                 </div>
               </div>
 
-              {/* Navigation Buttons - Waze & Google Maps */}
-              <div className="flex gap-3 py-2">
+              {/* Boutons secondaires */}
+              <div className="flex gap-2">
                 <Button 
                   variant="outline" 
-                  className="flex-1 h-12 bg-[#33ccff]/10 border-[#33ccff]/30 hover:bg-[#33ccff]/20"
-                  onClick={() => {
-                    const destination = activeRide.status === 'accepted' ? activeRide.pickup : activeRide.destination;
-                    const url = `https://waze.com/ul?ll=${destination.lat},${destination.lng}&navigate=yes`;
-                    window.open(url, '_blank');
-                  }}
-                  data-testid="open-waze-btn"
+                  className="flex-1"
+                  onClick={() => setShowReceipt(true)}
+                  data-testid="view-receipt-btn"
                 >
-                  <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="#33ccff">
-                    <path d="M12 2C6.48 2 2 6.48 2 12c0 4.54 3.04 8.37 7.2 9.57.14-.78.3-1.98-.06-2.83-.33-.77-2.09-4.89-2.09-4.89s-.53-1.06.37-1.06c.9 0 1.47 1.43 1.47 1.43s.78 1.34 1.83.89c1.05-.45.74-1.78.74-1.78s-.15-1.12.74-1.12c.89 0 1.04 1.12 1.04 1.12s.3 2.68 2.09 2.68c1.79 0 2.68-1.34 2.68-1.34s.89-1.49 1.64-.74c.74.74.15 1.64.15 1.64s-1.49 2.24-.15 3.58c1.34 1.34 3.13.45 3.13.45s1.79-1.04 1.79-2.83c0-1.79-1.04-3.28-1.04-3.28S22 13.54 22 12c0-5.52-4.48-10-10-10z"/>
-                  </svg>
-                  Waze
+                  <Receipt className="w-4 h-4 mr-2" /> Bon de réservation
                 </Button>
-                <Button 
-                  variant="outline" 
-                  className="flex-1 h-12 bg-[#4285f4]/10 border-[#4285f4]/30 hover:bg-[#4285f4]/20"
-                  onClick={() => {
-                    const destination = activeRide.status === 'accepted' ? activeRide.pickup : activeRide.destination;
-                    const url = `https://www.google.com/maps/dir/?api=1&destination=${destination.lat},${destination.lng}&travelmode=driving`;
-                    window.open(url, '_blank');
-                  }}
-                  data-testid="open-gmaps-btn"
-                >
-                  <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="#4285f4">
-                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                  </svg>
-                  Google Maps
-                </Button>
-              </div>
-
-              <div className="flex items-center justify-between py-2 border-t border-border">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Clock className="w-4 h-4" />
-                  <span className="text-sm">{activeRide.distance_km} km</span>
-                </div>
-                <div className="text-right">
-                  <p className="text-xl font-bold text-primary">{activeRide.estimated_fare}€</p>
-                  <p className="text-xs text-green-500">
-                    Vos gains: {activeRide.driver_earnings || (activeRide.estimated_fare * 0.82).toFixed(2)}€
-                  </p>
-                </div>
-              </div>
-
-              {/* Booking Receipt Button */}
-              <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={() => setShowReceipt(true)}
-                data-testid="view-receipt-btn"
-              >
-                <Receipt className="w-4 h-4 mr-2" /> Voir le bon de réservation
-              </Button>
-
-              <div className="flex flex-col gap-3">
-                {/* Status: accepted - show arrived button and start button */}
-                {activeRide.status === 'accepted' && (
-                  <>
-                    {/* Arrived button */}
-                    <Button 
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white h-14 text-lg font-bold"
-                      onClick={async () => {
-                        try {
-                          await api.post(`/rides/${activeRide.id}/arrived`);
-                          toast.success('Client notifié de votre arrivée!');
-                          playNotificationSound(1);
-                          fetchActiveRide();
-                        } catch (error) {
-                          toast.error('Erreur lors de la notification');
-                        }
-                      }}
-                      data-testid="driver-arrived-btn"
-                    >
-                      <MapPin className="w-5 h-5 mr-2" /> Je suis arrivé
-                    </Button>
-                    
-                    <div className="flex gap-3">
-                      <Button 
-                        variant="outline" 
-                        className="flex-1 border-red-500/50 text-red-500 hover:bg-red-500/10 h-12"
-                        onClick={rejectRide}
-                        data-testid="driver-reject-btn"
-                      >
-                        <X className="w-4 h-4 mr-2" /> Annuler
-                      </Button>
-                    </div>
-                  </>
-                )}
                 
-                {/* Status: arrived - client à bord, démarrer la course */}
-                {activeRide.status === 'arrived' && (
-                  <>
-                    <div className="text-center py-3 bg-blue-500/20 rounded-lg text-blue-400 text-sm font-medium">
-                      ✓ En attente du client
-                    </div>
-                    <Button 
-                      className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-14 text-lg font-bold"
-                      onClick={startRide}
-                      data-testid="start-ride-btn"
-                    >
-                      <Play className="w-5 h-5 mr-2" /> Démarrer la course
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="w-full border-red-500/50 text-red-500 hover:bg-red-500/10 h-12"
-                      onClick={rejectRide}
-                      data-testid="driver-reject-btn"
-                    >
-                      <X className="w-4 h-4 mr-2" /> Annuler la course
-                    </Button>
-                  </>
-                )}
-                
-                {/* Status: in_progress - terminer la course */}
-                {activeRide.status === 'in_progress' && (
+                {/* Bouton Annuler (secondaire, en bas) */}
+                {(activeRide.status === 'accepted' || activeRide.status === 'arrived') && (
                   <Button 
-                    className="w-full bg-green-600 hover:bg-green-700 text-white h-14 text-lg font-bold"
-                    onClick={completeRide}
-                    data-testid="complete-ride-btn"
+                    variant="outline" 
+                    className="border-red-500/50 text-red-500 hover:bg-red-500/10"
+                    onClick={rejectRide}
+                    data-testid="driver-reject-btn"
                   >
-                    <Check className="w-5 h-5 mr-2" /> Terminer la course
+                    <X className="w-4 h-4 mr-1" /> Annuler
                   </Button>
                 )}
               </div>

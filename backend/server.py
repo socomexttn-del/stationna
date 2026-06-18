@@ -2537,10 +2537,47 @@ async def cancel_ride(ride_id: str, current_user: dict = Depends(get_current_use
     if ride["status"] in ["completed", "cancelled"]:
         raise HTTPException(status_code=400, detail="Cannot cancel this ride")
     
-    await db.rides.update_one({"id": ride_id}, {"$set": {"status": "cancelled"}})
+    # Determine who cancelled (passenger or driver)
+    cancelled_by = "passenger" if current_user["id"] == ride["passenger_id"] else "driver"
     
+    await db.rides.update_one({"id": ride_id}, {"$set": {
+        "status": "cancelled",
+        "cancelled_by": cancelled_by,
+        "cancelled_at": datetime.now(timezone.utc).isoformat()
+    }})
+    
+    # If there was a driver assigned, make them available again and notify them
     if ride.get("driver_id"):
         await db.users.update_one({"id": ride["driver_id"]}, {"$set": {"is_available": True}})
+        
+        # Notify the driver that the ride was cancelled (if cancelled by passenger)
+        if cancelled_by == "passenger":
+            try:
+                await notification_manager.notify_driver(
+                    ride["driver_id"],
+                    "ride_cancelled",
+                    {
+                        "ride_id": ride_id,
+                        "message": "Le client a annulé la course",
+                        "pickup_address": ride.get("pickup", {}).get("address", "")
+                    }
+                )
+            except Exception as e:
+                logger.error(f"Error notifying driver of cancellation: {e}")
+    
+    # If cancelled by driver, notify the passenger
+    if cancelled_by == "driver" and ride.get("passenger_id"):
+        try:
+            await notification_manager.notify_passenger(
+                ride["passenger_id"],
+                "ride_cancelled",
+                {
+                    "ride_id": ride_id,
+                    "message": "Le chauffeur a annulé la course"
+                }
+            )
+        except Exception as e:
+            logger.error(f"Error notifying passenger of cancellation: {e}")
     
     updated = await db.rides.find_one({"id": ride_id}, {"_id": 0})
     return RideResponse(**updated)
