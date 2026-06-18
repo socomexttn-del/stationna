@@ -932,6 +932,7 @@ const PassengerDashboard = () => {
     switch(status) {
       case 'pending': return 'text-yellow-500';
       case 'accepted': return 'text-blue-500';
+      case 'arrived': return 'text-orange-500';
       case 'in_progress': return 'text-green-500';
       case 'completed': return 'text-primary';
       default: return 'text-muted-foreground';
@@ -941,7 +942,8 @@ const PassengerDashboard = () => {
   const getStatusText = (status) => {
     switch(status) {
       case 'pending': return 'Recherche d\'un chauffeur...';
-      case 'accepted': return 'Chauffeur en route';
+      case 'accepted': return 'Chauffeur en route vers vous';
+      case 'arrived': return 'Votre chauffeur est arrivé';
       case 'in_progress': return 'Course en cours';
       case 'completed': return 'Course terminée';
       default: return status;
@@ -1774,7 +1776,7 @@ const PassengerDashboard = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       {/* Chat Button */}
-                      {(activeRide.status === 'accepted' || activeRide.status === 'in_progress') && (
+                      {(activeRide.status === 'accepted' || activeRide.status === 'arrived' || activeRide.status === 'in_progress') && (
                         <Button 
                           variant="outline" 
                           size="icon" 

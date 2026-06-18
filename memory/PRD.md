@@ -66,7 +66,23 @@ Application taxi complète "StationCab" avec support multi-rôles (Passager, Cha
 - Endpoints FCM pour enregistrement tokens
 - Notifications automatiques lors des événements de course
 
-## Modifications Récentes (15/06/2026)
+## Modifications Récentes (18/06/2026)
+
+1. **Correction du flux de course complet** :
+   - Ajout du statut "arrived" (chauffeur arrivé)
+   - Flux : pending → accepted → arrived → in_progress → completed
+   - Chauffeur : Boutons séparés "Je suis arrivé", "Démarrer la course", "Terminer la course"
+   - Client : Affichage clair de chaque étape (en route → arrivé → course en cours → terminée)
+
+2. **Notification sonore limitée à 3 fois** :
+   - Son de notification joué maximum 3 fois pour éviter d'être trop insistant
+
+3. **Paiement automatique avec carte enregistrée** :
+   - Client enregistre sa carte une seule fois
+   - Paiement automatique à chaque réservation
+   - Pas de redirection vers Stripe à chaque course
+
+## Modifications (15/06/2026)
 
 1. **NOUVEAU - CGV et Mentions Légales** :
    - Page Mentions Légales (`/mentions-legales`) avec infos complètes A&S Prestige

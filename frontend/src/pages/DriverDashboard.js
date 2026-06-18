@@ -265,8 +265,8 @@ const DriverDashboard = () => {
         });
         // Push notification
         notifyNewRide(data.passenger_name, data.pickup?.address);
-        // Play notification sound
-        playNotificationSound();
+        // Play notification sound - max 3 times
+        playNotificationSound(3);
         break;
       
       case 'ride_assigned':
@@ -283,8 +283,8 @@ const DriverDashboard = () => {
         notifyRideAssigned(data.passenger_name, data.pickup?.address);
         // Refresh active ride
         fetchActiveRide();
-        // Play notification sound
-        playNotificationSound();
+        // Play notification sound - max 3 times
+        playNotificationSound(3);
         break;
       
       case 'ride_available':
@@ -383,54 +383,58 @@ const DriverDashboard = () => {
   const playNotificationSound = useCallback((repeat = 1) => {
     console.log('Playing notification sound, repeat:', repeat);
     
-    const playWebAudio = () => {
+    // Try HTML5 Audio first (more compatible)
+    const playHTMLAudio = () => {
       try {
-        const ctx = audioContextRef.current || new (window.AudioContext || window.webkitAudioContext)();
-        if (ctx.state === 'suspended') ctx.resume();
+        // Create a simple beep using oscillator
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
         
-        // MAXIMUM LOUDNESS urgent sound
-        osc.frequency.value = 880;
-        osc.type = 'square';
-        gain.gain.value = 1.0; // MAX
-        osc.start();
+        // Create a more attention-grabbing sound pattern
+        const playBeep = (startTime, freq, duration) => {
+          const oscillator = audioCtx.createOscillator();
+          const gainNode = audioCtx.createGain();
+          
+          oscillator.connect(gainNode);
+          gainNode.connect(audioCtx.destination);
+          
+          oscillator.frequency.value = freq;
+          oscillator.type = 'square';
+          gainNode.gain.setValueAtTime(0.5, startTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+          
+          oscillator.start(startTime);
+          oscillator.stop(startTime + duration);
+        };
         
-        // Urgent rising pattern
-        setTimeout(() => { osc.frequency.value = 1047; }, 80);
-        setTimeout(() => { osc.frequency.value = 1319; }, 160);
-        setTimeout(() => { osc.frequency.value = 1568; }, 240);
-        setTimeout(() => { osc.frequency.value = 1047; }, 320);
-        setTimeout(() => { osc.frequency.value = 1319; }, 400);
-        setTimeout(() => { osc.frequency.value = 1568; }, 480);
-        setTimeout(() => { osc.stop(); }, 560);
+        const now = audioCtx.currentTime;
+        // Play urgent pattern: high-low-high
+        playBeep(now, 1200, 0.15);
+        playBeep(now + 0.2, 800, 0.15);
+        playBeep(now + 0.4, 1200, 0.15);
+        playBeep(now + 0.6, 800, 0.15);
+        playBeep(now + 0.8, 1500, 0.3);
+        
       } catch (e) {
-        console.log('Web Audio error:', e);
+        console.log('Audio play error:', e);
       }
     };
-
-    // Play multiple times
+    
+    // Play multiple times for urgency
     for (let i = 0; i < repeat; i++) {
-      setTimeout(playWebAudio, i * 700);
+      setTimeout(playHTMLAudio, i * 1200);
     }
     
     // Strong vibration pattern
     if (navigator.vibrate) {
-      navigator.vibrate([500, 200, 500, 200, 500, 200, 500]);
-    }
-    
-    // Browser notification with sound
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification('🚗 NOUVELLE COURSE!', {
-        body: 'Une nouvelle course est disponible!',
-        icon: '/favicon.ico',
-        requireInteraction: true,
-        silent: false,
-        tag: 'new-ride-' + Date.now()
-      });
+      const pattern = [];
+      for (let i = 0; i < repeat; i++) {
+        pattern.push(300, 100, 300, 100, 500, 200);
+      }
+      navigator.vibrate(pattern);
     }
   }, []);
 
@@ -1215,58 +1219,72 @@ const DriverDashboard = () => {
               </Button>
 
               <div className="flex flex-col gap-3">
+                {/* Status: accepted - show arrived button and start button */}
                 {activeRide.status === 'accepted' && (
                   <>
-                    {/* Arrived button - only show if not already arrived */}
-                    {!activeRide.driver_arrived && (
-                      <Button 
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12"
-                        onClick={async () => {
-                          try {
-                            await api.post(`/rides/${activeRide.id}/arrived`);
-                            toast.success('Client notifié de votre arrivée!');
-                            playNotificationSound(1);
-                            fetchActiveRide();
-                          } catch (error) {
-                            toast.error('Erreur lors de la notification');
-                          }
-                        }}
-                        data-testid="driver-arrived-btn"
-                      >
-                        <MapPin className="w-5 h-5 mr-2" /> Je suis arrivé
-                      </Button>
-                    )}
-                    {activeRide.driver_arrived && (
-                      <div className="text-center py-2 bg-blue-500/20 rounded-lg text-blue-400 text-sm">
-                        ✓ Client notifié de votre arrivée
-                      </div>
-                    )}
+                    {/* Arrived button */}
+                    <Button 
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white h-14 text-lg font-bold"
+                      onClick={async () => {
+                        try {
+                          await api.post(`/rides/${activeRide.id}/arrived`);
+                          toast.success('Client notifié de votre arrivée!');
+                          playNotificationSound(1);
+                          fetchActiveRide();
+                        } catch (error) {
+                          toast.error('Erreur lors de la notification');
+                        }
+                      }}
+                      data-testid="driver-arrived-btn"
+                    >
+                      <MapPin className="w-5 h-5 mr-2" /> Je suis arrivé
+                    </Button>
+                    
                     <div className="flex gap-3">
                       <Button 
                         variant="outline" 
-                        className="flex-1 border-red-500/50 text-red-500 hover:bg-red-500/10"
+                        className="flex-1 border-red-500/50 text-red-500 hover:bg-red-500/10 h-12"
                         onClick={rejectRide}
                         data-testid="driver-reject-btn"
                       >
-                        <X className="w-4 h-4 mr-2" /> Refuser
-                      </Button>
-                      <Button 
-                        className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
-                        onClick={startRide}
-                        data-testid="start-ride-btn"
-                      >
-                        <Play className="w-4 h-4 mr-2" /> Démarrer
+                        <X className="w-4 h-4 mr-2" /> Annuler
                       </Button>
                     </div>
                   </>
                 )}
+                
+                {/* Status: arrived - client à bord, démarrer la course */}
+                {activeRide.status === 'arrived' && (
+                  <>
+                    <div className="text-center py-3 bg-blue-500/20 rounded-lg text-blue-400 text-sm font-medium">
+                      ✓ En attente du client
+                    </div>
+                    <Button 
+                      className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-14 text-lg font-bold"
+                      onClick={startRide}
+                      data-testid="start-ride-btn"
+                    >
+                      <Play className="w-5 h-5 mr-2" /> Démarrer la course
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="w-full border-red-500/50 text-red-500 hover:bg-red-500/10 h-12"
+                      onClick={rejectRide}
+                      data-testid="driver-reject-btn"
+                    >
+                      <X className="w-4 h-4 mr-2" /> Annuler la course
+                    </Button>
+                  </>
+                )}
+                
+                {/* Status: in_progress - terminer la course */}
                 {activeRide.status === 'in_progress' && (
                   <Button 
-                    className="w-full bg-green-600 hover:bg-green-700 text-white"
+                    className="w-full bg-green-600 hover:bg-green-700 text-white h-14 text-lg font-bold"
                     onClick={completeRide}
                     data-testid="complete-ride-btn"
                   >
-                    <Check className="w-4 h-4 mr-2" /> Terminer la course
+                    <Check className="w-5 h-5 mr-2" /> Terminer la course
                   </Button>
                 )}
               </div>
@@ -1311,14 +1329,34 @@ const DriverDashboard = () => {
               availableRides.map((ride) => (
                 <Card key={ride.id} className={`bg-card ${ride.is_scheduled ? 'border-amber-500/50 hover:border-amber-500' : 'border-green-500/50 hover:border-green-500'} transition-colors shadow-[0_0_15px_${ride.is_scheduled ? 'rgba(245,158,11,0.2)' : 'rgba(34,197,94,0.2)'}]`}>
                   <CardContent className="p-4 space-y-3">
+                    {/* BUTTONS AT TOP - Always visible */}
+                    <div className="flex gap-2 w-full">
+                      <Button 
+                        variant="outline"
+                        onClick={() => dismissRide(ride.id)}
+                        data-testid={`dismiss-ride-${ride.id}`}
+                        className="flex-1 h-12 border-red-500/50 text-red-500 hover:bg-red-500/10 font-bold text-base"
+                      >
+                        <X className="w-5 h-5 mr-2" /> Refuser
+                      </Button>
+                      <Button 
+                        onClick={() => acceptRide(ride.id)}
+                        data-testid={`accept-ride-${ride.id}`}
+                        className={`flex-1 h-12 ${ride.is_scheduled ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'} text-white font-bold text-base`}
+                      >
+                        <Check className="w-5 h-5 mr-2" /> Accepter
+                      </Button>
+                    </div>
+                    
                     {/* Scheduled ride badge */}
                     {ride.is_scheduled && ride.scheduled_time && (
                       <div className="flex items-center gap-2 bg-amber-500/20 text-amber-500 px-3 py-1.5 rounded-full w-fit text-sm font-medium">
                         <Clock className="w-4 h-4" />
-                        <span>Course réservée à l'avance - {new Date(ride.scheduled_time).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span>Réservée - {new Date(ride.scheduled_time).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
                       </div>
                     )}
                     
+                    {/* Price and passenger info */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className={`w-8 h-8 ${ride.is_scheduled ? 'bg-amber-500/20' : 'bg-green-500/20'} rounded-full flex items-center justify-center`}>
@@ -1332,6 +1370,7 @@ const DriverDashboard = () => {
                       </div>
                     </div>
                     
+                    {/* Addresses */}
                     <div className="space-y-2 bg-muted/30 rounded-lg p-3">
                       <div className="flex items-start gap-2">
                         <MapPin className={`w-4 h-4 ${ride.is_scheduled ? 'text-amber-500' : 'text-green-500'} mt-0.5 flex-shrink-0`} />
@@ -1343,33 +1382,13 @@ const DriverDashboard = () => {
                       </div>
                     </div>
                     
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-                      <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
-                        <span>{ride.distance_km} km</span>
-                        <span>•</span>
-                        <span>{ride.vehicle_type === 'van' ? 'Van' : ride.vehicle_type === 'taxi' ? 'Taxi' : 'Standard'}</span>
-                        <span>•</span>
-                        <span>{ride.passenger_count || 1} passager{(ride.passenger_count || 1) > 1 ? 's' : ''}</span>
-                      </div>
-                      <div className="flex gap-2 flex-shrink-0">
-                        <Button 
-                          variant="outline"
-                          size="sm"
-                          onClick={() => dismissRide(ride.id)}
-                          data-testid={`dismiss-ride-${ride.id}`}
-                          className="border-red-500/50 text-red-500 hover:bg-red-500/10"
-                        >
-                          <X className="w-4 h-4 mr-1" /> Refuser
-                        </Button>
-                        <Button 
-                          size="sm"
-                          onClick={() => acceptRide(ride.id)}
-                          data-testid={`accept-ride-${ride.id}`}
-                          className={`${ride.is_scheduled ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'} text-white font-bold`}
-                        >
-                          <Check className="w-4 h-4 mr-1" /> Accepter
-                        </Button>
-                      </div>
+                    {/* Ride details */}
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                      <span>{ride.distance_km} km</span>
+                      <span>•</span>
+                      <span>{ride.vehicle_type === 'van' ? 'Van' : ride.vehicle_type === 'taxi' ? 'Taxi' : 'Standard'}</span>
+                      <span>•</span>
+                      <span>{ride.passenger_count || 1} passager{(ride.passenger_count || 1) > 1 ? 's' : ''}</span>
                     </div>
                   </CardContent>
                 </Card>

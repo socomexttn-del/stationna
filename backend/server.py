@@ -1989,7 +1989,7 @@ async def update_driver_location(data: LocationModel, current_user: dict = Depen
     # Also notify passenger if driver has an active ride
     active_ride = await db.rides.find_one({
         "driver_id": current_user["id"],
-        "status": {"$in": ["accepted", "in_progress"]}
+        "status": {"$in": ["accepted", "arrived", "in_progress"]}
     }, {"_id": 0})
     
     if active_ride:
@@ -2246,7 +2246,7 @@ async def get_available_rides(current_user: dict = Depends(get_current_user)):
     # Don't show available rides if driver already has an active ride
     active_ride = await db.rides.find_one({
         "driver_id": current_user["id"],
-        "status": {"$in": ["accepted", "in_progress"]}
+        "status": {"$in": ["accepted", "arrived", "in_progress"]}
     })
     if active_ride:
         return []  # Driver has an active ride, don't show new ones
@@ -2290,7 +2290,7 @@ async def get_available_rides(current_user: dict = Depends(get_current_user)):
 
 @api_router.get("/rides/active", response_model=Optional[RideResponse])
 async def get_active_ride(current_user: dict = Depends(get_current_user)):
-    query = {"status": {"$in": ["pending", "accepted", "in_progress"]}}
+    query = {"status": {"$in": ["pending", "accepted", "arrived", "in_progress"]}}
     if current_user["role"] == "passenger":
         query["passenger_id"] = current_user["id"]
     else:
@@ -2386,7 +2386,7 @@ async def accept_ride(ride_id: str, current_user: dict = Depends(get_current_use
     # Check if driver already has an active ride
     existing_active = await db.rides.find_one({
         "driver_id": current_user["id"],
-        "status": {"$in": ["accepted", "in_progress"]}
+        "status": {"$in": ["accepted", "arrived", "in_progress"]}
     })
     if existing_active:
         raise HTTPException(status_code=400, detail="Vous avez déjà une course en cours. Terminez-la d'abord.")
@@ -2448,13 +2448,17 @@ async def driver_arrived(ride_id: str, current_user: dict = Depends(get_current_
         raise HTTPException(status_code=404, detail="Ride not found")
     
     await db.rides.update_one({"id": ride_id}, {"$set": {
+        "status": "arrived",
         "driver_arrived": True,
         "driver_arrived_at": datetime.now(timezone.utc).isoformat()
     }})
     updated = await db.rides.find_one({"id": ride_id}, {"_id": 0})
     
     # Notify passenger that driver has arrived
-    await notification_manager.notify_passenger(ride["passenger_id"], "driver_arrived", {"ride_id": ride_id})
+    await notification_manager.notify_passenger(ride["passenger_id"], "driver_arrived", {
+        "ride_id": ride_id,
+        "driver_name": ride.get("driver_name", "Votre chauffeur")
+    })
     
     return RideResponse(**updated)
 
@@ -2463,7 +2467,12 @@ async def start_ride(ride_id: str, current_user: dict = Depends(get_current_user
     if current_user["role"] != "driver":
         raise HTTPException(status_code=403, detail="Only drivers can start rides")
     
-    ride = await db.rides.find_one({"id": ride_id, "driver_id": current_user["id"], "status": "accepted"}, {"_id": 0})
+    # Accept both "accepted" and "arrived" statuses
+    ride = await db.rides.find_one({
+        "id": ride_id, 
+        "driver_id": current_user["id"], 
+        "status": {"$in": ["accepted", "arrived"]}
+    }, {"_id": 0})
     if not ride:
         raise HTTPException(status_code=404, detail="Ride not found")
     
@@ -5099,7 +5108,7 @@ async def send_chat_message(data: ChatMessage, current_user: dict = Depends(get_
         raise HTTPException(status_code=403, detail="Not authorized to send messages for this ride")
     
     # Only allow chat during active ride
-    if ride["status"] not in ["accepted", "in_progress"]:
+    if ride["status"] not in ["accepted", "arrived", "in_progress"]:
         raise HTTPException(status_code=400, detail="Chat only available during active ride")
     
     message_id = str(uuid.uuid4())
