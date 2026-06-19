@@ -128,3 +128,4 @@ firebase_admin==7.2.0
 google-cloud-core==2.5.0
 google-cloud-firestore==2.23.0
 google-cloud-storage==3.9.0
+aiosmtplib

@@ -18,7 +18,9 @@ from datetime import datetime, timezone, timedelta
 import jwt
 import bcrypt
 import stripe
-import resend
+import aiosmtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from pywebpush import webpush, WebPushException
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -31,12 +33,58 @@ from emergentintegrations.payments.stripe.checkout import StripeCheckout, Checko
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# Resend Configuration
-RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
-SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'contact@stationcab.fr')
-DRIVER_EMAIL = os.environ.get('DRIVER_EMAIL', 'driver@stationcab.fr')
-if RESEND_API_KEY:
-    resend.api_key = RESEND_API_KEY
+# SMTP Configuration (Zembra/OVH)
+SMTP_SERVER = os.environ.get('SMTP_SERVER', 'ssl0.ovh.net')
+SMTP_PORT = int(os.environ.get('SMTP_PORT', '465'))
+SMTP_CLIENT_EMAIL = os.environ.get('SMTP_CLIENT_EMAIL', 'contact@stationcab.fr')
+SMTP_CLIENT_PASSWORD = os.environ.get('SMTP_CLIENT_PASSWORD', '')
+SMTP_DRIVER_EMAIL = os.environ.get('SMTP_DRIVER_EMAIL', 'driver@stationcab.fr')
+SMTP_DRIVER_PASSWORD = os.environ.get('SMTP_DRIVER_PASSWORD', '')
+
+# Email sending function using SMTP
+async def send_email_smtp(to_email: str, subject: str, html_content: str, sender_type: str = "client"):
+    """
+    Send email via SMTP (Zembra/OVH)
+    sender_type: "client" uses contact@stationcab.fr, "driver" uses driver@stationcab.fr
+    """
+    if sender_type == "driver":
+        from_email = SMTP_DRIVER_EMAIL
+        password = SMTP_DRIVER_PASSWORD
+    else:
+        from_email = SMTP_CLIENT_EMAIL
+        password = SMTP_CLIENT_PASSWORD
+    
+    if not password:
+        logger.warning(f"SMTP password not configured for {from_email}")
+        return False
+    
+    try:
+        # Create message
+        message = MIMEMultipart("alternative")
+        message["From"] = f"StationCab <{from_email}>"
+        message["To"] = to_email
+        message["Subject"] = subject
+        
+        # Attach HTML content
+        html_part = MIMEText(html_content, "html", "utf-8")
+        message.attach(html_part)
+        
+        # Send via SMTP with SSL
+        await aiosmtplib.send(
+            message,
+            hostname=SMTP_SERVER,
+            port=SMTP_PORT,
+            username=from_email,
+            password=password,
+            use_tls=True  # SSL/TLS on port 465
+        )
+        
+        logger.info(f"Email sent successfully to {to_email} from {from_email}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Failed to send email to {to_email}: {e}")
+        return False
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -1369,34 +1417,37 @@ async def forgot_password(data: PasswordResetRequest):
         "created_at": datetime.now(timezone.utc).isoformat()
     })
     
-    # Send email with reset link
-    if RESEND_API_KEY:
-        try:
-            frontend_url = os.environ.get('FRONTEND_URL', 'https://taxi-connect-47.preview.emergentagent.com')
-            reset_link = f"{frontend_url}/reset-password?token={reset_token}"
-            
-            params = {
-                "from": SENDER_EMAIL,
-                "to": [user["email"]],
-                "subject": "StationCab - Réinitialisation de votre mot de passe",
-                "html": f"""
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <h2 style="color: #f59e0b;">StationCab</h2>
-                    <p>Bonjour {user.get('first_name', '')},</p>
-                    <p>Vous avez demandé la réinitialisation de votre mot de passe.</p>
-                    <p>Cliquez sur le bouton ci-dessous pour créer un nouveau mot de passe :</p>
-                    <a href="{reset_link}" style="display: inline-block; background-color: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 20px 0;">
-                        Réinitialiser mon mot de passe
-                    </a>
-                    <p style="color: #666; font-size: 12px;">Ce lien expire dans 1 heure.</p>
-                    <p style="color: #666; font-size: 12px;">Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</p>
-                </div>
-                """
-            }
-            await asyncio.to_thread(resend.Emails.send, params)
-            logger.info(f"Password reset email sent to {user['email']}")
-        except Exception as e:
-            logger.error(f"Failed to send password reset email: {e}")
+    # Send email with reset link via SMTP
+    try:
+        frontend_url = os.environ.get('FRONTEND_URL', 'https://stationcab.fr')
+        reset_link = f"{frontend_url}/reset-password?token={reset_token}"
+        
+        # Determine sender based on user role
+        sender_type = "driver" if user.get("role") == "driver" else "client"
+        
+        html_content = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #f59e0b;">StationCab</h2>
+            <p>Bonjour {user.get('first_name', '')},</p>
+            <p>Vous avez demandé la réinitialisation de votre mot de passe.</p>
+            <p>Cliquez sur le bouton ci-dessous pour créer un nouveau mot de passe :</p>
+            <a href="{reset_link}" style="display: inline-block; background-color: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 20px 0;">
+                Réinitialiser mon mot de passe
+            </a>
+            <p style="color: #666; font-size: 12px;">Ce lien expire dans 1 heure.</p>
+            <p style="color: #666; font-size: 12px;">Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</p>
+        </div>
+        """
+        
+        await send_email_smtp(
+            to_email=user["email"],
+            subject="StationCab - Réinitialisation de votre mot de passe",
+            html_content=html_content,
+            sender_type=sender_type
+        )
+        logger.info(f"Password reset email sent to {user['email']}")
+    except Exception as e:
+        logger.error(f"Failed to send password reset email: {e}")
     
     return {"success": True, "message": "Si cet email existe, un lien de réinitialisation a été envoyé"}
 
@@ -1983,31 +2034,38 @@ async def send_expiry_email_alerts(
         subject = f"⚠️ {'Documents expirés' if expired_count else 'Documents à renouveler'} - StationCab"
         
         try:
-            params = {
-                "from": DRIVER_EMAIL,
-                "to": [driver["email"]],
-                "subject": subject,
-                "html": html_content
-            }
-            email_result = await asyncio.to_thread(resend.Emails.send, params)
-            emails_sent.append({
-                "driver_id": driver["id"],
-                "driver_name": driver_name,
-                "email": driver["email"],
-                "documents_count": len(expiring_docs),
-                "email_id": email_result.get("id")
-            })
+            # Send via SMTP (driver mailbox)
+            email_success = await send_email_smtp(
+                to_email=driver["email"],
+                subject=subject,
+                html_content=html_content,
+                sender_type="driver"
+            )
             
-            # Log notification sent
-            await db.email_logs.insert_one({
-                "id": str(uuid.uuid4()),
-                "type": "document_expiry",
-                "recipient_id": driver["id"],
-                "recipient_email": driver["email"],
-                "subject": subject,
-                "sent_at": datetime.now(timezone.utc).isoformat(),
-                "sent_by": admin_user["id"]
-            })
+            if email_success:
+                emails_sent.append({
+                    "driver_id": driver["id"],
+                    "driver_name": driver_name,
+                    "email": driver["email"],
+                    "documents_count": len(expiring_docs)
+                })
+                
+                # Log notification sent
+                await db.email_logs.insert_one({
+                    "id": str(uuid.uuid4()),
+                    "type": "document_expiry",
+                    "recipient_id": driver["id"],
+                    "recipient_email": driver["email"],
+                    "subject": subject,
+                    "sent_at": datetime.now(timezone.utc).isoformat(),
+                    "sent_by": admin_user["id"]
+                })
+            else:
+                errors.append({
+                    "driver_id": driver["id"],
+                    "email": driver["email"],
+                    "error": "Email send failed"
+                })
             
         except Exception as e:
             logger.error(f"Failed to send email to {driver['email']}: {e}")
