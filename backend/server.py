@@ -33,7 +33,8 @@ load_dotenv(ROOT_DIR / '.env')
 
 # Resend Configuration
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
-SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'onboarding@resend.dev')
+SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'contact@stationcab.fr')
+DRIVER_EMAIL = os.environ.get('DRIVER_EMAIL', 'driver@stationcab.fr')
 if RESEND_API_KEY:
     resend.api_key = RESEND_API_KEY
 
@@ -1983,7 +1984,7 @@ async def send_expiry_email_alerts(
         
         try:
             params = {
-                "from": SENDER_EMAIL,
+                "from": DRIVER_EMAIL,
                 "to": [driver["email"]],
                 "subject": subject,
                 "html": html_content
