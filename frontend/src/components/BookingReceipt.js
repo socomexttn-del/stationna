@@ -1,9 +1,19 @@
 import React, { useRef } from 'react';
 import { 
-  MapPin, Navigation, Car, User, Phone, CreditCard, 
-  Calendar, Hash, Building, FileText, X, Printer, Download
+  MapPin, Navigation, Car, User, Phone, 
+  Calendar, Hash, Building, X, Printer, Truck
 } from 'lucide-react';
 import { Button } from './ui/button';
+
+// Company info - A&S PRESTIGE
+const COMPANY_INFO = {
+  name: "A&S PRESTIGE",
+  address: "22 B RUE DU DOCTEUR INFROY",
+  postalCode: "77290",
+  city: "MITRY-MORY",
+  phone: "+33 602062244",
+  siret: "123 456 789 00012" // TODO: Replace with real SIRET
+};
 
 const BookingReceipt = ({ ride, onClose, isOpen }) => {
   const receiptRef = useRef(null);
@@ -11,7 +21,7 @@ const BookingReceipt = ({ ride, onClose, isOpen }) => {
   if (!isOpen || !ride) return null;
 
   const formatDate = (dateStr) => {
-    if (!dateStr) return '';
+    if (!dateStr) return '-';
     const date = new Date(dateStr);
     return date.toLocaleDateString('fr-FR', {
       day: '2-digit',
@@ -22,75 +32,225 @@ const BookingReceipt = ({ ride, onClose, isOpen }) => {
     });
   };
 
+  const formatScheduledTime = (dateStr) => {
+    if (!dateStr) return 'Immédiate';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getVehicleType = (type) => {
+    switch(type) {
+      case 'van': return 'Van (7 places)';
+      case 'taxi': return 'Taxi';
+      default: return 'VTC Standard';
+    }
+  };
+
+  // Calculate TVA (10% for transport)
+  const tvaRate = 10;
+  const totalTTC = ride.estimated_fare || 0;
+  const totalHT = (totalTTC / (1 + tvaRate / 100)).toFixed(2);
+  const tvaAmount = (totalTTC - totalHT).toFixed(2);
+
   const handlePrint = () => {
-    const printContent = receiptRef.current;
-    const printWindow = window.open('', '', 'width=600,height=800');
+    const printWindow = window.open('', '', 'width=600,height=900');
     printWindow.document.write(`
       <html>
         <head>
-          <title>Bon de Réservation - ${ride.reservation_number}</title>
+          <title>Bon de Commande - ${ride.reservation_number || ride.id?.slice(0, 8)}</title>
           <style>
-            body { font-family: Arial, sans-serif; padding: 20px; color: #333; }
-            .header { text-align: center; border-bottom: 2px solid #FFD700; padding-bottom: 15px; margin-bottom: 20px; }
-            .logo { font-size: 24px; font-weight: bold; color: #FFD700; }
-            .reservation-number { font-size: 18px; color: #666; margin-top: 5px; }
-            .section { margin-bottom: 20px; }
-            .section-title { font-weight: bold; font-size: 14px; color: #666; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-            .row { display: flex; justify-content: space-between; margin-bottom: 8px; }
-            .label { color: #666; }
-            .value { font-weight: 500; text-align: right; max-width: 60%; }
-            .total-section { background: #f5f5f5; padding: 15px; border-radius: 8px; margin-top: 20px; }
-            .total-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
-            .total-main { font-size: 20px; font-weight: bold; color: #FFD700; }
-            .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #999; }
+            @page { margin: 10mm; }
+            body { 
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+              padding: 15px; 
+              color: #1a1a1a; 
+              font-size: 12px;
+              line-height: 1.4;
+            }
+            .header { 
+              background: #1a1a1a; 
+              color: #FFD700; 
+              padding: 12px 15px; 
+              margin: -15px -15px 15px -15px;
+              font-size: 16px;
+              font-weight: bold;
+            }
+            .company-section {
+              border-bottom: 1px dotted #ccc;
+              padding-bottom: 12px;
+              margin-bottom: 12px;
+            }
+            .company-name { font-weight: bold; font-size: 14px; }
+            .company-address { color: #666; font-size: 11px; line-height: 1.6; }
+            .section { 
+              margin-bottom: 15px;
+              border-bottom: 1px dotted #ccc;
+              padding-bottom: 12px;
+            }
+            .section:last-child { border-bottom: none; }
+            .section-title { 
+              font-weight: bold; 
+              font-size: 11px; 
+              color: #1a1a1a; 
+              margin-bottom: 8px;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            .row { 
+              display: flex; 
+              justify-content: space-between; 
+              margin-bottom: 6px;
+              align-items: flex-start;
+            }
+            .label { 
+              color: #1a1a1a; 
+              font-weight: 600;
+              min-width: 140px;
+            }
+            .value { 
+              text-align: right; 
+              max-width: 55%;
+              color: #333;
+            }
+            .info-box {
+              background: #f5f5f5;
+              padding: 10px;
+              border-radius: 4px;
+              margin-bottom: 12px;
+            }
+            .legal-text {
+              font-size: 10px;
+              color: #666;
+              font-style: italic;
+            }
+            .price-highlight {
+              font-size: 14px;
+              font-weight: bold;
+            }
+            .footer {
+              margin-top: 20px;
+              text-align: center;
+              font-size: 10px;
+              color: #999;
+              border-top: 1px solid #eee;
+              padding-top: 10px;
+            }
           </style>
         </head>
         <body>
-          <div class="header">
-            <div class="logo">STATIONCAB</div>
-            <div class="reservation-number">Bon de réservation N° ${ride.reservation_number}</div>
+          <div class="header">Bon de commande</div>
+          
+          <div class="company-section">
+            <div class="company-address">
+              ${COMPANY_INFO.address}<br/>
+              ${COMPANY_INFO.postalCode}<br/>
+              ${COMPANY_INFO.city}<br/>
+              ${COMPANY_INFO.phone}
+            </div>
           </div>
           
           <div class="section">
-            <div class="section-title">INFORMATIONS CHAUFFEUR</div>
-            <div class="row"><span class="label">Nom</span><span class="value">${ride.driver_name || '-'}</span></div>
-            <div class="row"><span class="label">Société</span><span class="value">${ride.driver_company || 'Indépendant'}</span></div>
-            <div class="row"><span class="label">Téléphone</span><span class="value">${ride.driver_phone || '-'}</span></div>
-            <div class="row"><span class="label">N° Identification</span><span class="value">${ride.driver_identification || '-'}</span></div>
-            <div class="row"><span class="label">Immatriculation</span><span class="value">${ride.driver_license_plate || '-'}</span></div>
+            <div class="section-title">INFORMATION</div>
+            <div class="row">
+              <span class="label">Montant Brut maximal (EUR, ${tvaRate}% TVA incl. si applicable)</span>
+              <span class="value price-highlight">${totalTTC}</span>
+            </div>
           </div>
           
           <div class="section">
-            <div class="section-title">DÉTAILS DE LA COURSE</div>
-            <div class="row"><span class="label">Date</span><span class="value">${formatDate(ride.created_at)}</span></div>
-            <div class="row"><span class="label">Prise en charge</span><span class="value">${ride.pickup?.address || '-'}</span></div>
+            <div class="section-title">SERVICE DE TAXI</div>
+            <div class="row">
+              <span class="label">JUSTIFICATION DE LA RESERVATION PREALABLE</span>
+              <span class="value">(Article L3120-2 du Code des transports)</span>
+            </div>
+          </div>
+          
+          <div class="section">
+            <div class="section-title">Exploitant de Taxi</div>
+            <div class="company-address">
+              ${COMPANY_INFO.name}<br/>
+              ${COMPANY_INFO.address}<br/>
+              ${COMPANY_INFO.postalCode}<br/>
+              ${COMPANY_INFO.city}<br/>
+              ${COMPANY_INFO.phone}
+            </div>
+          </div>
+          
+          <div class="section">
+            <div class="section-title">Voyage</div>
+            <div class="row">
+              <span class="label">Conducteur</span>
+              <span class="value">${ride.driver_name || '-'}</span>
+            </div>
+            <div class="row">
+              <span class="label">Passager</span>
+              <span class="value">${ride.passenger_name || '-'}</span>
+            </div>
+            <div class="row">
+              <span class="label">Commande</span>
+              <span class="value">${formatDate(ride.created_at)}</span>
+            </div>
+            <div class="row">
+              <span class="label">Prise en charge</span>
+              <span class="value">${formatScheduledTime(ride.scheduled_time)}</span>
+            </div>
+            <div class="row">
+              <span class="label">Lieu prise en charge</span>
+              <span class="value">${ride.pickup?.address || '-'}</span>
+            </div>
             ${ride.stops && ride.stops.length > 0 ? ride.stops.map((stop, i) => `
-              <div class="row" style="color: #f59e0b;">
-                <span class="label">↳ Arrêt ${i + 1}</span>
+              <div class="row" style="color: #b45309;">
+                <span class="label">Via (Arrêt ${i + 1})</span>
                 <span class="value">${stop.address}</span>
               </div>
             `).join('') : ''}
-            <div class="row"><span class="label">Destination</span><span class="value">${ride.destination?.address || '-'}</span></div>
-            <div class="row"><span class="label">Distance</span><span class="value">${ride.distance_km} km</span></div>
-            <div class="row"><span class="label">Passagers</span><span class="value">${ride.passenger_count}</span></div>
-            <div class="row"><span class="label">Type véhicule</span><span class="value">${ride.vehicle_type === 'van' ? 'Van' : 'Standard'}</span></div>
+            <div class="row">
+              <span class="label">Destination</span>
+              <span class="value">${ride.destination?.address || '-'}</span>
+            </div>
+            <div class="row">
+              <span class="label">Tarifs</span>
+              <span class="value">Montant brut maximal ou taximètre si moins élevé</span>
+            </div>
+            <div class="row">
+              <span class="label">Via</span>
+              <span class="value">StationCab</span>
+            </div>
           </div>
           
           <div class="section">
-            <div class="section-title">CLIENT</div>
-            <div class="row"><span class="label">Nom</span><span class="value">${ride.passenger_name}</span></div>
-            <div class="row"><span class="label">Téléphone</span><span class="value">${ride.passenger_phone || '-'}</span></div>
-          </div>
-          
-          <div class="total-section">
-            <div class="total-row"><span>Prix de la course</span><span>${ride.estimated_fare}€</span></div>
-            <div class="total-row"><span>Commission (18%)</span><span>-${ride.commission_amount || (ride.estimated_fare * 0.18).toFixed(2)}€</span></div>
-            <div class="total-row total-main"><span>Vos gains</span><span>${ride.driver_earnings || (ride.estimated_fare * 0.82).toFixed(2)}€</span></div>
+            <div class="section-title">Chauffeur</div>
+            <div class="row">
+              <span class="label">Nom</span>
+              <span class="value">${ride.driver_name || '-'}</span>
+            </div>
+            <div class="row">
+              <span class="label">Société</span>
+              <span class="value">${ride.driver_company || COMPANY_INFO.name}</span>
+            </div>
+            <div class="row">
+              <span class="label">Téléphone</span>
+              <span class="value">${ride.driver_phone || '-'}</span>
+            </div>
+            <div class="row">
+              <span class="label">Immatriculation</span>
+              <span class="value">${ride.driver_license_plate || '-'}</span>
+            </div>
+            <div class="row">
+              <span class="label">Type véhicule</span>
+              <span class="value">${getVehicleType(ride.vehicle_type)}</span>
+            </div>
           </div>
           
           <div class="footer">
-            <p>StationCab - Service de transport</p>
-            <p>Document généré le ${new Date().toLocaleDateString('fr-FR')}</p>
+            <p>StationCab - stationcab.fr</p>
+            <p>Document généré le ${new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
           </div>
         </body>
       </html>
@@ -110,160 +270,136 @@ const BookingReceipt = ({ ride, onClose, isOpen }) => {
       {/* Modal */}
       <div className="relative bg-card border border-white/10 rounded-2xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-card border-b border-white/10 p-4 flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-bold text-primary" style={{ fontFamily: 'Space Grotesk' }}>
-              BON DE RÉSERVATION
-            </h3>
-            <p className="text-sm text-muted-foreground">N° {ride.reservation_number}</p>
-          </div>
+        <div className="sticky top-0 bg-[#1a1a1a] border-b border-white/10 p-4 flex items-center justify-between rounded-t-2xl">
+          <h3 className="text-lg font-bold text-primary" style={{ fontFamily: 'Space Grotesk' }}>
+            Bon de commande
+          </h3>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={handlePrint}>
+            <Button variant="outline" size="icon" onClick={handlePrint} className="border-white/20 hover:bg-white/10">
               <Printer className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={onClose}>
+            <Button variant="ghost" size="icon" onClick={onClose} className="hover:bg-white/10">
               <X className="w-4 h-4" />
             </Button>
           </div>
         </div>
 
-        <div ref={receiptRef} className="p-4 space-y-4">
-          {/* Driver Info Section */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Informations Chauffeur
-            </h4>
-            <div className="bg-muted/30 rounded-xl p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm">
-                  <User className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Nom</span>
-                </div>
-                <span className="font-medium">{ride.driver_name}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm">
-                  <Building className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Société</span>
-                </div>
-                <span className="font-medium">{ride.driver_company || 'Indépendant'}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm">
-                  <Phone className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Téléphone</span>
-                </div>
-                <span className="font-medium">{ride.driver_phone || '-'}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm">
-                  <Hash className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">N° Identification</span>
-                </div>
-                <span className="font-medium font-mono">{ride.driver_identification}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm">
-                  <Car className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Immatriculation</span>
-                </div>
-                <span className="font-medium font-mono">{ride.driver_license_plate}</span>
-              </div>
+        <div ref={receiptRef} className="p-4 space-y-4 bg-white text-black">
+          {/* Company Address Header */}
+          <div className="border-b border-dashed border-gray-300 pb-3">
+            <p className="text-sm">{COMPANY_INFO.address}</p>
+            <p className="text-sm">{COMPANY_INFO.postalCode}</p>
+            <p className="text-sm">{COMPANY_INFO.city}</p>
+            <p className="text-sm">{COMPANY_INFO.phone}</p>
+          </div>
+
+          {/* INFORMATION Section */}
+          <div className="space-y-2 border-b border-dashed border-gray-300 pb-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider">INFORMATION</h4>
+            <div className="flex justify-between items-start">
+              <span className="text-sm font-semibold max-w-[60%]">
+                Montant Brut maximal (EUR, {tvaRate}% TVA incl. si applicable)
+              </span>
+              <span className="font-bold text-lg">{totalTTC}</span>
             </div>
           </div>
 
-          {/* Ride Details Section */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Détails de la Course
-            </h4>
-            <div className="bg-muted/30 rounded-xl p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Date</span>
-                </div>
-                <span className="font-medium">{formatDate(ride.created_at)}</span>
+          {/* SERVICE DE TAXI Section */}
+          <div className="space-y-2 border-b border-dashed border-gray-300 pb-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider">SERVICE DE TAXI</h4>
+            <div className="flex justify-between items-start">
+              <span className="text-sm font-semibold">JUSTIFICATION DE LA RESERVATION PREALABLE</span>
+              <span className="text-sm text-right text-gray-600">(Article L3120-2 du Code des transports)</span>
+            </div>
+          </div>
+
+          {/* Exploitant de Taxi Section */}
+          <div className="space-y-2 border-b border-dashed border-gray-300 pb-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider">Exploitant de Taxi</h4>
+            <div className="text-sm space-y-0.5">
+              <p className="font-medium">{COMPANY_INFO.name}</p>
+              <p className="border-b border-dashed border-gray-200 pb-1">{COMPANY_INFO.address}</p>
+              <p className="border-b border-dashed border-gray-200 py-1">{COMPANY_INFO.postalCode}</p>
+              <p className="border-b border-dashed border-gray-200 py-1">{COMPANY_INFO.city}</p>
+              <p className="pt-1">{COMPANY_INFO.phone}</p>
+            </div>
+          </div>
+
+          {/* Voyage Section */}
+          <div className="space-y-2 border-b border-dashed border-gray-300 pb-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider">Voyage</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between border-b border-dashed border-gray-200 pb-1">
+                <span className="font-semibold">Conducteur</span>
+                <span>{ride.driver_name || '-'}</span>
               </div>
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2 text-sm">
-                  <MapPin className="w-4 h-4 text-green-500" />
-                  <span className="text-muted-foreground">Départ</span>
-                </div>
-                <span className="font-medium text-right max-w-[60%] text-sm">{ride.pickup?.address}</span>
+              <div className="flex justify-between border-b border-dashed border-gray-200 pb-1">
+                <span className="font-semibold">Passager</span>
+                <span>{ride.passenger_name || '-'}</span>
+              </div>
+              <div className="flex justify-between border-b border-dashed border-gray-200 pb-1">
+                <span className="font-semibold">Commande</span>
+                <span>{formatDate(ride.created_at)}</span>
+              </div>
+              <div className="flex justify-between border-b border-dashed border-gray-200 pb-1">
+                <span className="font-semibold">Prise en charge</span>
+                <span>{formatScheduledTime(ride.scheduled_time)}</span>
+              </div>
+              <div className="flex justify-between items-start border-b border-dashed border-gray-200 pb-1">
+                <span className="font-semibold min-w-[120px]">Lieu prise en charge</span>
+                <span className="text-right max-w-[55%]">{ride.pickup?.address || '-'}</span>
               </div>
               
               {/* Intermediate Stops */}
-              {ride.stops && ride.stops.length > 0 && (
-                <div className="pl-2 border-l-2 border-amber-500/30 ml-2 space-y-2">
-                  {ride.stops.map((stop, index) => (
-                    <div key={index} className="flex items-start justify-between">
-                      <div className="flex items-center gap-2 text-sm">
-                        <div className="w-4 h-4 rounded-full bg-amber-500/30 flex items-center justify-center text-[10px] font-bold text-amber-500">
-                          {index + 1}
-                        </div>
-                        <span className="text-amber-500">Arrêt {index + 1}</span>
-                      </div>
-                      <span className="font-medium text-right max-w-[55%] text-sm text-amber-400">{stop.address}</span>
-                    </div>
-                  ))}
+              {ride.stops && ride.stops.length > 0 && ride.stops.map((stop, index) => (
+                <div key={index} className="flex justify-between items-start border-b border-dashed border-amber-200 pb-1 text-amber-700">
+                  <span className="font-semibold">Via (Arrêt {index + 1})</span>
+                  <span className="text-right max-w-[55%]">{stop.address}</span>
                 </div>
-              )}
+              ))}
               
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2 text-sm">
-                  <Navigation className="w-4 h-4 text-primary" />
-                  <span className="text-muted-foreground">Arrivée</span>
-                </div>
-                <span className="font-medium text-right max-w-[60%] text-sm">{ride.destination?.address}</span>
+              <div className="flex justify-between items-start border-b border-dashed border-gray-200 pb-1">
+                <span className="font-semibold min-w-[100px]">Destination</span>
+                <span className="text-right max-w-[55%]">{ride.destination?.address || '-'}</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Distance</span>
-                <span className="font-medium">{ride.distance_km} km</span>
+              <div className="flex justify-between items-start border-b border-dashed border-gray-200 pb-1">
+                <span className="font-semibold min-w-[80px]">Tarifs</span>
+                <span className="text-right max-w-[60%]">Montant brut maximal ou taximètre si moins élevé</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Passagers</span>
-                <span className="font-medium">{ride.passenger_count}</span>
+              <div className="flex justify-between border-b border-dashed border-gray-200 pb-1">
+                <span className="font-semibold">Via</span>
+                <span>StationCab</span>
               </div>
             </div>
           </div>
 
-          {/* Client Info Section */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Client
-            </h4>
-            <div className="bg-muted/30 rounded-xl p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Nom</span>
-                <span className="font-medium">{ride.passenger_name}</span>
+          {/* Chauffeur Section */}
+          <div className="space-y-2">
+            <h4 className="text-xs font-bold uppercase tracking-wider">Chauffeur</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between border-b border-dashed border-gray-200 pb-1">
+                <span className="font-semibold">Nom</span>
+                <span>{ride.driver_name || '-'}</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Téléphone</span>
-                <span className="font-medium">{ride.passenger_phone || '-'}</span>
+              <div className="flex justify-between border-b border-dashed border-gray-200 pb-1">
+                <span className="font-semibold">Société</span>
+                <span>{ride.driver_company || COMPANY_INFO.name}</span>
               </div>
-            </div>
-          </div>
-
-          {/* Pricing Section */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Tarification
-            </h4>
-            <div className="bg-primary/10 border border-primary/30 rounded-xl p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Prix de la course</span>
-                <span className="font-semibold">{ride.estimated_fare}€</span>
+              <div className="flex justify-between border-b border-dashed border-gray-200 pb-1">
+                <span className="font-semibold">Téléphone</span>
+                <span>{ride.driver_phone || '-'}</span>
               </div>
-              <div className="flex items-center justify-between text-red-400">
-                <span>Commission (18%)</span>
-                <span>-{ride.commission_amount || (ride.estimated_fare * 0.18).toFixed(2)}€</span>
+              <div className="flex justify-between border-b border-dashed border-gray-200 pb-1">
+                <span className="font-semibold">N° Identification</span>
+                <span className="font-mono">{ride.driver_identification || '-'}</span>
               </div>
-              <div className="border-t border-white/10 pt-3 flex items-center justify-between">
-                <span className="font-semibold">Vos gains</span>
-                <span className="text-2xl font-bold text-primary">
-                  {ride.driver_earnings || (ride.estimated_fare * 0.82).toFixed(2)}€
-                </span>
+              <div className="flex justify-between border-b border-dashed border-gray-200 pb-1">
+                <span className="font-semibold">Immatriculation</span>
+                <span className="font-mono">{ride.driver_license_plate || '-'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-semibold">Type véhicule</span>
+                <span>{getVehicleType(ride.vehicle_type)}</span>
               </div>
             </div>
           </div>

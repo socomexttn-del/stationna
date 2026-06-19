@@ -109,6 +109,17 @@ Application taxi complète "StationCab" avec support multi-rôles (Passager, Cha
    - Affiche "En attente de validation" avec délai estimé (24-48h)
    - Page Admin `/admin/driver-validation` affiche bien tous les chauffeurs en attente avec progression documents
 
+6. **Bon de Commande complet (conforme réglementation)** :
+   - Refonte complète du composant `BookingReceipt.js`
+   - Sections conformes à la réglementation transport :
+     - En-tête avec adresse de l'exploitant
+     - **INFORMATION** : Montant Brut maximal (EUR, 10% TVA incl.)
+     - **SERVICE DE TAXI** : Justification de la réservation préalable (Article L3120-2 du Code des transports)
+     - **Exploitant de Taxi** : A&S PRESTIGE, adresse complète
+     - **Voyage** : Conducteur, Passager, Commande, Prise en charge, Lieu, Destination, Tarifs, Via (StationCab)
+     - **Chauffeur** : Nom, Société, Téléphone, N° Identification, Immatriculation, Type véhicule
+   - Fonction d'impression optimisée pour le format papier
+
 ### Session 1 - Flux de course et paiements
 
 1. **Correction du flux de course complet** :
