@@ -128,12 +128,12 @@ const CGV = () => {
                 <p className="mb-3">Après acceptation du chauffeur :</p>
                 <div className="bg-muted/50 rounded-lg p-4 space-y-2">
                   <div className="flex justify-between items-center">
-                    <span>VTC / Van</span>
-                    <span className="text-white">Gratuit sous 4 minutes, sinon <strong className="text-red-400">8 €</strong></span>
+                    <span>VTC / Taxi</span>
+                    <span className="text-white">Gratuit les 2 premières minutes, puis <strong className="text-red-400">8 €</strong></span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span>Berline Premium</span>
-                    <span className="text-white">Gratuit sous 5 minutes, sinon <strong className="text-red-400">15 €</strong></span>
+                    <span>Van</span>
+                    <span className="text-white">Gratuit les 2 premières minutes, puis <strong className="text-red-400">15 €</strong></span>
                   </div>
                 </div>
               </div>
@@ -158,20 +158,27 @@ const CGV = () => {
               <div>
                 <h3 className="font-semibold text-white mb-3">4.3 Non-présentation du passager (No-show)</h3>
                 <p>
-                  Une fois que le chauffeur arrive à votre point de rendez-vous, un minuteur se déclenche :
+                  Une fois que le chauffeur arrive à votre point de rendez-vous et signale son arrivée dans l&apos;application, 
+                  vous disposez d&apos;un délai de <strong className="text-white">3 minutes</strong> pour le rejoindre.
                 </p>
-                <div className="bg-muted/50 rounded-lg p-4 space-y-2 mt-3">
-                  <div className="flex justify-between items-center">
-                    <span>VTC / Van</span>
-                    <span className="text-white">Attente gratuite : <strong>5 minutes</strong></span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Berline Premium</span>
-                    <span className="text-white">Attente gratuite : <strong>15 minutes</strong></span>
+                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mt-3">
+                  <p className="text-red-200">
+                    <strong>Passé ce délai de 3 minutes</strong>, si vous ne vous êtes pas présenté, le chauffeur 
+                    peut signaler votre absence. La course sera alors annulée et vous serez facturé des frais d&apos;annulation :
+                  </p>
+                  <div className="mt-3 space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span>VTC / Taxi</span>
+                      <span className="font-bold text-red-400">8 €</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>Van</span>
+                      <span className="font-bold text-red-400">15 €</span>
+                    </div>
                   </div>
                 </div>
                 <p className="text-sm text-gray-400 mt-3">
-                  Au-delà de ce délai, le chauffeur peut annuler la course et des frais d&apos;annulation vous seront facturés.
+                  <strong>Conseil :</strong> Activez les notifications pour être alerté dès l&apos;arrivée de votre chauffeur.
                 </p>
               </div>
             </div>

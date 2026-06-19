@@ -1614,6 +1614,25 @@ const DriverDashboard = () => {
                     >
                       <Play className="w-5 h-5 mr-2" /> Démarrer la course
                     </Button>
+                    <Button 
+                      variant="outline"
+                      className="w-full border-red-500/50 text-red-500 hover:bg-red-500/10 h-12"
+                      onClick={async () => {
+                        if (window.confirm('Le client ne s\'est pas présenté ? Des frais d\'annulation lui seront facturés.')) {
+                          try {
+                            await api.post(`/rides/${activeRide.id}/no-show`);
+                            toast.success('Client absent signalé - Frais facturés');
+                            setActiveRide(null);
+                          } catch (error) {
+                            const msg = error.response?.data?.detail || 'Erreur';
+                            toast.error(msg);
+                          }
+                        }
+                      }}
+                      data-testid="no-show-btn"
+                    >
+                      <X className="w-4 h-4 mr-2" /> Client absent (après 3 min)
+                    </Button>
                   </>
                 )}
                 

@@ -2786,6 +2786,141 @@ async def driver_arrived(ride_id: str, current_user: dict = Depends(get_current_
     
     return RideResponse(**updated)
 
+@api_router.post("/rides/{ride_id}/no-show", response_model=RideResponse)
+async def client_no_show(ride_id: str, current_user: dict = Depends(get_current_user)):
+    """
+    Driver reports client no-show after waiting at pickup location.
+    Client is charged cancellation fee if driver has been waiting >= 3 minutes.
+    """
+    if current_user["role"] != "driver":
+        raise HTTPException(status_code=403, detail="Seuls les chauffeurs peuvent signaler un client absent")
+    
+    ride = await db.rides.find_one({
+        "id": ride_id, 
+        "driver_id": current_user["id"], 
+        "status": "arrived"
+    }, {"_id": 0})
+    
+    if not ride:
+        raise HTTPException(status_code=404, detail="Course non trouvée ou vous n'êtes pas encore arrivé")
+    
+    # Check if driver has been waiting for at least 3 minutes
+    driver_arrived_at = ride.get("driver_arrived_at")
+    if not driver_arrived_at:
+        raise HTTPException(status_code=400, detail="Heure d'arrivée non enregistrée")
+    
+    try:
+        arrived_time = datetime.fromisoformat(driver_arrived_at.replace('Z', '+00:00'))
+        time_waiting = datetime.now(timezone.utc) - arrived_time
+        minutes_waiting = time_waiting.total_seconds() / 60
+        
+        if minutes_waiting < 3:
+            remaining = 3 - minutes_waiting
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Vous devez attendre encore {remaining:.0f} minute(s) avant de signaler le client absent"
+            )
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Erreur de calcul du temps d'attente")
+    
+    # Charge cancellation fee
+    cancellation_fee = 0.0
+    cancellation_fee_charged = False
+    vehicle_type = ride.get("vehicle_type", "standard")
+    
+    if vehicle_type == "van":
+        cancellation_fee = 15.0
+    else:
+        cancellation_fee = 8.0
+    
+    # Try to capture from existing authorization or charge new
+    payment_intent_id = ride.get("payment_intent_id")
+    
+    if payment_intent_id:
+        try:
+            intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+            
+            if intent.status == "requires_capture":
+                # Capture only the cancellation fee
+                cancellation_fee_cents = int(cancellation_fee * 100)
+                captured_intent = stripe.PaymentIntent.capture(
+                    payment_intent_id,
+                    amount_to_capture=cancellation_fee_cents
+                )
+                if captured_intent.status == "succeeded":
+                    cancellation_fee_charged = True
+                    logger.info(f"No-show fee {cancellation_fee}€ captured for ride {ride_id}")
+                    
+                    await db.payment_transactions.update_one(
+                        {"payment_intent_id": payment_intent_id},
+                        {"$set": {
+                            "status": "partial_capture",
+                            "captured_amount": cancellation_fee,
+                            "type": "no_show_fee",
+                            "captured_at": datetime.now(timezone.utc).isoformat()
+                        }}
+                    )
+        except stripe.error.StripeError as e:
+            logger.error(f"Error capturing no-show fee: {e}")
+    
+    # If no authorization or capture failed, try direct charge
+    if not cancellation_fee_charged:
+        passenger = await db.users.find_one({"id": ride["passenger_id"]}, {"_id": 0})
+        if passenger and passenger.get("stripe_customer_id"):
+            try:
+                customer = stripe.Customer.retrieve(passenger["stripe_customer_id"])
+                default_pm = customer.get("invoice_settings", {}).get("default_payment_method")
+                
+                if default_pm:
+                    fee_intent = stripe.PaymentIntent.create(
+                        amount=int(cancellation_fee * 100),
+                        currency="eur",
+                        customer=passenger["stripe_customer_id"],
+                        payment_method=default_pm,
+                        off_session=True,
+                        confirm=True,
+                        description=f"Frais client absent - course {ride_id}",
+                        metadata={
+                            "ride_id": ride_id,
+                            "type": "no_show_fee",
+                            "vehicle_type": vehicle_type
+                        }
+                    )
+                    if fee_intent.status == "succeeded":
+                        cancellation_fee_charged = True
+                        logger.info(f"No-show fee {cancellation_fee}€ charged directly for ride {ride_id}")
+            except Exception as e:
+                logger.error(f"Error charging no-show fee: {e}")
+    
+    # Update ride status
+    await db.rides.update_one({"id": ride_id}, {"$set": {
+        "status": "cancelled",
+        "cancelled_by": "no_show",
+        "cancelled_at": datetime.now(timezone.utc).isoformat(),
+        "cancellation_fee": cancellation_fee,
+        "cancellation_fee_charged": cancellation_fee_charged,
+        "no_show": True,
+        "minutes_waited": round(minutes_waiting, 1)
+    }})
+    
+    # Make driver available again
+    await db.users.update_one({"id": current_user["id"]}, {"$set": {"is_available": True}})
+    
+    # Notify passenger
+    await notification_manager.notify_passenger(ride["passenger_id"], "ride_cancelled", {
+        "ride_id": ride_id,
+        "message": f"Course annulée - Client absent. Frais: {cancellation_fee}€",
+        "cancellation_fee": cancellation_fee,
+        "no_show": True
+    })
+    
+    updated = await db.rides.find_one({"id": ride_id}, {"_id": 0})
+    
+    fee_status = "prélevés" if cancellation_fee_charged else "à prélever"
+    logger.info(f"No-show reported for ride {ride_id}: {cancellation_fee}€ ({fee_status})")
+    
+    return RideResponse(**updated)
+
 @api_router.post("/rides/{ride_id}/start", response_model=RideResponse)
 async def start_ride(ride_id: str, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "driver":
