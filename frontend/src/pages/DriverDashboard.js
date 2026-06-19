@@ -39,6 +39,12 @@ const DriverDashboard = () => {
     return localStorage.getItem('allogo_hide_earnings') === 'true';
   });
   
+  // MODE CHAUFFEUR - Keep app alive in background
+  const [driverModeActive, setDriverModeActive] = useState(false);
+  const wakeLockRef = useRef(null);
+  const silentAudioRef = useRef(null);
+  const keepAliveIntervalRef = useRef(null);
+  
   // Taxi meter price modal
   const [showMeterModal, setShowMeterModal] = useState(false);
   const [meterPrice, setMeterPrice] = useState('');
@@ -48,6 +54,153 @@ const DriverDashboard = () => {
   const audioElementRef = useRef(null);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [webPushEnabled, setWebPushEnabled] = useState(false);
+
+  // ============ MODE CHAUFFEUR FUNCTIONS ============
+  
+  // Request Wake Lock to prevent screen from sleeping
+  const requestWakeLock = async () => {
+    try {
+      if ('wakeLock' in navigator) {
+        wakeLockRef.current = await navigator.wakeLock.request('screen');
+        console.log('✅ Wake Lock activé - écran restera allumé');
+        
+        wakeLockRef.current.addEventListener('release', () => {
+          console.log('⚠️ Wake Lock relâché');
+        });
+        return true;
+      }
+    } catch (err) {
+      console.log('Wake Lock non disponible:', err);
+    }
+    return false;
+  };
+
+  // Release Wake Lock
+  const releaseWakeLock = () => {
+    if (wakeLockRef.current) {
+      wakeLockRef.current.release();
+      wakeLockRef.current = null;
+      console.log('Wake Lock désactivé');
+    }
+  };
+
+  // Start silent audio to keep browser active in background
+  const startSilentAudio = () => {
+    try {
+      // Create audio context for silent tone
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      
+      // Create a very quiet oscillator (inaudible but keeps browser active)
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      
+      oscillator.frequency.value = 1; // Very low frequency
+      gainNode.gain.value = 0.001; // Almost silent
+      
+      oscillator.start();
+      silentAudioRef.current = { audioCtx, oscillator, gainNode };
+      
+      console.log('✅ Audio silencieux démarré - app reste active en arrière-plan');
+      return true;
+    } catch (e) {
+      console.log('Erreur audio silencieux:', e);
+      return false;
+    }
+  };
+
+  // Stop silent audio
+  const stopSilentAudio = () => {
+    if (silentAudioRef.current) {
+      try {
+        silentAudioRef.current.oscillator.stop();
+        silentAudioRef.current.audioCtx.close();
+      } catch (e) {}
+      silentAudioRef.current = null;
+      console.log('Audio silencieux arrêté');
+    }
+  };
+
+  // Activate Driver Mode
+  const activateDriverMode = async () => {
+    console.log('🚗 Activation Mode Chauffeur...');
+    
+    // 1. Request notification permission
+    if (Notification.permission === 'default') {
+      await Notification.requestPermission();
+    }
+    
+    // 2. Activate Wake Lock (keep screen on)
+    await requestWakeLock();
+    
+    // 3. Start silent audio (keep app alive in background)
+    startSilentAudio();
+    
+    // 4. Start keep-alive ping every 30 seconds
+    keepAliveIntervalRef.current = setInterval(() => {
+      console.log('💓 Keep-alive ping');
+      // Re-request wake lock if it was released
+      if (!wakeLockRef.current) {
+        requestWakeLock();
+      }
+    }, 30000);
+    
+    // 5. Initialize audio context
+    initAudio();
+    
+    setDriverModeActive(true);
+    toast.success(
+      <div className="flex flex-col gap-1">
+        <span className="font-bold">🚗 Mode Chauffeur activé!</span>
+        <span className="text-sm">• Écran reste allumé</span>
+        <span className="text-sm">• App active en arrière-plan</span>
+        <span className="text-sm">• Alarme sonore pour nouvelles courses</span>
+      </div>,
+      { duration: 5000 }
+    );
+  };
+
+  // Deactivate Driver Mode
+  const deactivateDriverMode = () => {
+    console.log('🚗 Désactivation Mode Chauffeur...');
+    
+    releaseWakeLock();
+    stopSilentAudio();
+    
+    if (keepAliveIntervalRef.current) {
+      clearInterval(keepAliveIntervalRef.current);
+      keepAliveIntervalRef.current = null;
+    }
+    
+    setDriverModeActive(false);
+    toast.info('Mode Chauffeur désactivé');
+  };
+
+  // Re-acquire wake lock when page becomes visible again
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible' && driverModeActive) {
+        console.log('📱 Page redevenue visible - réactivation Wake Lock');
+        await requestWakeLock();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [driverModeActive]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      releaseWakeLock();
+      stopSilentAudio();
+      if (keepAliveIntervalRef.current) {
+        clearInterval(keepAliveIntervalRef.current);
+      }
+    };
+  }, []);
 
   // Initialize Web Push notifications for background notifications
   const initWebPush = useCallback(async () => {
@@ -1118,63 +1271,80 @@ const DriverDashboard = () => {
           </div>
         )}
 
-        {/* Important warning for drivers */}
+        {/* MODE CHAUFFEUR - Keep app alive */}
         {isAvailable && (
-          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3">
-            <div className="flex items-center gap-2 text-yellow-500 font-medium mb-2">
-              <Bell className="w-4 h-4" />
-              <span>Important - Notifications sonores</span>
-            </div>
-            
-            {!soundEnabled ? (
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">
-                  Cliquez ci-dessous pour activer les alertes sonores lors de nouvelles courses.
+          <div className={`rounded-xl p-4 ${driverModeActive ? 'bg-green-500/20 border-2 border-green-500' : 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/50'}`}>
+            {!driverModeActive ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-yellow-500 font-bold">
+                  <Car className="w-5 h-5" />
+                  <span className="text-lg">Mode Chauffeur</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Activez le Mode Chauffeur pour recevoir les courses même en arrière-plan :
                 </p>
+                <ul className="text-xs text-muted-foreground space-y-1 ml-4">
+                  <li>✓ Écran reste allumé</li>
+                  <li>✓ App active en arrière-plan</li>
+                  <li>✓ Alarme sonore forte</li>
+                  <li>✓ Vibrations</li>
+                </ul>
                 <Button 
                   size="lg" 
-                  className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold h-12"
-                  onClick={() => {
-                    initAudio();
-                    setSoundEnabled(true);
-                    playNotificationSound(1);
-                    toast.success('🔔 Son activé! Vous entendrez un son lors des nouvelles courses.');
-                  }}
-                  data-testid="enable-sound-btn"
+                  className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-bold h-14 text-lg"
+                  onClick={activateDriverMode}
+                  data-testid="activate-driver-mode-btn"
                 >
-                  <Bell className="w-5 h-5 mr-2" />
-                  🔊 ACTIVER LE SON
+                  <Car className="w-6 h-6 mr-2" />
+                  🚗 ACTIVER MODE CHAUFFEUR
                 </Button>
               </div>
             ) : (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-green-500 text-sm">
-                  <CheckCircle className="w-4 h-4" />
-                  <span>Son activé - Alertes sonores actives</span>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-green-500 font-bold">
+                    <CheckCircle className="w-5 h-5" />
+                    <span className="text-lg">Mode Chauffeur Actif</span>
+                  </div>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => playNotificationSound(1)}
-                    className="ml-auto text-xs"
+                    className="text-xs"
                   >
-                    Tester
+                    🔊 Tester
                   </Button>
                 </div>
-                {webPushEnabled && (
-                  <div className="flex items-center gap-2 text-blue-500 text-xs">
-                    <Bell className="w-3 h-3" />
-                    <span>Notifications en arrière-plan activées</span>
+                
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="flex items-center gap-1 text-green-400">
+                    <CheckCircle className="w-3 h-3" />
+                    <span>Écran allumé</span>
                   </div>
-                )}
+                  <div className="flex items-center gap-1 text-green-400">
+                    <CheckCircle className="w-3 h-3" />
+                    <span>Son actif</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-green-400">
+                    <CheckCircle className="w-3 h-3" />
+                    <span>Arrière-plan</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-green-400">
+                    <CheckCircle className="w-3 h-3" />
+                    <span>Vibrations</span>
+                  </div>
+                </div>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="w-full border-red-500/50 text-red-500 hover:bg-red-500/10"
+                  onClick={deactivateDriverMode}
+                >
+                  Désactiver le Mode Chauffeur
+                </Button>
               </div>
             )}
-            
-            <p className="text-[10px] text-muted-foreground mt-2">
-              {webPushEnabled 
-                ? "✓ Vous recevrez les alertes même en veille (gardez les notifications activées)"
-                : "Gardez cette page ouverte et l'écran allumé pour recevoir les alertes."
-              }
-            </p>
           </div>
         )}
 
