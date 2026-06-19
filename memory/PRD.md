@@ -103,6 +103,12 @@ Application taxi complète "StationCab" avec support multi-rôles (Passager, Cha
    - Export CSV pour comptabilité
    - Bouton "Annulations" ajouté dans le header du dashboard Admin
 
+5. **Correction Inscription Chauffeur** :
+   - Créé l'endpoint `PUT /api/users/profile` manquant pour la mise à jour des infos entreprise (company_name, siret, address, tva_number)
+   - Ajouté un message de succès personnalisé après inscription chauffeur (/auth?registered=true)
+   - Affiche "En attente de validation" avec délai estimé (24-48h)
+   - Page Admin `/admin/driver-validation` affiche bien tous les chauffeurs en attente avec progression documents
+
 ### Session 1 - Flux de course et paiements
 
 1. **Correction du flux de course complet** :

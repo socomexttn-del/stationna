@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -9,13 +9,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Checkbox } from '../components/ui/checkbox';
 import StationCabLogo from '../components/StationCabLogo';
-import { Car, User, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { Car, User, ArrowLeft, Eye, EyeOff, CheckCircle2, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 
 const AuthPage = () => {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const defaultRole = searchParams.get('role') || 'passenger';
+  const isRegistered = searchParams.get('registered') === 'true';
   const { login, register } = useAuth();
   
   const [isLogin, setIsLogin] = useState(true);
@@ -23,6 +24,7 @@ const AuthPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [acceptedCGV, setAcceptedCGV] = useState(false);
+  const [showRegistrationSuccess, setShowRegistrationSuccess] = useState(isRegistered);
   
   const [formData, setFormData] = useState({
     email: '',
@@ -31,6 +33,12 @@ const AuthPage = () => {
     last_name: '',
     phone: ''
   });
+
+  useEffect(() => {
+    if (isRegistered) {
+      setShowRegistrationSuccess(true);
+    }
+  }, [isRegistered]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -73,6 +81,47 @@ const AuthPage = () => {
       </header>
 
       <div className="flex-1 flex items-center justify-center p-4">
+        {/* Registration Success Message for Drivers */}
+        {showRegistrationSuccess ? (
+          <Card className="w-full max-w-md bg-card border-border/50">
+            <CardContent className="pt-8 pb-8 text-center space-y-6">
+              <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto">
+                <CheckCircle2 className="w-10 h-10 text-green-500" />
+              </div>
+              
+              <div className="space-y-2">
+                <h2 className="text-2xl font-bold text-green-500" style={{ fontFamily: 'Space Grotesk' }}>
+                  Inscription réussie !
+                </h2>
+                <p className="text-lg text-foreground">
+                  Votre compte chauffeur a bien été créé.
+                </p>
+              </div>
+              
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 text-left space-y-2">
+                <div className="flex items-center gap-2 text-amber-500">
+                  <Clock className="w-5 h-5" />
+                  <span className="font-semibold">En attente de validation</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Nos équipes vont vérifier vos documents et informations. 
+                  Vous recevrez une notification dès que votre compte sera activé.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Délai habituel : <span className="font-medium text-foreground">24 à 48h ouvrées</span>
+                </p>
+              </div>
+              
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => setShowRegistrationSuccess(false)}
+              >
+                Retour à la connexion
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
         <Card className="w-full max-w-md bg-card border-border/50">
           <CardHeader className="text-center space-y-4">
             <div className="mx-auto flex justify-center">
@@ -270,6 +319,7 @@ const AuthPage = () => {
             </div>
           </CardContent>
         </Card>
+        )}
       </div>
     </div>
   );

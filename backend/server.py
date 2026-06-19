@@ -1256,6 +1256,46 @@ async def login(credentials: UserLogin):
 async def get_me(current_user: dict = Depends(get_current_user)):
     return UserResponse(**{k: v for k, v in current_user.items() if k != "password_hash"})
 
+# ======================== USER PROFILE UPDATE ========================
+
+class ProfileUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone: Optional[str] = None
+    company_name: Optional[str] = None
+    siret: Optional[str] = None
+    address: Optional[str] = None
+    tva_number: Optional[str] = None
+
+@api_router.put("/users/profile", response_model=UserResponse)
+async def update_user_profile(data: ProfileUpdate, current_user: dict = Depends(get_current_user)):
+    """Update user profile information"""
+    update_data = {}
+    
+    if data.first_name is not None:
+        update_data["first_name"] = data.first_name
+    if data.last_name is not None:
+        update_data["last_name"] = data.last_name
+    if data.phone is not None:
+        update_data["phone"] = data.phone
+    if data.company_name is not None:
+        update_data["company_name"] = data.company_name
+    if data.siret is not None:
+        update_data["siret"] = data.siret
+    if data.address is not None:
+        update_data["address"] = data.address
+    if data.tva_number is not None:
+        update_data["tva_number"] = data.tva_number
+    
+    if update_data:
+        await db.users.update_one(
+            {"id": current_user["id"]},
+            {"$set": update_data}
+        )
+    
+    updated_user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0, "password_hash": 0})
+    return UserResponse(**updated_user)
+
 # ======================== PASSWORD RESET ROUTES ========================
 
 @api_router.post("/auth/forgot-password")
