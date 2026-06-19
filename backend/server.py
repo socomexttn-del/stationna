@@ -545,6 +545,7 @@ class RideResponse(BaseModel):
     status: str
     payment_status: str = "pending"
     payment_method: Optional[str] = None  # card, cash
+    payment_intent_id: Optional[str] = None  # Stripe PaymentIntent ID for authorization
     scheduled_time: Optional[str] = None
     is_scheduled: Optional[bool] = False  # Flag for scheduled rides
     created_at: str
@@ -561,6 +562,7 @@ class RideResponse(BaseModel):
     cancelled_at: Optional[str] = None
     cancellation_fee: Optional[float] = None  # VTC/Taxi: 8€, Van: 15€
     cancellation_fee_charged: Optional[bool] = None
+    authorization_cancelled: Optional[bool] = None  # If payment authorization was cancelled
 
 class RatingCreate(BaseModel):
     ride_id: str
@@ -628,6 +630,8 @@ class RideRequest(BaseModel):
     stops: Optional[List[LocationModel]] = None  # Intermediate stops
     vehicle_type: str = "standard"
     passenger_count: int = 1
+    payment_intent_id: Optional[str] = None  # Stripe PaymentIntent ID from authorization
+    payment_status: Optional[str] = None  # 'authorized' when using auth flow
 
 class PaymentCreateRequest(BaseModel):
     ride_id: str
@@ -2370,7 +2374,8 @@ async def create_ride(data: RideRequest, current_user: dict = Depends(get_curren
         "promo_used": promo_used,
         "final_fare": None,
         "status": "pending",  # Always starts as pending - driver must accept
-        "payment_status": "pending",
+        "payment_status": data.payment_status or "pending",  # 'authorized' if using auth flow
+        "payment_intent_id": data.payment_intent_id,  # Stripe PaymentIntent ID for later capture
         "payment_method": None,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "accepted_at": None,
@@ -2702,11 +2707,58 @@ async def complete_ride(ride_id: str, data: Optional[MeterPriceRequest] = None, 
     if ride.get("vehicle_type") == "taxi" and data and data.meter_price:
         final_fare = data.meter_price
     
+    # CAPTURE THE PAYMENT if there's an authorized payment intent
+    payment_captured = False
+    payment_intent_id = ride.get("payment_intent_id")
+    
+    if payment_intent_id:
+        try:
+            intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+            
+            if intent.status == "requires_capture":
+                # Calculate amount to capture (final fare in cents)
+                amount_to_capture = int(final_fare * 100)
+                
+                # For taxi with meter price different from estimate, capture the actual amount
+                # But cannot capture more than authorized, so use min
+                authorized_amount = intent.amount
+                capture_amount = min(amount_to_capture, authorized_amount)
+                
+                # Capture the payment
+                captured_intent = stripe.PaymentIntent.capture(
+                    payment_intent_id,
+                    amount_to_capture=capture_amount
+                )
+                
+                if captured_intent.status == "succeeded":
+                    payment_captured = True
+                    logger.info(f"Payment captured for ride {ride_id}: {capture_amount/100}€")
+                    
+                    # Update transaction record
+                    await db.payment_transactions.update_one(
+                        {"payment_intent_id": payment_intent_id},
+                        {"$set": {
+                            "status": "captured",
+                            "captured_amount": capture_amount / 100,
+                            "captured_at": datetime.now(timezone.utc).isoformat()
+                        }}
+                    )
+            elif intent.status == "succeeded":
+                # Already captured (shouldn't happen with new flow, but handle legacy)
+                payment_captured = True
+                logger.info(f"Payment already captured for ride {ride_id}")
+                
+        except stripe.error.StripeError as e:
+            logger.error(f"Error capturing payment for ride {ride_id}: {e}")
+            # Don't fail the ride completion, but log the issue
+    
     await db.rides.update_one({"id": ride_id}, {"$set": {
         "status": "completed",
         "final_fare": final_fare,
         "meter_price": data.meter_price if data else None,
-        "completed_at": datetime.now(timezone.utc).isoformat()
+        "completed_at": datetime.now(timezone.utc).isoformat(),
+        "payment_status": "paid" if payment_captured else ride.get("payment_status", "pending"),
+        "payment_captured": payment_captured
     }})
     
     await db.users.update_one({"id": current_user["id"]}, {"$set": {"is_available": True}})
@@ -2721,7 +2773,8 @@ async def complete_ride(ride_id: str, data: Optional[MeterPriceRequest] = None, 
         "driver_name": f"{current_user['first_name']} {current_user['last_name']}",
         "final_fare": final_fare,
         "is_taxi": ride.get("vehicle_type") == "taxi",
-        "meter_price": data.meter_price if data else None
+        "meter_price": data.meter_price if data else None,
+        "payment_captured": payment_captured
     })
     
     return RideResponse(**updated)
@@ -2744,58 +2797,140 @@ async def cancel_ride(ride_id: str, current_user: dict = Depends(get_current_use
     # Calculate cancellation fee (only if passenger cancels after driver accepted)
     cancellation_fee = 0.0
     cancellation_fee_charged = False
+    authorization_cancelled = False
     
-    if cancelled_by == "passenger" and ride.get("driver_id") and ride["status"] in ["accepted", "arrived", "in_progress"]:
-        # Cancellation fees by vehicle type: VTC=8€, Van=15€, Taxi=8€
-        vehicle_type = ride.get("vehicle_type", "standard")
-        if vehicle_type == "van":
-            cancellation_fee = 15.0
-        else:
-            # VTC (standard) and Taxi both have 8€ fee
-            cancellation_fee = 8.0
-        
-        # Try to charge the cancellation fee via Stripe
-        passenger = await db.users.find_one({"id": ride["passenger_id"]}, {"_id": 0})
-        if passenger and passenger.get("stripe_customer_id"):
-            try:
-                # Get default payment method
-                customer = stripe.Customer.retrieve(passenger["stripe_customer_id"])
-                default_pm = customer.get("invoice_settings", {}).get("default_payment_method")
-                
-                if default_pm:
-                    # Create and confirm a PaymentIntent for the cancellation fee
-                    payment_intent = stripe.PaymentIntent.create(
-                        amount=int(cancellation_fee * 100),  # Convert to cents
-                        currency="eur",
-                        customer=passenger["stripe_customer_id"],
-                        payment_method=default_pm,
-                        off_session=True,
-                        confirm=True,
-                        description=f"Frais d'annulation course {ride_id}",
-                        metadata={
-                            "ride_id": ride_id,
-                            "type": "cancellation_fee",
-                            "vehicle_type": vehicle_type
-                        }
-                    )
-                    if payment_intent.status == "succeeded":
-                        cancellation_fee_charged = True
-                        logger.info(f"Cancellation fee {cancellation_fee}€ charged for ride {ride_id}")
+    # Handle the payment authorization
+    payment_intent_id = ride.get("payment_intent_id")
+    
+    if payment_intent_id:
+        try:
+            intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+            
+            if intent.status == "requires_capture":
+                # Determine if we need to charge cancellation fee or just cancel
+                if cancelled_by == "passenger" and ride.get("driver_id") and ride["status"] in ["accepted", "arrived", "in_progress"]:
+                    # Passenger cancels after driver accepted - charge cancellation fee only
+                    vehicle_type = ride.get("vehicle_type", "standard")
+                    if vehicle_type == "van":
+                        cancellation_fee = 15.0
                     else:
-                        logger.warning(f"Cancellation fee payment status: {payment_intent.status}")
+                        cancellation_fee = 8.0
+                    
+                    # Capture only the cancellation fee from the authorized amount
+                    cancellation_fee_cents = int(cancellation_fee * 100)
+                    
+                    try:
+                        captured_intent = stripe.PaymentIntent.capture(
+                            payment_intent_id,
+                            amount_to_capture=cancellation_fee_cents
+                        )
+                        if captured_intent.status == "succeeded":
+                            cancellation_fee_charged = True
+                            logger.info(f"Cancellation fee {cancellation_fee}€ captured from authorization for ride {ride_id}")
+                            
+                            # Update transaction record
+                            await db.payment_transactions.update_one(
+                                {"payment_intent_id": payment_intent_id},
+                                {"$set": {
+                                    "status": "partial_capture",
+                                    "captured_amount": cancellation_fee,
+                                    "type": "cancellation_fee",
+                                    "captured_at": datetime.now(timezone.utc).isoformat()
+                                }}
+                            )
+                    except stripe.error.StripeError as e:
+                        logger.error(f"Error capturing cancellation fee from authorization: {e}")
+                        # Fall back to separate charge
+                        try:
+                            passenger = await db.users.find_one({"id": ride["passenger_id"]}, {"_id": 0})
+                            if passenger and passenger.get("stripe_customer_id"):
+                                customer = stripe.Customer.retrieve(passenger["stripe_customer_id"])
+                                default_pm = customer.get("invoice_settings", {}).get("default_payment_method")
+                                if default_pm:
+                                    fee_intent = stripe.PaymentIntent.create(
+                                        amount=cancellation_fee_cents,
+                                        currency="eur",
+                                        customer=passenger["stripe_customer_id"],
+                                        payment_method=default_pm,
+                                        off_session=True,
+                                        confirm=True,
+                                        description=f"Frais d'annulation course {ride_id}",
+                                        metadata={"ride_id": ride_id, "type": "cancellation_fee"}
+                                    )
+                                    if fee_intent.status == "succeeded":
+                                        cancellation_fee_charged = True
+                        except Exception as fallback_err:
+                            logger.error(f"Fallback cancellation fee charge failed: {fallback_err}")
                 else:
-                    logger.warning(f"No default payment method for passenger {ride['passenger_id']}")
-            except stripe.error.CardError as e:
-                logger.error(f"Card error charging cancellation fee: {e}")
-            except Exception as e:
-                logger.error(f"Error charging cancellation fee: {e}")
+                    # No driver assigned yet, or driver cancelled - just cancel the authorization
+                    try:
+                        stripe.PaymentIntent.cancel(payment_intent_id)
+                        authorization_cancelled = True
+                        logger.info(f"Payment authorization cancelled for ride {ride_id} - no charge")
+                        
+                        # Update transaction record
+                        await db.payment_transactions.update_one(
+                            {"payment_intent_id": payment_intent_id},
+                            {"$set": {
+                                "status": "cancelled",
+                                "cancelled_at": datetime.now(timezone.utc).isoformat()
+                            }}
+                        )
+                    except stripe.error.StripeError as e:
+                        logger.error(f"Error cancelling authorization: {e}")
+                        
+            elif intent.status == "succeeded":
+                # Payment was already captured (legacy flow) - need to refund
+                logger.warning(f"Ride {ride_id} was cancelled but payment already captured. May need refund.")
+                
+        except stripe.error.StripeError as e:
+            logger.error(f"Error handling payment during cancellation: {e}")
+    else:
+        # No payment intent (old rides or edge cases) - use old logic for cancellation fee
+        if cancelled_by == "passenger" and ride.get("driver_id") and ride["status"] in ["accepted", "arrived", "in_progress"]:
+            vehicle_type = ride.get("vehicle_type", "standard")
+            if vehicle_type == "van":
+                cancellation_fee = 15.0
+            else:
+                cancellation_fee = 8.0
+            
+            # Try to charge the cancellation fee via Stripe
+            passenger = await db.users.find_one({"id": ride["passenger_id"]}, {"_id": 0})
+            if passenger and passenger.get("stripe_customer_id"):
+                try:
+                    customer = stripe.Customer.retrieve(passenger["stripe_customer_id"])
+                    default_pm = customer.get("invoice_settings", {}).get("default_payment_method")
+                    
+                    if default_pm:
+                        payment_intent = stripe.PaymentIntent.create(
+                            amount=int(cancellation_fee * 100),
+                            currency="eur",
+                            customer=passenger["stripe_customer_id"],
+                            payment_method=default_pm,
+                            off_session=True,
+                            confirm=True,
+                            description=f"Frais d'annulation course {ride_id}",
+                            metadata={
+                                "ride_id": ride_id,
+                                "type": "cancellation_fee",
+                                "vehicle_type": vehicle_type
+                            }
+                        )
+                        if payment_intent.status == "succeeded":
+                            cancellation_fee_charged = True
+                            logger.info(f"Cancellation fee {cancellation_fee}€ charged for ride {ride_id}")
+                except stripe.error.CardError as e:
+                    logger.error(f"Card error charging cancellation fee: {e}")
+                except Exception as e:
+                    logger.error(f"Error charging cancellation fee: {e}")
     
     await db.rides.update_one({"id": ride_id}, {"$set": {
         "status": "cancelled",
         "cancelled_by": cancelled_by,
         "cancelled_at": datetime.now(timezone.utc).isoformat(),
         "cancellation_fee": cancellation_fee,
-        "cancellation_fee_charged": cancellation_fee_charged
+        "cancellation_fee_charged": cancellation_fee_charged,
+        "authorization_cancelled": authorization_cancelled
     }})
     
     # If there was a driver assigned, make them available again and notify them
@@ -3403,9 +3538,159 @@ class ChargeCardRequest(BaseModel):
     description: str
     metadata: dict = {}
 
+class AuthorizePaymentRequest(BaseModel):
+    amount: int  # Amount in cents
+    description: str
+    metadata: dict = {}
+
+@api_router.post("/payments/authorize")
+async def authorize_payment(data: AuthorizePaymentRequest, current_user: dict = Depends(get_current_user)):
+    """
+    Authorize a payment WITHOUT capturing it.
+    The amount is reserved on the customer's card but NOT charged.
+    Use /payments/capture to actually charge, or /payments/cancel-authorization to release.
+    """
+    card_info = current_user.get("default_payment_method")
+    stripe_customer_id = current_user.get("stripe_customer_id")
+    
+    if not card_info or not stripe_customer_id:
+        raise HTTPException(status_code=400, detail="Aucune carte enregistrée. Veuillez ajouter un moyen de paiement.")
+    
+    try:
+        # Create a PaymentIntent with capture_method='manual' - this AUTHORIZES but does NOT charge
+        payment_intent = stripe.PaymentIntent.create(
+            amount=data.amount,
+            currency="eur",
+            customer=stripe_customer_id,
+            payment_method=card_info["payment_method_id"],
+            off_session=True,
+            confirm=True,
+            capture_method="manual",  # KEY: This makes it an authorization only!
+            description=data.description,
+            metadata={
+                **data.metadata,
+                "user_id": current_user["id"]
+            }
+        )
+        
+        # Record the authorization (not a charge yet)
+        transaction = {
+            "id": str(uuid.uuid4()),
+            "payment_intent_id": payment_intent.id,
+            "user_id": current_user["id"],
+            "amount": data.amount / 100,
+            "currency": "eur",
+            "status": "authorized",  # Not captured yet
+            "description": data.description,
+            "metadata": data.metadata,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.payment_transactions.insert_one(transaction)
+        
+        logger.info(f"Payment authorized (not captured): {payment_intent.id} for {data.amount/100}€")
+        
+        return {
+            "success": True,
+            "payment_intent_id": payment_intent.id,
+            "status": payment_intent.status,  # Should be "requires_capture"
+            "amount": data.amount / 100
+        }
+        
+    except stripe.error.CardError as e:
+        raise HTTPException(status_code=400, detail=f"Erreur de carte: {e.user_message}")
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=400, detail=f"Erreur de paiement: {str(e)}")
+
+@api_router.post("/payments/capture/{payment_intent_id}")
+async def capture_payment(payment_intent_id: str, amount_to_capture: Optional[int] = None, current_user: dict = Depends(get_current_user)):
+    """
+    Capture an authorized payment.
+    If amount_to_capture is provided (in cents), only that amount will be captured.
+    Otherwise, the full authorized amount is captured.
+    """
+    try:
+        # Retrieve the payment intent to verify it belongs to this user
+        intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+        
+        if intent.metadata.get("user_id") != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Ce paiement ne vous appartient pas")
+        
+        if intent.status != "requires_capture":
+            raise HTTPException(status_code=400, detail=f"Ce paiement ne peut pas être capturé (statut: {intent.status})")
+        
+        # Capture the payment (full or partial)
+        if amount_to_capture:
+            captured_intent = stripe.PaymentIntent.capture(payment_intent_id, amount_to_capture=amount_to_capture)
+        else:
+            captured_intent = stripe.PaymentIntent.capture(payment_intent_id)
+        
+        # Update transaction record
+        await db.payment_transactions.update_one(
+            {"payment_intent_id": payment_intent_id},
+            {"$set": {
+                "status": "captured",
+                "captured_amount": (amount_to_capture or intent.amount) / 100,
+                "captured_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+        logger.info(f"Payment captured: {payment_intent_id} for {(amount_to_capture or intent.amount)/100}€")
+        
+        return {
+            "success": True,
+            "status": captured_intent.status,
+            "amount_captured": (amount_to_capture or intent.amount) / 100
+        }
+        
+    except stripe.error.StripeError as e:
+        logger.error(f"Error capturing payment: {e}")
+        raise HTTPException(status_code=400, detail=f"Erreur de capture: {str(e)}")
+
+@api_router.post("/payments/cancel-authorization/{payment_intent_id}")
+async def cancel_authorization(payment_intent_id: str, current_user: dict = Depends(get_current_user)):
+    """
+    Cancel an authorized payment (release the hold on the customer's card).
+    No money is charged.
+    """
+    try:
+        intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+        
+        if intent.metadata.get("user_id") != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Ce paiement ne vous appartient pas")
+        
+        if intent.status not in ["requires_capture", "requires_confirmation", "requires_payment_method"]:
+            raise HTTPException(status_code=400, detail=f"Cette autorisation ne peut pas être annulée (statut: {intent.status})")
+        
+        # Cancel the payment intent (releases the authorization)
+        cancelled_intent = stripe.PaymentIntent.cancel(payment_intent_id)
+        
+        # Update transaction record
+        await db.payment_transactions.update_one(
+            {"payment_intent_id": payment_intent_id},
+            {"$set": {
+                "status": "cancelled",
+                "cancelled_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+        logger.info(f"Payment authorization cancelled: {payment_intent_id}")
+        
+        return {
+            "success": True,
+            "status": cancelled_intent.status,
+            "message": "Autorisation annulée - aucun prélèvement effectué"
+        }
+        
+    except stripe.error.StripeError as e:
+        logger.error(f"Error cancelling authorization: {e}")
+        raise HTTPException(status_code=400, detail=f"Erreur d'annulation: {str(e)}")
+
 @api_router.post("/payments/charge-saved-card")
 async def charge_saved_card(data: ChargeCardRequest, current_user: dict = Depends(get_current_user)):
-    """Charge the user's saved card automatically"""
+    """
+    DEPRECATED: Use /payments/authorize instead for ride payments.
+    This endpoint still charges immediately - only use for wallet top-ups or similar.
+    """
     card_info = current_user.get("default_payment_method")
     stripe_customer_id = current_user.get("stripe_customer_id")
     

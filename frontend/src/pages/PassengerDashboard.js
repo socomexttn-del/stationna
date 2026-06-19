@@ -811,8 +811,9 @@ const PassengerDashboard = () => {
     try {
       setLoadingPayment(true);
       
-      // Charge the saved card automatically
-      const paymentResponse = await api.post('/payments/charge-saved-card', {
+      // AUTHORIZE the payment (reserve funds but don't charge yet)
+      // The actual charge happens only when the ride is completed
+      const paymentResponse = await api.post('/payments/authorize', {
         amount: Math.round(estimate.estimated_fare * 100), // Convert to cents
         description: `Course StationCab: ${pickup.address} → ${destination.address}`,
         metadata: {
@@ -822,20 +823,20 @@ const PassengerDashboard = () => {
       });
       
       if (paymentResponse.data.success) {
-        // Payment successful, create the ride
+        // Authorization successful, create the ride with the payment_intent_id
         const response = await api.post('/rides', { 
           pickup, 
           destination,
           stops: validStops.length > 0 ? validStops : null,
           vehicle_type: vehicleType,
           passenger_count: passengers,
-          payment_status: 'paid',
+          payment_status: 'authorized',  // Authorized, not paid yet
           payment_intent_id: paymentResponse.data.payment_intent_id
         });
         
         setActiveRide(response.data);
         setStep('searching');
-        toast.success('Paiement accepté ! Recherche d\'un chauffeur...');
+        toast.success('Carte validée ! Recherche d\'un chauffeur...');
         
         // Start polling for driver acceptance or cancellation
         const rideId = response.data.id;
@@ -851,11 +852,12 @@ const PassengerDashboard = () => {
               toast.success('Chauffeur trouvé!');
             } else if (status === 'cancelled') {
               // Ride was cancelled (by system or all drivers refused)
+              // Authorization is automatically released - no charge
               clearInterval(checkInterval);
               setActiveRide(null);
               setStep('idle');
               setEstimate(null);
-              toast.error('Aucun chauffeur disponible. Veuillez réessayer.');
+              toast.info('Course annulée - Aucun prélèvement effectué.');
             }
           } catch (err) {
             console.error('Error checking ride:', err);
@@ -877,11 +879,12 @@ const PassengerDashboard = () => {
             const finalCheck = await api.get(`/rides/${rideId}`);
             if (finalCheck.data.status === 'pending') {
               // Still pending after 2 minutes, cancel it
+              // This will release the authorization - no charge
               await api.post(`/rides/${rideId}/cancel`);
               setActiveRide(null);
               setStep('idle');
               setEstimate(null);
-              toast.error('Aucun chauffeur disponible pour le moment. Veuillez réessayer plus tard.');
+              toast.error('Aucun chauffeur disponible. Votre carte n\'a pas été débitée.');
             }
           } catch (err) {
             console.error('Error in timeout check:', err);
@@ -891,8 +894,8 @@ const PassengerDashboard = () => {
         }, 120000);
       }
     } catch (error) {
-      console.error('Payment error:', error);
-      const errorMsg = error.response?.data?.detail || 'Erreur lors du paiement';
+      console.error('Authorization error:', error);
+      const errorMsg = error.response?.data?.detail || 'Erreur lors de la validation de la carte';
       toast.error(errorMsg);
       
       // If card error, suggest to add a new card
