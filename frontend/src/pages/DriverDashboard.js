@@ -724,12 +724,13 @@ const DriverDashboard = () => {
         notified: notifiedRidesRef.current.size 
       });
       
-      if (brandNewRides.length > 0 && soundEnabled) {
+      // Play alarm for new rides (always play if there are new rides!)
+      if (brandNewRides.length > 0) {
         // Mark these rides as notified
         brandNewRides.forEach(r => notifiedRidesRef.current.add(r.id));
         
         // START CONTINUOUS ALARM for new ride(s)!
-        console.log('🔔 Nouvelle(s) course(s) détectée(s):', brandNewRides.length);
+        console.log('🔔 ALARME! Nouvelle(s) course(s):', brandNewRides.length);
         playNotificationSound(1, true); // true = continuous alarm
         
         // Show toast for the first new ride
@@ -739,7 +740,6 @@ const DriverDashboard = () => {
             <span className="font-semibold">🚗 NOUVELLE COURSE!</span>
             <span className="text-sm">{firstNew?.pickup?.address}</span>
             <span className="text-primary font-bold text-xl">{firstNew?.driver_earnings || (firstNew?.estimated_fare * 0.82).toFixed(2)}€</span>
-            <span className="text-xs text-muted-foreground">Touchez l'écran pour arrêter l'alarme</span>
           </div>,
           { duration: 60000 }
         );
@@ -1184,7 +1184,7 @@ const DriverDashboard = () => {
             <div className="text-center p-8">
               <div className="text-6xl mb-4">🔔</div>
               <h2 className="text-3xl font-bold text-white mb-4">NOUVELLE COURSE!</h2>
-              <p className="text-lg text-white/80 mb-6">Regardez les détails ci-dessous</p>
+              <p className="text-lg text-white/80 mb-6">Regardez les détails ci-dessus</p>
               <Button 
                 size="lg"
                 onClick={stopAlarm}
