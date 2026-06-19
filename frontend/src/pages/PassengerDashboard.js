@@ -837,23 +837,58 @@ const PassengerDashboard = () => {
         setStep('searching');
         toast.success('Paiement accepté ! Recherche d\'un chauffeur...');
         
-        // Start polling for driver acceptance
+        // Start polling for driver acceptance or cancellation
+        const rideId = response.data.id;
         const checkInterval = setInterval(async () => {
           try {
-            const check = await api.get(`/rides/${response.data.id}`);
-            if (check.data.status === 'accepted') {
+            const check = await api.get(`/rides/${rideId}`);
+            const status = check.data.status;
+            
+            if (status === 'accepted' || status === 'arrived' || status === 'in_progress') {
               clearInterval(checkInterval);
               setActiveRide(check.data);
               setStep('ride_active');
               toast.success('Chauffeur trouvé!');
+            } else if (status === 'cancelled') {
+              // Ride was cancelled (by system or all drivers refused)
+              clearInterval(checkInterval);
+              setActiveRide(null);
+              setStep('idle');
+              setEstimate(null);
+              toast.error('Aucun chauffeur disponible. Veuillez réessayer.');
             }
           } catch (err) {
             console.error('Error checking ride:', err);
+            // If ride not found, reset to idle
+            if (err.response?.status === 404) {
+              clearInterval(checkInterval);
+              setActiveRide(null);
+              setStep('idle');
+              setEstimate(null);
+            }
           }
         }, 3000);
         
-        // Clear after 2 minutes if no driver found
-        setTimeout(() => clearInterval(checkInterval), 120000);
+        // Clear after 2 minutes if no driver found and cancel the ride
+        setTimeout(async () => {
+          clearInterval(checkInterval);
+          // Check current status before cancelling
+          try {
+            const finalCheck = await api.get(`/rides/${rideId}`);
+            if (finalCheck.data.status === 'pending') {
+              // Still pending after 2 minutes, cancel it
+              await api.post(`/rides/${rideId}/cancel`);
+              setActiveRide(null);
+              setStep('idle');
+              setEstimate(null);
+              toast.error('Aucun chauffeur disponible pour le moment. Veuillez réessayer plus tard.');
+            }
+          } catch (err) {
+            console.error('Error in timeout check:', err);
+            setActiveRide(null);
+            setStep('idle');
+          }
+        }, 120000);
       }
     } catch (error) {
       console.error('Payment error:', error);

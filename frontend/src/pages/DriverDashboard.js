@@ -139,21 +139,32 @@ const DriverDashboard = () => {
       // 3. Start silent audio (keep app alive in background)
       startSilentAudio();
       
-      // 4. Initialize audio context for alarms
+      // 4. Initialize audio context for alarms - CRITICAL FOR iOS!
+      // Must be done in response to user gesture
       if (!audioContextRef.current) {
         try {
           audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-          setSoundEnabled(true);
-          console.log('Audio context initialized');
+          console.log('AudioContext created');
         } catch (e) {
-          console.log('Audio context error:', e);
+          console.log('AudioContext creation error:', e);
         }
       }
+      
+      // Resume audio context (required for iOS)
       if (audioContextRef.current?.state === 'suspended') {
-        audioContextRef.current.resume();
+        await audioContextRef.current.resume();
+        console.log('AudioContext resumed');
       }
       
-      // 5. Start keep-alive ping every 30 seconds
+      setSoundEnabled(true);
+      
+      // 5. Play a TEST SOUND immediately to "unlock" audio on iOS
+      // This is critical - iOS requires audio to be played during user interaction
+      setTimeout(() => {
+        playNotificationSound(1, false);
+      }, 100);
+      
+      // 6. Start keep-alive ping every 30 seconds
       if (keepAliveIntervalRef.current) {
         clearInterval(keepAliveIntervalRef.current);
       }
@@ -162,6 +173,10 @@ const DriverDashboard = () => {
         // Re-request wake lock if it was released
         if (!wakeLockRef.current && driverModeActive) {
           requestWakeLock();
+        }
+        // Also resume audio context if suspended
+        if (audioContextRef.current?.state === 'suspended') {
+          audioContextRef.current.resume();
         }
       }, 30000);
       
@@ -606,13 +621,21 @@ const DriverDashboard = () => {
   const playNotificationSound = useCallback((repeat = 1, continuous = false) => {
     console.log('🔊 Playing notification sound, repeat:', repeat, 'continuous:', continuous);
     
-    // Play single beep
+    // Play single beep using EXISTING audio context (important for iOS!)
     const playBeep = () => {
       try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        // Use existing audio context or create new one
+        let audioCtx = audioContextRef.current;
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          audioContextRef.current = audioCtx;
+        }
         
+        // CRITICAL for iOS: Resume if suspended
         if (audioCtx.state === 'suspended') {
-          audioCtx.resume();
+          audioCtx.resume().then(() => {
+            console.log('AudioContext resumed');
+          });
         }
         
         const playTone = (startTime, freq, duration) => {
@@ -624,7 +647,7 @@ const DriverDashboard = () => {
           
           oscillator.frequency.value = freq;
           oscillator.type = 'square';
-          gainNode.gain.setValueAtTime(0.7, startTime);
+          gainNode.gain.setValueAtTime(0.8, startTime); // Louder!
           gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
           
           oscillator.start(startTime);
@@ -639,9 +662,33 @@ const DriverDashboard = () => {
         playTone(now + 0.54, 900, 0.15);
         playTone(now + 0.72, 1600, 0.3);
         
+        console.log('✅ Web Audio played');
         return true;
       } catch (e) {
-        console.log('Audio error:', e);
+        console.log('❌ Web Audio error:', e);
+        return false;
+      }
+    };
+    
+    // Fallback: HTML5 Audio with beep sound (works better on some iOS versions)
+    const playHTML5Audio = () => {
+      try {
+        // Create a beep using data URI
+        const audio = new Audio('data:audio/wav;base64,UklGRl9vT19teleW0AAAAAAAAAACQVZFZM10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQ==');
+        audio.volume = 1.0;
+        
+        // For iOS, we need to play inline
+        audio.setAttribute('playsinline', '');
+        audio.setAttribute('webkit-playsinline', '');
+        
+        audio.play().then(() => {
+          console.log('✅ HTML5 Audio played');
+        }).catch(e => {
+          console.log('HTML5 Audio blocked:', e);
+        });
+        return true;
+      } catch (e) {
+        console.log('❌ HTML5 Audio error:', e);
         return false;
       }
     };
@@ -650,6 +697,7 @@ const DriverDashboard = () => {
     const vibrate = () => {
       if (navigator.vibrate) {
         navigator.vibrate([500, 200, 500, 200, 800]);
+        console.log('📳 Vibration triggered');
       }
     };
     
@@ -659,12 +707,16 @@ const DriverDashboard = () => {
       setAlarmActive(true);
       
       // Play immediately
-      playBeep();
+      if (!playBeep()) {
+        playHTML5Audio();
+      }
       vibrate();
       
       // Then repeat every 2 seconds
       alarmIntervalRef.current = setInterval(() => {
-        playBeep();
+        if (!playBeep()) {
+          playHTML5Audio();
+        }
         vibrate();
         console.log('🔔 Alarme continue...');
       }, 2000);
@@ -683,7 +735,9 @@ const DriverDashboard = () => {
     // Normal mode - play X times
     for (let i = 0; i < Math.min(repeat, 5); i++) {
       setTimeout(() => {
-        playBeep();
+        if (!playBeep()) {
+          playHTML5Audio();
+        }
         vibrate();
       }, i * 1200);
     }
