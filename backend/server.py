@@ -2926,8 +2926,40 @@ async def cancel_ride(ride_id: str, current_user: dict = Depends(get_current_use
             
             if intent.status == "requires_capture":
                 # Determine if we need to charge cancellation fee or just cancel
+                # Cancellation fee applies ONLY if:
+                # 1. Passenger cancels (not driver)
+                # 2. Driver has accepted the ride
+                # 3. Ride is in accepted/arrived/in_progress status
+                # 4. MORE than 2 minutes have passed since acceptance
+                
+                should_charge_cancellation_fee = False
+                
                 if cancelled_by == "passenger" and ride.get("driver_id") and ride["status"] in ["accepted", "arrived", "in_progress"]:
-                    # Passenger cancels after driver accepted - charge cancellation fee only
+                    # Check if 2 minutes have passed since acceptance
+                    accepted_at = ride.get("accepted_at")
+                    if accepted_at:
+                        try:
+                            accepted_time = datetime.fromisoformat(accepted_at.replace('Z', '+00:00'))
+                            time_since_acceptance = datetime.now(timezone.utc) - accepted_time
+                            minutes_since_acceptance = time_since_acceptance.total_seconds() / 60
+                            
+                            if minutes_since_acceptance >= 2:
+                                # More than 2 minutes since acceptance - charge cancellation fee
+                                should_charge_cancellation_fee = True
+                                logger.info(f"Ride {ride_id}: Cancellation after {minutes_since_acceptance:.1f} minutes - fee applies")
+                            else:
+                                # Within 2 minutes grace period - no fee
+                                logger.info(f"Ride {ride_id}: Cancellation within grace period ({minutes_since_acceptance:.1f} min) - no fee")
+                        except (ValueError, TypeError) as e:
+                            # If we can't parse the date, assume fee applies for safety
+                            logger.warning(f"Could not parse accepted_at for ride {ride_id}: {e}")
+                            should_charge_cancellation_fee = True
+                    else:
+                        # No accepted_at timestamp (shouldn't happen), charge fee for safety
+                        should_charge_cancellation_fee = True
+                
+                if should_charge_cancellation_fee:
+                    # Passenger cancels after driver accepted AND after 2 min grace period
                     vehicle_type = ride.get("vehicle_type", "standard")
                     if vehicle_type == "van":
                         cancellation_fee = 15.0
@@ -2980,7 +3012,7 @@ async def cancel_ride(ride_id: str, current_user: dict = Depends(get_current_use
                         except Exception as fallback_err:
                             logger.error(f"Fallback cancellation fee charge failed: {fallback_err}")
                 else:
-                    # No driver assigned yet, or driver cancelled - just cancel the authorization
+                    # No fee - cancel the authorization (within grace period, or no driver, or driver cancelled)
                     try:
                         stripe.PaymentIntent.cancel(payment_intent_id)
                         authorization_cancelled = True
@@ -3005,42 +3037,63 @@ async def cancel_ride(ride_id: str, current_user: dict = Depends(get_current_use
             logger.error(f"Error handling payment during cancellation: {e}")
     else:
         # No payment intent (old rides or edge cases) - use old logic for cancellation fee
+        # But still apply the 2-minute grace period
         if cancelled_by == "passenger" and ride.get("driver_id") and ride["status"] in ["accepted", "arrived", "in_progress"]:
-            vehicle_type = ride.get("vehicle_type", "standard")
-            if vehicle_type == "van":
-                cancellation_fee = 15.0
-            else:
-                cancellation_fee = 8.0
-            
-            # Try to charge the cancellation fee via Stripe
-            passenger = await db.users.find_one({"id": ride["passenger_id"]}, {"_id": 0})
-            if passenger and passenger.get("stripe_customer_id"):
+            # Check if 2 minutes have passed since acceptance
+            should_charge = False
+            accepted_at = ride.get("accepted_at")
+            if accepted_at:
                 try:
-                    customer = stripe.Customer.retrieve(passenger["stripe_customer_id"])
-                    default_pm = customer.get("invoice_settings", {}).get("default_payment_method")
+                    accepted_time = datetime.fromisoformat(accepted_at.replace('Z', '+00:00'))
+                    time_since_acceptance = datetime.now(timezone.utc) - accepted_time
+                    minutes_since_acceptance = time_since_acceptance.total_seconds() / 60
                     
-                    if default_pm:
-                        payment_intent = stripe.PaymentIntent.create(
-                            amount=int(cancellation_fee * 100),
-                            currency="eur",
-                            customer=passenger["stripe_customer_id"],
-                            payment_method=default_pm,
-                            off_session=True,
-                            confirm=True,
-                            description=f"Frais d'annulation course {ride_id}",
-                            metadata={
-                                "ride_id": ride_id,
-                                "type": "cancellation_fee",
-                                "vehicle_type": vehicle_type
-                            }
-                        )
-                        if payment_intent.status == "succeeded":
-                            cancellation_fee_charged = True
-                            logger.info(f"Cancellation fee {cancellation_fee}€ charged for ride {ride_id}")
-                except stripe.error.CardError as e:
-                    logger.error(f"Card error charging cancellation fee: {e}")
-                except Exception as e:
-                    logger.error(f"Error charging cancellation fee: {e}")
+                    if minutes_since_acceptance >= 2:
+                        should_charge = True
+                        logger.info(f"Ride {ride_id} (legacy): Cancellation after {minutes_since_acceptance:.1f} minutes - fee applies")
+                    else:
+                        logger.info(f"Ride {ride_id} (legacy): Cancellation within grace period ({minutes_since_acceptance:.1f} min) - no fee")
+                except (ValueError, TypeError):
+                    should_charge = True  # If can't parse date, charge for safety
+            else:
+                should_charge = True
+            
+            if should_charge:
+                vehicle_type = ride.get("vehicle_type", "standard")
+                if vehicle_type == "van":
+                    cancellation_fee = 15.0
+                else:
+                    cancellation_fee = 8.0
+                
+                # Try to charge the cancellation fee via Stripe
+                passenger = await db.users.find_one({"id": ride["passenger_id"]}, {"_id": 0})
+                if passenger and passenger.get("stripe_customer_id"):
+                    try:
+                        customer = stripe.Customer.retrieve(passenger["stripe_customer_id"])
+                        default_pm = customer.get("invoice_settings", {}).get("default_payment_method")
+                        
+                        if default_pm:
+                            payment_intent = stripe.PaymentIntent.create(
+                                amount=int(cancellation_fee * 100),
+                                currency="eur",
+                                customer=passenger["stripe_customer_id"],
+                                payment_method=default_pm,
+                                off_session=True,
+                                confirm=True,
+                                description=f"Frais d'annulation course {ride_id}",
+                                metadata={
+                                    "ride_id": ride_id,
+                                    "type": "cancellation_fee",
+                                    "vehicle_type": vehicle_type
+                                }
+                            )
+                            if payment_intent.status == "succeeded":
+                                cancellation_fee_charged = True
+                                logger.info(f"Cancellation fee {cancellation_fee}€ charged for ride {ride_id}")
+                    except stripe.error.CardError as e:
+                        logger.error(f"Card error charging cancellation fee: {e}")
+                    except Exception as e:
+                        logger.error(f"Error charging cancellation fee: {e}")
     
     await db.rides.update_one({"id": ride_id}, {"$set": {
         "status": "cancelled",
