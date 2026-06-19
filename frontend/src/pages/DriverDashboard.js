@@ -127,39 +127,58 @@ const DriverDashboard = () => {
   const activateDriverMode = async () => {
     console.log('🚗 Activation Mode Chauffeur...');
     
-    // 1. Request notification permission
-    if (Notification.permission === 'default') {
-      await Notification.requestPermission();
-    }
-    
-    // 2. Activate Wake Lock (keep screen on)
-    await requestWakeLock();
-    
-    // 3. Start silent audio (keep app alive in background)
-    startSilentAudio();
-    
-    // 4. Start keep-alive ping every 30 seconds
-    keepAliveIntervalRef.current = setInterval(() => {
-      console.log('💓 Keep-alive ping');
-      // Re-request wake lock if it was released
-      if (!wakeLockRef.current) {
-        requestWakeLock();
+    try {
+      // 1. Request notification permission
+      if ('Notification' in window && Notification.permission === 'default') {
+        await Notification.requestPermission();
       }
-    }, 30000);
-    
-    // 5. Initialize audio context
-    initAudio();
-    
-    setDriverModeActive(true);
-    toast.success(
-      <div className="flex flex-col gap-1">
-        <span className="font-bold">🚗 Mode Chauffeur activé!</span>
-        <span className="text-sm">• Écran reste allumé</span>
-        <span className="text-sm">• App active en arrière-plan</span>
-        <span className="text-sm">• Alarme sonore pour nouvelles courses</span>
-      </div>,
-      { duration: 5000 }
-    );
+      
+      // 2. Activate Wake Lock (keep screen on)
+      await requestWakeLock();
+      
+      // 3. Start silent audio (keep app alive in background)
+      startSilentAudio();
+      
+      // 4. Initialize audio context for alarms
+      if (!audioContextRef.current) {
+        try {
+          audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+          setSoundEnabled(true);
+          console.log('Audio context initialized');
+        } catch (e) {
+          console.log('Audio context error:', e);
+        }
+      }
+      if (audioContextRef.current?.state === 'suspended') {
+        audioContextRef.current.resume();
+      }
+      
+      // 5. Start keep-alive ping every 30 seconds
+      if (keepAliveIntervalRef.current) {
+        clearInterval(keepAliveIntervalRef.current);
+      }
+      keepAliveIntervalRef.current = setInterval(() => {
+        console.log('💓 Keep-alive ping');
+        // Re-request wake lock if it was released
+        if (!wakeLockRef.current && driverModeActive) {
+          requestWakeLock();
+        }
+      }, 30000);
+      
+      setDriverModeActive(true);
+      toast.success(
+        <div className="flex flex-col gap-1">
+          <span className="font-bold">🚗 Mode Chauffeur activé!</span>
+          <span className="text-sm">• Écran reste allumé</span>
+          <span className="text-sm">• App active en arrière-plan</span>
+          <span className="text-sm">• Alarme sonore pour nouvelles courses</span>
+        </div>,
+        { duration: 5000 }
+      );
+    } catch (error) {
+      console.error('Erreur activation Mode Chauffeur:', error);
+      toast.error('Erreur lors de l\'activation du Mode Chauffeur');
+    }
   };
 
   // Deactivate Driver Mode
