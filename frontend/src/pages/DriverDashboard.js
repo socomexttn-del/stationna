@@ -413,22 +413,37 @@ const DriverDashboard = () => {
   // Connect to notification polling
   const { isConnected } = useNotifications(api, 'driver', handleNotification);
 
+  // Alarm interval ref for continuous ringing
+  const alarmIntervalRef = useRef(null);
+  const [alarmActive, setAlarmActive] = useState(false);
+
+  // Stop the alarm
+  const stopAlarm = useCallback(() => {
+    if (alarmIntervalRef.current) {
+      clearInterval(alarmIntervalRef.current);
+      alarmIntervalRef.current = null;
+    }
+    setAlarmActive(false);
+    if (navigator.vibrate) {
+      navigator.vibrate(0); // Stop vibration
+    }
+    console.log('🔕 Alarme arrêtée');
+  }, []);
+
   // Play notification sound - VERY aggressive for new rides
-  const playNotificationSound = useCallback((repeat = 1) => {
-    console.log('🔊 Playing notification sound, repeat:', repeat);
+  const playNotificationSound = useCallback((repeat = 1, continuous = false) => {
+    console.log('🔊 Playing notification sound, repeat:', repeat, 'continuous:', continuous);
     
-    // Try to play using Web Audio API (works better on mobile)
-    const playWebAudio = () => {
+    // Play single beep
+    const playBeep = () => {
       try {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         
-        // Resume if suspended (required after user interaction)
         if (audioCtx.state === 'suspended') {
           audioCtx.resume();
         }
         
-        // Create attention-grabbing sound pattern
-        const playBeep = (startTime, freq, duration) => {
+        const playTone = (startTime, freq, duration) => {
           const oscillator = audioCtx.createOscillator();
           const gainNode = audioCtx.createGain();
           
@@ -437,7 +452,7 @@ const DriverDashboard = () => {
           
           oscillator.frequency.value = freq;
           oscillator.type = 'square';
-          gainNode.gain.setValueAtTime(0.6, startTime);
+          gainNode.gain.setValueAtTime(0.7, startTime);
           gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
           
           oscillator.start(startTime);
@@ -445,54 +460,62 @@ const DriverDashboard = () => {
         };
         
         const now = audioCtx.currentTime;
-        // Play urgent pattern: high-low-high-low-HIGH (taxi horn style)
-        playBeep(now, 1200, 0.12);
-        playBeep(now + 0.15, 800, 0.12);
-        playBeep(now + 0.30, 1200, 0.12);
-        playBeep(now + 0.45, 800, 0.12);
-        playBeep(now + 0.60, 1500, 0.25);
+        // LOUD taxi horn pattern
+        playTone(now, 1400, 0.15);
+        playTone(now + 0.18, 900, 0.15);
+        playTone(now + 0.36, 1400, 0.15);
+        playTone(now + 0.54, 900, 0.15);
+        playTone(now + 0.72, 1600, 0.3);
         
-        console.log('✅ Web Audio played successfully');
         return true;
       } catch (e) {
-        console.log('❌ Web Audio error:', e);
+        console.log('Audio error:', e);
         return false;
       }
     };
-    
-    // Try HTML5 Audio as fallback
-    const playHTML5Audio = () => {
-      try {
-        // Use a data URI for a simple beep sound
-        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleXb3gY2RqL/G3OT85+Xv9O/f4ef19fLu6evo6d/X4+Xh3tvi4t7Y5Obg1uPr5t/f6+fi3+nr5uPq6uXl6unl5Ojo5ubp5+fn5+jp5+np5+fo6Ofn6Ojn6Onn6Ofn6Ojn5+jn5+fo5+fo5+fo5+fn5+fn5+fn5+fn');
-        audio.volume = 1.0;
-        audio.play().catch(e => console.log('HTML5 Audio blocked:', e));
-        return true;
-      } catch (e) {
-        console.log('❌ HTML5 Audio error:', e);
-        return false;
+
+    // Vibrate
+    const vibrate = () => {
+      if (navigator.vibrate) {
+        navigator.vibrate([500, 200, 500, 200, 800]);
       }
     };
     
-    // Play multiple times for urgency
-    for (let i = 0; i < Math.min(repeat, 3); i++) {
+    // If continuous mode - start alarm that repeats until stopped
+    if (continuous) {
+      stopAlarm(); // Stop any existing alarm first
+      setAlarmActive(true);
+      
+      // Play immediately
+      playBeep();
+      vibrate();
+      
+      // Then repeat every 2 seconds
+      alarmIntervalRef.current = setInterval(() => {
+        playBeep();
+        vibrate();
+        console.log('🔔 Alarme continue...');
+      }, 2000);
+      
+      // Auto-stop after 60 seconds to prevent infinite loop
       setTimeout(() => {
-        if (!playWebAudio()) {
-          playHTML5Audio();
+        if (alarmIntervalRef.current) {
+          stopAlarm();
+          toast.info('Alarme arrêtée automatiquement après 60 secondes');
         }
-      }, i * 1000);
+      }, 60000);
+      
+      return;
     }
     
-    // Strong vibration pattern for mobile
-    if (navigator.vibrate) {
-      const pattern = [];
-      for (let i = 0; i < Math.min(repeat, 3); i++) {
-        pattern.push(400, 150, 400, 150, 600, 300);
-      }
-      navigator.vibrate(pattern);
-      console.log('📳 Vibration triggered');
+    // Normal mode - play X times
+    for (let i = 0; i < Math.min(repeat, 5); i++) {
+      setTimeout(() => {
+        playBeep();
+        vibrate();
+      }, i * 1200);
     }
-  }, []);
+  }, [stopAlarm]);
 
   // Send GPS location to server
   const sendLocation = useCallback(async () => {
@@ -686,25 +709,26 @@ const DriverDashboard = () => {
         // Mark these rides as notified
         brandNewRides.forEach(r => notifiedRidesRef.current.add(r.id));
         
-        // Play notification sound for new ride(s)!
+        // START CONTINUOUS ALARM for new ride(s)!
         console.log('🔔 Nouvelle(s) course(s) détectée(s):', brandNewRides.length);
-        playNotificationSound(3);
+        playNotificationSound(1, true); // true = continuous alarm
         
         // Show toast for the first new ride
         const firstNew = brandNewRides[0];
         toast.success(
           <div className="flex flex-col gap-1">
-            <span className="font-semibold">🚗 Nouvelle course!</span>
+            <span className="font-semibold">🚗 NOUVELLE COURSE!</span>
             <span className="text-sm">{firstNew?.pickup?.address}</span>
-            <span className="text-primary font-bold">{firstNew?.estimated_fare}€</span>
+            <span className="text-primary font-bold text-xl">{firstNew?.driver_earnings || (firstNew?.estimated_fare * 0.82).toFixed(2)}€</span>
+            <span className="text-xs text-muted-foreground">Touchez l'écran pour arrêter l'alarme</span>
           </div>,
-          { duration: 15000 }
+          { duration: 60000 }
         );
         
         // Also trigger browser notification if permission granted
         if (Notification.permission === 'granted') {
           new Notification('StationCab - Nouvelle course!', {
-            body: `${firstNew?.pickup?.address} → ${firstNew?.destination?.address}\nPrix: ${firstNew?.estimated_fare}€`,
+            body: `${firstNew?.pickup?.address} → ${firstNew?.destination?.address}\nGains: ${firstNew?.driver_earnings || (firstNew?.estimated_fare * 0.82).toFixed(2)}€`,
             icon: '/logo192.png',
             tag: 'new-ride',
             requireInteraction: true
@@ -745,6 +769,7 @@ const DriverDashboard = () => {
   };
 
   const acceptRide = async (rideId) => {
+    stopAlarm(); // Stop alarm when accepting
     try {
       const response = await api.post(`/rides/${rideId}/accept`);
       setActiveRide(response.data);
@@ -757,6 +782,7 @@ const DriverDashboard = () => {
   };
 
   const dismissRide = async (rideId) => {
+    stopAlarm(); // Stop alarm when dismissing
     // Add to dismissed list so it won't show again locally
     setDismissedRides(prev => [...prev, rideId]);
     // Remove from available rides
@@ -1124,6 +1150,24 @@ const DriverDashboard = () => {
                 : "Gardez cette page ouverte et l'écran allumé pour recevoir les alertes."
               }
             </p>
+          </div>
+        )}
+
+        {/* ALARM ACTIVE - Big stop button */}
+        {alarmActive && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 animate-pulse">
+            <div className="text-center p-8">
+              <div className="text-6xl mb-4">🔔</div>
+              <h2 className="text-3xl font-bold text-white mb-4">NOUVELLE COURSE!</h2>
+              <p className="text-lg text-white/80 mb-6">Regardez les détails ci-dessous</p>
+              <Button 
+                size="lg"
+                onClick={stopAlarm}
+                className="bg-red-600 hover:bg-red-700 text-white text-xl px-8 py-6 h-auto"
+              >
+                🔕 ARRÊTER L'ALARME
+              </Button>
+            </div>
           </div>
         )}
 

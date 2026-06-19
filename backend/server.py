@@ -55,10 +55,8 @@ stripe.api_key = STRIPE_API_KEY
 STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', "pk_live_51J5B0aIhFRBc7tGxbkNUnMyYfrSEGJpSc1DzoxUASi6guCIYeaYGEeA2Cf9Ce7ZiYa2vSJEsjtnvJ1mKxQc8xhJI006tIB0hKE")
 
 # Web Push VAPID Keys (for push notifications even when phone is in sleep mode)
-# Generate new keys with: openssl ecparam -name prime256v1 -genkey -noout -out vapid_private.pem
-# openssl ec -in vapid_private.pem -pubout -out vapid_public.pem
-VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY', 'BLBRwT8pfrKg5VD4Uj9z7fYUVT0cPT9fPHnvW0qfYmRYL3r9z-8nxB6vYy7KRzYAJmBgP9cQZfzR5KjK1TJzH2M')
-VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', 'nPLYCyD6VqhGTsLcjZqC8VvKHdQ6qF2fM7rYxT0wS5o')
+VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY', 'BDCbQxC5k4UrbdizRop8uCR-33wtwazA7uIfpBAWqJUSfJG8tzJwRrcXS_HXXCmZfo2l_Buf_zLLHeHAtF8BU54')
+VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', 'Et9fgI_HxcyPRlFfOt0uXUeMn7z7C2zKPGXl0uBDGGs')
 VAPID_CLAIMS = {"sub": "mailto:contact@stationcab.fr"}
 
 # Create the main app
