@@ -14,7 +14,7 @@ import BookingReceipt from '../components/BookingReceipt';
 import StationCabLogo from '../components/StationCabLogo';
 import { 
   Car, MapPin, Navigation, Star, Clock, DollarSign,
-  Menu, User, History, LogOut, Check, X, Play, Phone, Bell, Wifi, WifiOff, MessageCircle, FileText, Receipt, Crosshair, Loader2, Eye, EyeOff, RefreshCw
+  Menu, User, History, LogOut, Check, X, Play, Phone, Bell, Wifi, WifiOff, MessageCircle, FileText, Receipt, Crosshair, Loader2, Eye, EyeOff, RefreshCw, CheckCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -381,19 +381,19 @@ const DriverDashboard = () => {
 
   // Play notification sound - VERY aggressive for new rides
   const playNotificationSound = useCallback((repeat = 1) => {
-    console.log('Playing notification sound, repeat:', repeat);
+    console.log('🔊 Playing notification sound, repeat:', repeat);
     
-    // Try HTML5 Audio first (more compatible)
-    const playHTMLAudio = () => {
+    // Try to play using Web Audio API (works better on mobile)
+    const playWebAudio = () => {
       try {
-        // Create a simple beep using oscillator
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         
+        // Resume if suspended (required after user interaction)
         if (audioCtx.state === 'suspended') {
           audioCtx.resume();
         }
         
-        // Create a more attention-grabbing sound pattern
+        // Create attention-grabbing sound pattern
         const playBeep = (startTime, freq, duration) => {
           const oscillator = audioCtx.createOscillator();
           const gainNode = audioCtx.createGain();
@@ -403,7 +403,7 @@ const DriverDashboard = () => {
           
           oscillator.frequency.value = freq;
           oscillator.type = 'square';
-          gainNode.gain.setValueAtTime(0.5, startTime);
+          gainNode.gain.setValueAtTime(0.6, startTime);
           gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
           
           oscillator.start(startTime);
@@ -411,30 +411,52 @@ const DriverDashboard = () => {
         };
         
         const now = audioCtx.currentTime;
-        // Play urgent pattern: high-low-high
-        playBeep(now, 1200, 0.15);
-        playBeep(now + 0.2, 800, 0.15);
-        playBeep(now + 0.4, 1200, 0.15);
-        playBeep(now + 0.6, 800, 0.15);
-        playBeep(now + 0.8, 1500, 0.3);
+        // Play urgent pattern: high-low-high-low-HIGH (taxi horn style)
+        playBeep(now, 1200, 0.12);
+        playBeep(now + 0.15, 800, 0.12);
+        playBeep(now + 0.30, 1200, 0.12);
+        playBeep(now + 0.45, 800, 0.12);
+        playBeep(now + 0.60, 1500, 0.25);
         
+        console.log('✅ Web Audio played successfully');
+        return true;
       } catch (e) {
-        console.log('Audio play error:', e);
+        console.log('❌ Web Audio error:', e);
+        return false;
+      }
+    };
+    
+    // Try HTML5 Audio as fallback
+    const playHTML5Audio = () => {
+      try {
+        // Use a data URI for a simple beep sound
+        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleXb3gY2RqL/G3OT85+Xv9O/f4ef19fLu6evo6d/X4+Xh3tvi4t7Y5Obg1uPr5t/f6+fi3+nr5uPq6uXl6unl5Ojo5ubp5+fn5+jp5+np5+fo6Ofn6Ojn6Onn6Ofn6Ojn5+jn5+fo5+fo5+fo5+fn5+fn5+fn5+fn');
+        audio.volume = 1.0;
+        audio.play().catch(e => console.log('HTML5 Audio blocked:', e));
+        return true;
+      } catch (e) {
+        console.log('❌ HTML5 Audio error:', e);
+        return false;
       }
     };
     
     // Play multiple times for urgency
-    for (let i = 0; i < repeat; i++) {
-      setTimeout(playHTMLAudio, i * 1200);
+    for (let i = 0; i < Math.min(repeat, 3); i++) {
+      setTimeout(() => {
+        if (!playWebAudio()) {
+          playHTML5Audio();
+        }
+      }, i * 1000);
     }
     
-    // Strong vibration pattern
+    // Strong vibration pattern for mobile
     if (navigator.vibrate) {
       const pattern = [];
-      for (let i = 0; i < repeat; i++) {
-        pattern.push(300, 100, 300, 100, 500, 200);
+      for (let i = 0; i < Math.min(repeat, 3); i++) {
+        pattern.push(400, 150, 400, 150, 600, 300);
       }
       navigator.vibrate(pattern);
+      console.log('📳 Vibration triggered');
     }
   }, []);
 
@@ -613,6 +635,7 @@ const DriverDashboard = () => {
 
   // Track previous rides count to detect new ones
   const [prevRidesCount, setPrevRidesCount] = useState(0);
+  const notifiedRidesRef = useRef(new Set()); // Track rides we've already notified about
 
   const fetchAvailableRides = async () => {
     try {
@@ -622,22 +645,37 @@ const DriverDashboard = () => {
       // Filter out dismissed rides
       const newRides = allRides.filter(r => !dismissedRides.includes(r.id));
       
-      // Check if there are new rides
-      if (newRides.length > prevRidesCount && prevRidesCount > 0) {
-        // New ride detected - play sound!
+      // Check for truly NEW rides (not yet notified)
+      const brandNewRides = newRides.filter(r => !notifiedRidesRef.current.has(r.id));
+      
+      if (brandNewRides.length > 0) {
+        // Mark these rides as notified
+        brandNewRides.forEach(r => notifiedRidesRef.current.add(r.id));
+        
+        // Play notification sound for new ride(s)!
+        console.log('🔔 Nouvelle(s) course(s) détectée(s):', brandNewRides.length);
         playNotificationSound(3);
+        
+        // Show toast for the first new ride
+        const firstNew = brandNewRides[0];
         toast.success(
           <div className="flex flex-col gap-1">
             <span className="font-semibold">🚗 Nouvelle course!</span>
-            <span className="text-sm">{newRides[0]?.pickup?.address}</span>
-            <span className="text-primary font-bold">{newRides[0]?.estimated_fare}€</span>
+            <span className="text-sm">{firstNew?.pickup?.address}</span>
+            <span className="text-primary font-bold">{firstNew?.estimated_fare}€</span>
           </div>,
-          { duration: 10000 }
+          { duration: 15000 }
         );
-      } else if (newRides.length > 0 && prevRidesCount === 0) {
-        // First ride when coming online
-        playNotificationSound(2);
-        toast.success(`${newRides.length} course(s) disponible(s)!`, { duration: 5000 });
+        
+        // Also trigger browser notification if permission granted
+        if (Notification.permission === 'granted') {
+          new Notification('StationCab - Nouvelle course!', {
+            body: `${firstNew?.pickup?.address} → ${firstNew?.destination?.address}\nPrix: ${firstNew?.estimated_fare}€`,
+            icon: '/logo192.png',
+            tag: 'new-ride',
+            requireInteraction: true
+          });
+        }
       }
       
       setPrevRidesCount(newRides.length);
@@ -997,29 +1035,50 @@ const DriverDashboard = () => {
 
         {/* Important warning for drivers */}
         {isAvailable && (
-          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3 text-xs">
-            <div className="flex items-center gap-2 text-yellow-500 font-medium mb-1">
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3">
+            <div className="flex items-center gap-2 text-yellow-500 font-medium mb-2">
               <Bell className="w-4 h-4" />
-              <span>Important - Notifications</span>
+              <span>Important - Notifications sonores</span>
             </div>
-            <p className="text-muted-foreground">
-              Pour recevoir les alertes de course, gardez cette page ouverte et votre écran allumé. 
-              Les navigateurs ne peuvent pas sonner quand le téléphone est en veille.
-            </p>
-            {!soundEnabled && (
-              <Button 
-                size="sm" 
-                className="w-full mt-2 bg-yellow-500 hover:bg-yellow-600 text-black"
-                onClick={() => {
-                  initAudio();
-                  playNotificationSound(1);
-                  toast.success('Son activé!');
-                }}
-              >
-                <Bell className="w-3 h-3 mr-2" />
-                Activer le son
-              </Button>
+            
+            {!soundEnabled ? (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  Cliquez ci-dessous pour activer les alertes sonores lors de nouvelles courses.
+                </p>
+                <Button 
+                  size="lg" 
+                  className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold h-12"
+                  onClick={() => {
+                    initAudio();
+                    setSoundEnabled(true);
+                    playNotificationSound(1);
+                    toast.success('🔔 Son activé! Vous entendrez un son lors des nouvelles courses.');
+                  }}
+                  data-testid="enable-sound-btn"
+                >
+                  <Bell className="w-5 h-5 mr-2" />
+                  🔊 ACTIVER LE SON
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-green-500 text-sm">
+                <CheckCircle className="w-4 h-4" />
+                <span>Son activé - Vous recevrez des alertes sonores</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => playNotificationSound(1)}
+                  className="ml-auto text-xs"
+                >
+                  Tester
+                </Button>
+              </div>
             )}
+            
+            <p className="text-[10px] text-muted-foreground mt-2">
+              Gardez cette page ouverte et l'écran allumé pour recevoir les alertes.
+            </p>
           </div>
         )}
 
