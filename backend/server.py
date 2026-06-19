@@ -9,6 +9,7 @@ import logging
 import math
 import asyncio
 import io
+import json
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr, ConfigDict
 from typing import List, Optional, Dict
@@ -18,6 +19,7 @@ import jwt
 import bcrypt
 import stripe
 import resend
+from pywebpush import webpush, WebPushException
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -51,6 +53,13 @@ stripe.api_key = STRIPE_API_KEY
 
 # Stripe publishable key for frontend
 STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', "pk_live_51J5B0aIhFRBc7tGxbkNUnMyYfrSEGJpSc1DzoxUASi6guCIYeaYGEeA2Cf9Ce7ZiYa2vSJEsjtnvJ1mKxQc8xhJI006tIB0hKE")
+
+# Web Push VAPID Keys (for push notifications even when phone is in sleep mode)
+# Generate new keys with: openssl ecparam -name prime256v1 -genkey -noout -out vapid_private.pem
+# openssl ec -in vapid_private.pem -pubout -out vapid_public.pem
+VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY', 'BLBRwT8pfrKg5VD4Uj9z7fYUVT0cPT9fPHnvW0qfYmRYL3r9z-8nxB6vYy7KRzYAJmBgP9cQZfzR5KjK1TJzH2M')
+VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', 'nPLYCyD6VqhGTsLcjZqC8VvKHdQ6qF2fM7rYxT0wS5o')
+VAPID_CLAIMS = {"sub": "mailto:contact@stationcab.fr"}
 
 # Create the main app
 app = FastAPI(title="Volt Taxi API")
@@ -190,42 +199,77 @@ class NotificationManager:
         return [t["token"] for t in tokens]
     
     async def _send_push(self, user_id: str, notification_type: str, data: dict):
-        """Send push notification to a specific user"""
-        if not is_firebase_initialized():
-            return
-        
-        tokens = await self._get_user_fcm_tokens(user_id)
-        if not tokens:
-            return
-        
+        """Send push notification to a specific user via FCM and Web Push"""
         title, body = self._get_notification_content(notification_type, data)
         
-        # Send to all user devices
-        for token in tokens:
-            await send_push_notification(
-                token=token,
+        # Send via Firebase (for apps)
+        if is_firebase_initialized():
+            tokens = await self._get_user_fcm_tokens(user_id)
+            if tokens:
+                for token in tokens:
+                    await send_push_notification(
+                        token=token,
+                        title=title,
+                        body=body,
+                        data={"type": notification_type, **{k: str(v) for k, v in data.items() if v is not None}}
+                    )
+        
+        # Also send via Web Push (for web browser - works in sleep mode!)
+        try:
+            await send_web_push_notification(
+                user_id=user_id,
                 title=title,
                 body=body,
                 data={"type": notification_type, **{k: str(v) for k, v in data.items() if v is not None}}
             )
+        except Exception as e:
+            logger.debug(f"Web Push error (non-critical): {e}")
     
     async def _send_push_to_all_drivers(self, notification_type: str, data: dict, vehicle_type: str = None, exclude_driver_ids: list = None):
         """Send push notification to all available drivers filtered by vehicle type"""
-        if not is_firebase_initialized():
-            return
-        
-        tokens = await self._get_all_driver_fcm_tokens(vehicle_type, exclude_driver_ids)
-        if not tokens:
-            return
-        
         title, body = self._get_notification_content(notification_type, data)
         
-        await send_push_to_multiple(
-            tokens=tokens,
-            title=title,
-            body=body,
-            data={"type": notification_type, **{k: str(v) for k, v in data.items() if v is not None}}
-        )
+        # Send via Firebase (for apps)
+        if is_firebase_initialized():
+            tokens = await self._get_all_driver_fcm_tokens(vehicle_type, exclude_driver_ids)
+            if tokens:
+                await send_push_to_multiple(
+                    tokens=tokens,
+                    title=title,
+                    body=body,
+                    data={"type": notification_type, **{k: str(v) for k, v in data.items() if v is not None}}
+                )
+        
+        # Also send Web Push to all available drivers (works in sleep mode!)
+        try:
+            query = {"role": "driver", "is_available": True}
+            if vehicle_type:
+                if vehicle_type == "van":
+                    query["driver_vehicle_types"] = {"$in": ["van"]}
+                elif vehicle_type == "taxi":
+                    query["driver_vehicle_types"] = {"$in": ["taxi"]}
+                else:
+                    query["driver_vehicle_types"] = {"$in": ["vtc", "taxi"]}
+            
+            available_drivers = await db.users.find(query, {"_id": 0, "id": 1}).to_list(500)
+            driver_ids = [d["id"] for d in available_drivers]
+            
+            if exclude_driver_ids:
+                driver_ids = [d for d in driver_ids if d not in exclude_driver_ids]
+            
+            # Send Web Push to each driver
+            for driver_id in driver_ids:
+                try:
+                    await send_web_push_notification(
+                        user_id=driver_id,
+                        title=title,
+                        body=body,
+                        data={"type": notification_type, **{k: str(v) for k, v in data.items() if v is not None}}
+                    )
+                except Exception as e:
+                    logger.debug(f"Web Push error for driver {driver_id}: {e}")
+        except Exception as e:
+            logger.error(f"Error sending Web Push to drivers: {e}")
     
     async def create_notification(self, user_id: str, notification_type: str, data: dict, role: str = None):
         """Create a notification for a user or broadcast to all drivers"""
@@ -1471,6 +1515,120 @@ async def get_fcm_status():
         "enabled": is_firebase_initialized(),
         "message": "Firebase push notifications are " + ("enabled" if is_firebase_initialized() else "disabled")
     }
+
+# ======================== WEB PUSH NOTIFICATIONS ========================
+
+class WebPushSubscription(BaseModel):
+    subscription: dict  # Contains endpoint, keys.p256dh, keys.auth
+
+class WebPushUnsubscribe(BaseModel):
+    endpoint: str
+
+@api_router.get("/push/vapid-key")
+async def get_vapid_public_key():
+    """Get VAPID public key for Web Push subscription"""
+    return {"publicKey": VAPID_PUBLIC_KEY}
+
+@api_router.post("/push/subscribe")
+async def subscribe_to_web_push(data: WebPushSubscription, current_user: dict = Depends(get_current_user)):
+    """Subscribe to Web Push notifications"""
+    try:
+        subscription = data.subscription
+        
+        # Deactivate any existing subscriptions with the same endpoint
+        await db.web_push_subscriptions.update_many(
+            {"endpoint": subscription.get("endpoint"), "user_id": {"$ne": current_user["id"]}},
+            {"$set": {"active": False}}
+        )
+        
+        # Save or update subscription
+        await db.web_push_subscriptions.update_one(
+            {"user_id": current_user["id"], "endpoint": subscription.get("endpoint")},
+            {
+                "$set": {
+                    "user_id": current_user["id"],
+                    "endpoint": subscription.get("endpoint"),
+                    "keys": subscription.get("keys"),
+                    "active": True,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                },
+                "$setOnInsert": {
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }
+            },
+            upsert=True
+        )
+        
+        logger.info(f"Web Push subscription saved for user {current_user['id']}")
+        return {"success": True, "message": "Subscription saved"}
+        
+    except Exception as e:
+        logger.error(f"Error saving Web Push subscription: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/push/unsubscribe")
+async def unsubscribe_from_web_push(data: WebPushUnsubscribe, current_user: dict = Depends(get_current_user)):
+    """Unsubscribe from Web Push notifications"""
+    await db.web_push_subscriptions.update_one(
+        {"user_id": current_user["id"], "endpoint": data.endpoint},
+        {"$set": {"active": False}}
+    )
+    return {"success": True, "message": "Unsubscribed"}
+
+async def send_web_push_notification(user_id: str, title: str, body: str, data: dict = None):
+    """Send a Web Push notification to a user"""
+    try:
+        # Get all active subscriptions for this user
+        subscriptions = await db.web_push_subscriptions.find(
+            {"user_id": user_id, "active": True}
+        ).to_list(10)
+        
+        if not subscriptions:
+            logger.debug(f"No Web Push subscriptions for user {user_id}")
+            return False
+        
+        payload = json.dumps({
+            "title": title,
+            "body": body,
+            "icon": "/logo192.png",
+            "badge": "/logo192.png",
+            "tag": f"stationcab-{datetime.now().timestamp()}",
+            "data": data or {}
+        })
+        
+        success_count = 0
+        for sub in subscriptions:
+            try:
+                subscription_info = {
+                    "endpoint": sub["endpoint"],
+                    "keys": sub["keys"]
+                }
+                
+                webpush(
+                    subscription_info=subscription_info,
+                    data=payload,
+                    vapid_private_key=VAPID_PRIVATE_KEY,
+                    vapid_claims=VAPID_CLAIMS
+                )
+                success_count += 1
+                logger.info(f"Web Push sent to user {user_id}")
+                
+            except WebPushException as e:
+                logger.error(f"Web Push error for user {user_id}: {e}")
+                # If subscription is invalid, deactivate it
+                if e.response and e.response.status_code in [404, 410]:
+                    await db.web_push_subscriptions.update_one(
+                        {"_id": sub["_id"]},
+                        {"$set": {"active": False}}
+                    )
+            except Exception as e:
+                logger.error(f"Web Push error: {e}")
+        
+        return success_count > 0
+        
+    except Exception as e:
+        logger.error(f"Error sending Web Push: {e}")
+        return False
 
 # ======================== USER ROUTES ========================
 

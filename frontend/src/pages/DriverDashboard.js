@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../hooks/useNotifications';
 import { usePushNotifications } from '../hooks/usePushNotifications';
+import webPushService from '../services/webPushService';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -46,6 +47,36 @@ const DriverDashboard = () => {
   const audioContextRef = useRef(null);
   const audioElementRef = useRef(null);
   const [soundEnabled, setSoundEnabled] = useState(false);
+  const [webPushEnabled, setWebPushEnabled] = useState(false);
+
+  // Initialize Web Push notifications for background notifications
+  const initWebPush = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      
+      const success = await webPushService.initialize(token);
+      setWebPushEnabled(success);
+      
+      if (success) {
+        console.log('✅ Web Push notifications enabled - will work in background!');
+        
+        // Listen for service worker messages
+        webPushService.addMessageListener((message) => {
+          console.log('📩 Service Worker message:', message);
+          if (message.type === 'NOTIFICATION_CLICK') {
+            // Refresh rides when notification is clicked
+            fetchAvailableRides();
+          }
+          if (message.type === 'SYNC_RIDES' || message.type === 'CHECK_NEW_RIDES') {
+            fetchAvailableRides();
+          }
+        });
+      }
+    } catch (e) {
+      console.log('Web Push init error:', e);
+    }
+  }, []);
 
   // Initialize audio system on first user interaction
   const initAudio = useCallback(() => {
@@ -54,6 +85,9 @@ const DriverDashboard = () => {
         audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
         setSoundEnabled(true);
         console.log('Audio context initialized for driver');
+        
+        // Also initialize Web Push when user enables sound
+        initWebPush();
       } catch (e) {
         console.log('Audio context error:', e);
       }
@@ -61,7 +95,7 @@ const DriverDashboard = () => {
     if (audioContextRef.current?.state === 'suspended') {
       audioContextRef.current.resume();
     }
-  }, []);
+  }, [initWebPush]);
 
   // Create persistent audio element for notifications
   useEffect(() => {
@@ -1062,108 +1096,132 @@ const DriverDashboard = () => {
                 </Button>
               </div>
             ) : (
-              <div className="flex items-center gap-2 text-green-500 text-sm">
-                <CheckCircle className="w-4 h-4" />
-                <span>Son activé - Vous recevrez des alertes sonores</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => playNotificationSound(1)}
-                  className="ml-auto text-xs"
-                >
-                  Tester
-                </Button>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-green-500 text-sm">
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Son activé - Alertes sonores actives</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => playNotificationSound(1)}
+                    className="ml-auto text-xs"
+                  >
+                    Tester
+                  </Button>
+                </div>
+                {webPushEnabled && (
+                  <div className="flex items-center gap-2 text-blue-500 text-xs">
+                    <Bell className="w-3 h-3" />
+                    <span>Notifications en arrière-plan activées</span>
+                  </div>
+                )}
               </div>
             )}
             
             <p className="text-[10px] text-muted-foreground mt-2">
-              Gardez cette page ouverte et l'écran allumé pour recevoir les alertes.
+              {webPushEnabled 
+                ? "✓ Vous recevrez les alertes même en veille (gardez les notifications activées)"
+                : "Gardez cette page ouverte et l'écran allumé pour recevoir les alertes."
+              }
             </p>
           </div>
         )}
 
-        {/* Stats Cards */}
-        {stats && (
-          <div className="space-y-3">
-            {/* Toggle earnings visibility */}
-            <div className="flex justify-end">
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => {
-                  const newValue = !hideEarnings;
-                  setHideEarnings(newValue);
-                  localStorage.setItem('allogo_hide_earnings', newValue.toString());
-                }}
-                className="text-xs text-muted-foreground hover:text-foreground"
-                data-testid="toggle-earnings-btn"
-              >
-                {hideEarnings ? (
-                  <><Eye className="w-4 h-4 mr-1" /> Afficher les gains</>
-                ) : (
-                  <><EyeOff className="w-4 h-4 mr-1" /> Masquer les gains</>
-                )}
-              </Button>
+        {/* Available Rides - PRIORITY: Show when online OR when there are rides */}
+        {!activeRide && (isAvailable || availableRides.length > 0) && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold" style={{ fontFamily: 'Space Grotesk' }}>Courses disponibles</h2>
+              {availableRides.length > 0 && (
+                <span className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">
+                  {availableRides.length} course{availableRides.length > 1 ? 's' : ''}
+                </span>
+              )}
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
+            {!isAvailable && availableRides.length > 0 && (
+              <div className="bg-amber-500/20 border border-amber-500/50 rounded-lg p-3 text-amber-500 text-sm">
+                ⚠️ Vous êtes hors ligne. Passez en ligne pour accepter ces courses.
+              </div>
+            )}
+            
+            {availableRides.length === 0 ? (
               <Card className="bg-card border-border/50">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">
-                      <DollarSign className="w-5 h-5 text-green-500" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold">
-                        {hideEarnings ? '••••' : stats.today_earnings.toFixed(2) + '€'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Aujourd'hui</p>
-                    </div>
-                  </div>
+                <CardContent className="p-6 text-center">
+                  <Car className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
+                  <p className="text-muted-foreground">Aucune course disponible</p>
+                  <p className="text-xs text-muted-foreground mt-1">Restez en ligne pour recevoir des demandes</p>
                 </CardContent>
               </Card>
-              <Card className="bg-card border-border/50">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
-                      <Car className="w-5 h-5 text-blue-500" />
+            ) : (
+              availableRides.map((ride) => (
+                <Card key={ride.id} className={`bg-card ${ride.is_scheduled ? 'border-amber-500/50 hover:border-amber-500' : 'border-green-500/50 hover:border-green-500'} transition-colors shadow-[0_0_15px_${ride.is_scheduled ? 'rgba(245,158,11,0.2)' : 'rgba(34,197,94,0.2)'}]`}>
+                  <CardContent className="p-4 space-y-3">
+                    {/* BUTTONS AT TOP - Always visible */}
+                    <div className="flex gap-2 w-full">
+                      <Button 
+                        variant="outline"
+                        onClick={() => dismissRide(ride.id)}
+                        data-testid={`dismiss-ride-${ride.id}`}
+                        className="flex-1 h-12 border-red-500/50 text-red-500 hover:bg-red-500/10 font-bold text-base"
+                      >
+                        <X className="w-5 h-5 mr-2" /> Refuser
+                      </Button>
+                      <Button 
+                        onClick={() => acceptRide(ride.id)}
+                        data-testid={`accept-ride-${ride.id}`}
+                        className={`flex-1 h-12 ${ride.is_scheduled ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'} text-white font-bold text-base`}
+                      >
+                        <Check className="w-5 h-5 mr-2" /> Accepter
+                      </Button>
                     </div>
-                    <div>
-                      <p className="text-2xl font-bold">{stats.today_rides}</p>
-                      <p className="text-xs text-muted-foreground">Courses</p>
+                    
+                    {/* Scheduled ride badge */}
+                    {ride.is_scheduled && ride.scheduled_time && (
+                      <div className="flex items-center gap-2 bg-amber-500/20 text-amber-500 px-3 py-1.5 rounded-full w-fit text-sm font-medium">
+                        <Clock className="w-4 h-4" />
+                        <span>Réservée - {new Date(ride.scheduled_time).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                    )}
+                    
+                    {/* Price and passenger info */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-8 h-8 ${ride.is_scheduled ? 'bg-amber-500/20' : 'bg-green-500/20'} rounded-full flex items-center justify-center`}>
+                          <User className={`w-4 h-4 ${ride.is_scheduled ? 'text-amber-500' : 'text-green-500'}`} />
+                        </div>
+                        <p className="font-semibold">{ride.passenger_name}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-xl font-bold ${ride.is_scheduled ? 'text-amber-500' : 'text-green-500'}`}>{ride.driver_earnings || (ride.estimated_fare * 0.82).toFixed(2)}€</p>
+                        <p className="text-xs text-muted-foreground">Vos gains</p>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-card border-border/50">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
-                      <DollarSign className="w-5 h-5 text-primary" />
+                    
+                    {/* Addresses */}
+                    <div className="space-y-2 bg-muted/30 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <MapPin className={`w-4 h-4 ${ride.is_scheduled ? 'text-amber-500' : 'text-green-500'} mt-0.5 flex-shrink-0`} />
+                        <p className="text-sm">{ride.pickup.address}</p>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Navigation className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                        <p className="text-sm">{ride.destination.address}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-2xl font-bold">
-                        {hideEarnings ? '••••' : stats.total_earnings.toFixed(2) + '€'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Total</p>
+                    
+                    {/* Ride details */}
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                      <span>{ride.distance_km} km</span>
+                      <span>•</span>
+                      <span>{ride.vehicle_type === 'van' ? 'Van' : ride.vehicle_type === 'taxi' ? 'Taxi' : 'Standard'}</span>
+                      <span>•</span>
+                      <span>{ride.passenger_count || 1} passager{(ride.passenger_count || 1) > 1 ? 's' : ''}</span>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-            <Card className="bg-card border-border/50">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
-                    <Star className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{stats.rating.toFixed(1)}</p>
-                    <p className="text-xs text-muted-foreground">Note</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
         )}
 
@@ -1384,101 +1442,88 @@ const DriverDashboard = () => {
           onClose={() => setShowReceipt(false)}
         />
 
-        {/* Available Rides - Show when online OR when there are rides (to not miss notifications) */}
-        {!activeRide && (isAvailable || availableRides.length > 0) && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold" style={{ fontFamily: 'Space Grotesk' }}>Courses disponibles</h2>
-              {availableRides.length > 0 && (
-                <span className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">
-                  {availableRides.length} course{availableRides.length > 1 ? 's' : ''}
-                </span>
-              )}
+        {/* Stats Cards - At the bottom */}
+        {stats && (
+          <div className="space-y-3">
+            {/* Toggle earnings visibility */}
+            <div className="flex justify-end">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => {
+                  const newValue = !hideEarnings;
+                  setHideEarnings(newValue);
+                  localStorage.setItem('allogo_hide_earnings', newValue.toString());
+                }}
+                className="text-xs text-muted-foreground hover:text-foreground"
+                data-testid="toggle-earnings-btn"
+              >
+                {hideEarnings ? (
+                  <><Eye className="w-4 h-4 mr-1" /> Afficher les gains</>
+                ) : (
+                  <><EyeOff className="w-4 h-4 mr-1" /> Masquer les gains</>
+                )}
+              </Button>
             </div>
             
-            {!isAvailable && availableRides.length > 0 && (
-              <div className="bg-amber-500/20 border border-amber-500/50 rounded-lg p-3 text-amber-500 text-sm">
-                ⚠️ Vous êtes hors ligne. Passez en ligne pour accepter ces courses.
-              </div>
-            )}
-            
-            {availableRides.length === 0 ? (
+            <div className="grid grid-cols-2 gap-3">
               <Card className="bg-card border-border/50">
-                <CardContent className="p-8 text-center">
-                  <Car className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">Aucune course disponible pour le moment</p>
-                  <p className="text-sm text-muted-foreground mt-1">Restez en ligne pour recevoir des demandes</p>
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
+                      <DollarSign className="w-4 h-4 text-green-500" />
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold">
+                        {hideEarnings ? '••••' : stats.today_earnings.toFixed(2) + '€'}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">Aujourd'hui</p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
-            ) : (
-              availableRides.map((ride) => (
-                <Card key={ride.id} className={`bg-card ${ride.is_scheduled ? 'border-amber-500/50 hover:border-amber-500' : 'border-green-500/50 hover:border-green-500'} transition-colors shadow-[0_0_15px_${ride.is_scheduled ? 'rgba(245,158,11,0.2)' : 'rgba(34,197,94,0.2)'}]`}>
-                  <CardContent className="p-4 space-y-3">
-                    {/* BUTTONS AT TOP - Always visible */}
-                    <div className="flex gap-2 w-full">
-                      <Button 
-                        variant="outline"
-                        onClick={() => dismissRide(ride.id)}
-                        data-testid={`dismiss-ride-${ride.id}`}
-                        className="flex-1 h-12 border-red-500/50 text-red-500 hover:bg-red-500/10 font-bold text-base"
-                      >
-                        <X className="w-5 h-5 mr-2" /> Refuser
-                      </Button>
-                      <Button 
-                        onClick={() => acceptRide(ride.id)}
-                        data-testid={`accept-ride-${ride.id}`}
-                        className={`flex-1 h-12 ${ride.is_scheduled ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'} text-white font-bold text-base`}
-                      >
-                        <Check className="w-5 h-5 mr-2" /> Accepter
-                      </Button>
+              <Card className="bg-card border-border/50">
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center">
+                      <Car className="w-4 h-4 text-blue-500" />
                     </div>
-                    
-                    {/* Scheduled ride badge */}
-                    {ride.is_scheduled && ride.scheduled_time && (
-                      <div className="flex items-center gap-2 bg-amber-500/20 text-amber-500 px-3 py-1.5 rounded-full w-fit text-sm font-medium">
-                        <Clock className="w-4 h-4" />
-                        <span>Réservée - {new Date(ride.scheduled_time).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
-                      </div>
-                    )}
-                    
-                    {/* Price and passenger info */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-8 h-8 ${ride.is_scheduled ? 'bg-amber-500/20' : 'bg-green-500/20'} rounded-full flex items-center justify-center`}>
-                          <User className={`w-4 h-4 ${ride.is_scheduled ? 'text-amber-500' : 'text-green-500'}`} />
-                        </div>
-                        <p className="font-semibold">{ride.passenger_name}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className={`text-xl font-bold ${ride.is_scheduled ? 'text-amber-500' : 'text-green-500'}`}>{ride.driver_earnings || (ride.estimated_fare * 0.82).toFixed(2)}€</p>
-                        <p className="text-xs text-muted-foreground">Vos gains</p>
-                      </div>
+                    <div>
+                      <p className="text-lg font-bold">{stats.today_rides}</p>
+                      <p className="text-[10px] text-muted-foreground">Courses</p>
                     </div>
-                    
-                    {/* Addresses */}
-                    <div className="space-y-2 bg-muted/30 rounded-lg p-3">
-                      <div className="flex items-start gap-2">
-                        <MapPin className={`w-4 h-4 ${ride.is_scheduled ? 'text-amber-500' : 'text-green-500'} mt-0.5 flex-shrink-0`} />
-                        <p className="text-sm">{ride.pickup.address}</p>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <Navigation className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                        <p className="text-sm">{ride.destination.address}</p>
-                      </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="bg-card border-border/50">
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center">
+                      <DollarSign className="w-4 h-4 text-primary" />
                     </div>
-                    
-                    {/* Ride details */}
-                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                      <span>{ride.distance_km} km</span>
-                      <span>•</span>
-                      <span>{ride.vehicle_type === 'van' ? 'Van' : ride.vehicle_type === 'taxi' ? 'Taxi' : 'Standard'}</span>
-                      <span>•</span>
-                      <span>{ride.passenger_count || 1} passager{(ride.passenger_count || 1) > 1 ? 's' : ''}</span>
+                    <div>
+                      <p className="text-lg font-bold">
+                        {hideEarnings ? '••••' : stats.total_earnings.toFixed(2) + '€'}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">Total</p>
                     </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="bg-card border-border/50">
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center">
+                      <Star className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold">{stats.rating.toFixed(1)}</p>
+                      <p className="text-[10px] text-muted-foreground">Note</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         )}
 
