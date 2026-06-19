@@ -139,30 +139,55 @@ const DriverDashboard = () => {
       // 3. Start silent audio (keep app alive in background)
       startSilentAudio();
       
-      // 4. Initialize audio context for alarms - CRITICAL FOR iOS!
-      // Must be done in response to user gesture
-      if (!audioContextRef.current) {
-        try {
-          audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-          console.log('AudioContext created');
-        } catch (e) {
-          console.log('AudioContext creation error:', e);
+      // 4. CRITICAL FOR iOS: Create AND play audio in the SAME user gesture
+      // iOS Safari requires audio to be played during the click event itself
+      try {
+        // Create fresh AudioContext in this gesture
+        if (audioContextRef.current) {
+          try { audioContextRef.current.close(); } catch(e) {}
         }
+        audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // iOS requires immediate resume in user gesture
+        if (audioContextRef.current.state === 'suspended') {
+          await audioContextRef.current.resume();
+        }
+        
+        // IMMEDIATELY play a test tone to unlock audio (must happen in gesture)
+        const ctx = audioContextRef.current;
+        const oscillator = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        oscillator.frequency.value = 440;
+        oscillator.type = 'sine';
+        gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+        oscillator.start(ctx.currentTime);
+        oscillator.stop(ctx.currentTime + 0.3);
+        
+        console.log('✅ iOS AudioContext unlocked with test tone');
+      } catch (e) {
+        console.log('AudioContext error (non-fatal):', e);
       }
       
-      // Resume audio context (required for iOS)
-      if (audioContextRef.current?.state === 'suspended') {
-        await audioContextRef.current.resume();
-        console.log('AudioContext resumed');
+      // 5. Also prepare HTML5 Audio element as fallback
+      if (!audioElementRef.current) {
+        audioElementRef.current = new Audio();
+      }
+      // Play silent MP3 to unlock HTML5 Audio on iOS
+      try {
+        audioElementRef.current.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA/+M4wAAAAAAAAAAAAEluZm8AAAAPAAAAAwAAAbAAqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAbD/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/+M4wAALAAIYAAAAAAAAAAAAAEluZm8AAAAPAAAAAwAAAbAAqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAbD/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+        audioElementRef.current.volume = 0.01;
+        await audioElementRef.current.play();
+        audioElementRef.current.pause();
+        audioElementRef.current.currentTime = 0;
+        console.log('✅ HTML5 Audio unlocked');
+      } catch(e) {
+        console.log('HTML5 Audio unlock failed (non-fatal):', e);
       }
       
       setSoundEnabled(true);
-      
-      // 5. Play a TEST SOUND immediately to "unlock" audio on iOS
-      // This is critical - iOS requires audio to be played during user interaction
-      setTimeout(() => {
-        playNotificationSound(1, false);
-      }, 100);
       
       // 6. Start keep-alive ping every 30 seconds
       if (keepAliveIntervalRef.current) {
@@ -626,7 +651,7 @@ const DriverDashboard = () => {
       try {
         // Use existing audio context or create new one
         let audioCtx = audioContextRef.current;
-        if (!audioCtx) {
+        if (!audioCtx || audioCtx.state === 'closed') {
           audioCtx = new (window.AudioContext || window.webkitAudioContext)();
           audioContextRef.current = audioCtx;
         }
@@ -670,22 +695,27 @@ const DriverDashboard = () => {
       }
     };
     
-    // Fallback: HTML5 Audio with beep sound (works better on some iOS versions)
+    // Fallback: HTML5 Audio with proper MP3 (works better on some iOS versions)
     const playHTML5Audio = () => {
       try {
-        // Create a beep using data URI
-        const audio = new Audio('data:audio/wav;base64,UklGRl9vT19teleW0AAAAAAAAAACQVZFZM10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQ==');
+        // Use existing audio element if available
+        const audio = audioElementRef.current || new Audio();
+        // Use a valid silent MP3 base64 that iOS can play
+        audio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA/+M4wAAAAAAAAAAAAEluZm8AAAAPAAAAAwAAAbAAqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAbD/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/+M4wAALAAIYAAAAAAAAAAAAAEluZm8AAAAPAAAAAwAAAbAAqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAbD/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
         audio.volume = 1.0;
         
         // For iOS, we need to play inline
         audio.setAttribute('playsinline', '');
         audio.setAttribute('webkit-playsinline', '');
         
-        audio.play().then(() => {
-          console.log('✅ HTML5 Audio played');
-        }).catch(e => {
-          console.log('HTML5 Audio blocked:', e);
-        });
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            console.log('✅ HTML5 Audio played');
+          }).catch(e => {
+            console.log('HTML5 Audio blocked:', e);
+          });
+        }
         return true;
       } catch (e) {
         console.log('❌ HTML5 Audio error:', e);
@@ -706,17 +736,15 @@ const DriverDashboard = () => {
       stopAlarm(); // Stop any existing alarm first
       setAlarmActive(true);
       
-      // Play immediately
-      if (!playBeep()) {
-        playHTML5Audio();
-      }
+      // Play immediately - try both methods
+      playBeep();
+      playHTML5Audio();
       vibrate();
       
       // Then repeat every 2 seconds
       alarmIntervalRef.current = setInterval(() => {
-        if (!playBeep()) {
-          playHTML5Audio();
-        }
+        playBeep();
+        playHTML5Audio(); // Also try HTML5 as backup
         vibrate();
         console.log('🔔 Alarme continue...');
       }, 2000);
@@ -735,9 +763,8 @@ const DriverDashboard = () => {
     // Normal mode - play X times
     for (let i = 0; i < Math.min(repeat, 5); i++) {
       setTimeout(() => {
-        if (!playBeep()) {
-          playHTML5Audio();
-        }
+        playBeep();
+        playHTML5Audio();
         vibrate();
       }, i * 1200);
     }

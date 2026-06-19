@@ -2548,7 +2548,66 @@ async def refuse_ride(ride_id: str, current_user: dict = Depends(get_current_use
         pickup = current_ride.get("pickup", {})
         vehicle_type = current_ride.get("vehicle_type", "standard")
         
-        # Find next nearest available driver
+        # Count all available drivers for this vehicle type
+        driver_query = {
+            "role": "driver", 
+            "is_available": True,
+            "location": {"$exists": True},
+            "$or": [{"is_active": True}, {"is_active": {"$exists": False}}]
+        }
+        
+        # Filter by vehicle type
+        if vehicle_type == "van":
+            driver_query["driver_vehicle_types"] = {"$in": ["van"]}
+        elif vehicle_type == "taxi":
+            driver_query["driver_vehicle_types"] = {"$in": ["taxi"]}
+        else:
+            driver_query["driver_vehicle_types"] = {"$in": ["vtc", "taxi"]}
+        
+        all_available_drivers = await db.users.find(driver_query, {"_id": 0, "id": 1}).to_list(100)
+        all_driver_ids = [d["id"] for d in all_available_drivers]
+        
+        # Check if all available drivers have refused
+        remaining_drivers = [d for d in all_driver_ids if d not in refused_list]
+        
+        if not remaining_drivers:
+            # ALL drivers have refused or no drivers available - cancel the ride
+            logger.info(f"Ride {ride_id}: All drivers refused or none available. Auto-cancelling.")
+            
+            # Cancel the payment authorization if exists
+            payment_intent_id = current_ride.get("payment_intent_id")
+            if payment_intent_id:
+                try:
+                    intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+                    if intent.status == "requires_capture":
+                        stripe.PaymentIntent.cancel(payment_intent_id)
+                        await db.payment_transactions.update_one(
+                            {"payment_intent_id": payment_intent_id},
+                            {"$set": {"status": "cancelled", "cancelled_at": datetime.now(timezone.utc).isoformat()}}
+                        )
+                        logger.info(f"Payment authorization cancelled for ride {ride_id}")
+                except Exception as e:
+                    logger.error(f"Error cancelling payment for ride {ride_id}: {e}")
+            
+            # Update ride status to cancelled
+            await db.rides.update_one(
+                {"id": ride_id},
+                {"$set": {
+                    "status": "cancelled",
+                    "cancelled_by": "system",
+                    "cancelled_at": datetime.now(timezone.utc).isoformat(),
+                    "cancellation_reason": "no_drivers_available"
+                }}
+            )
+            
+            # Notify passenger
+            await notification_manager.notify_passenger(current_ride["passenger_id"], "ride_cancelled", {
+                "ride_id": ride_id,
+                "message": "Aucun chauffeur disponible pour le moment. Veuillez réessayer."
+            })
+            return
+        
+        # Find next nearest available driver from remaining
         next_driver = await find_nearest_driver(
             pickup, 
             max_distance_km=20.0, 
