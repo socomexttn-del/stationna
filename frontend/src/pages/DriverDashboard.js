@@ -702,10 +702,29 @@ const DriverDashboard = () => {
       // Filter out dismissed rides
       const newRides = allRides.filter(r => !dismissedRides.includes(r.id));
       
+      // Get current ride IDs
+      const currentRideIds = new Set(newRides.map(r => r.id));
+      
+      // Clean up old notified rides that are no longer available
+      // This ensures we can re-notify if a ride comes back or for new test rides
+      const oldNotified = [...notifiedRidesRef.current];
+      oldNotified.forEach(id => {
+        if (!currentRideIds.has(id)) {
+          notifiedRidesRef.current.delete(id);
+        }
+      });
+      
       // Check for truly NEW rides (not yet notified)
       const brandNewRides = newRides.filter(r => !notifiedRidesRef.current.has(r.id));
       
-      if (brandNewRides.length > 0) {
+      console.log('📊 Courses:', { 
+        total: allRides.length, 
+        filtered: newRides.length, 
+        new: brandNewRides.length,
+        notified: notifiedRidesRef.current.size 
+      });
+      
+      if (brandNewRides.length > 0 && soundEnabled) {
         // Mark these rides as notified
         brandNewRides.forEach(r => notifiedRidesRef.current.add(r.id));
         
@@ -770,10 +789,14 @@ const DriverDashboard = () => {
 
   const acceptRide = async (rideId) => {
     stopAlarm(); // Stop alarm when accepting
+    // Remove from notified set so future rides can trigger alarm
+    notifiedRidesRef.current.delete(rideId);
     try {
       const response = await api.post(`/rides/${rideId}/accept`);
       setActiveRide(response.data);
       setAvailableRides([]);
+      // Clear all notified rides since we accepted one
+      notifiedRidesRef.current.clear();
       toast.success('Course acceptée!');
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Erreur lors de l\'acceptation');
@@ -783,6 +806,8 @@ const DriverDashboard = () => {
 
   const dismissRide = async (rideId) => {
     stopAlarm(); // Stop alarm when dismissing
+    // Remove from notified set
+    notifiedRidesRef.current.delete(rideId);
     // Add to dismissed list so it won't show again locally
     setDismissedRides(prev => [...prev, rideId]);
     // Remove from available rides
