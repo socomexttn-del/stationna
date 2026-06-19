@@ -45,6 +45,10 @@ const DriverDashboard = () => {
   const silentAudioRef = useRef(null);
   const keepAliveIntervalRef = useRef(null);
   
+  // No-show countdown timer (3 minutes after arrival)
+  const [noShowCountdown, setNoShowCountdown] = useState(null); // seconds remaining
+  const noShowTimerRef = useRef(null);
+  
   // Taxi meter price modal
   const [showMeterModal, setShowMeterModal] = useState(false);
   const [meterPrice, setMeterPrice] = useState('');
@@ -894,6 +898,38 @@ const DriverDashboard = () => {
     return () => clearInterval(interval);
   }, [isAvailable]);
 
+  // No-show countdown timer - starts when ride status is 'arrived'
+  useEffect(() => {
+    // Clear any existing timer
+    if (noShowTimerRef.current) {
+      clearInterval(noShowTimerRef.current);
+      noShowTimerRef.current = null;
+    }
+    
+    if (activeRide?.status === 'arrived' && activeRide?.driver_arrived_at) {
+      // Calculate time since arrival
+      const arrivedAt = new Date(activeRide.driver_arrived_at);
+      const updateCountdown = () => {
+        const now = new Date();
+        const elapsedSeconds = Math.floor((now - arrivedAt) / 1000);
+        const remainingSeconds = Math.max(0, 180 - elapsedSeconds); // 3 minutes = 180 seconds
+        setNoShowCountdown(remainingSeconds);
+      };
+      
+      // Update immediately and then every second
+      updateCountdown();
+      noShowTimerRef.current = setInterval(updateCountdown, 1000);
+    } else {
+      setNoShowCountdown(null);
+    }
+    
+    return () => {
+      if (noShowTimerRef.current) {
+        clearInterval(noShowTimerRef.current);
+      }
+    };
+  }, [activeRide?.status, activeRide?.driver_arrived_at]);
+
   const fetchStats = async () => {
     try {
       const response = await api.get('/stats/driver');
@@ -1606,6 +1642,11 @@ const DriverDashboard = () => {
                   <>
                     <div className="text-center py-2 bg-blue-500/20 rounded-lg text-blue-400 text-sm font-medium">
                       ✓ En attente du client
+                      {noShowCountdown !== null && noShowCountdown > 0 && (
+                        <span className="ml-2 text-gray-400">
+                          ({Math.floor(noShowCountdown / 60)}:{String(noShowCountdown % 60).padStart(2, '0')})
+                        </span>
+                      )}
                     </div>
                     <Button 
                       className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-14 text-lg font-bold"
@@ -1616,8 +1657,14 @@ const DriverDashboard = () => {
                     </Button>
                     <Button 
                       variant="outline"
-                      className="w-full border-red-500/50 text-red-500 hover:bg-red-500/10 h-12"
+                      className={`w-full h-12 ${
+                        noShowCountdown === 0 
+                          ? 'border-red-500/50 text-red-500 hover:bg-red-500/10' 
+                          : 'border-gray-600 text-gray-500 cursor-not-allowed opacity-50'
+                      }`}
+                      disabled={noShowCountdown !== 0}
                       onClick={async () => {
+                        if (noShowCountdown !== 0) return;
                         if (window.confirm('Le client ne s\'est pas présenté ? Des frais d\'annulation lui seront facturés.')) {
                           try {
                             await api.post(`/rides/${activeRide.id}/no-show`);
@@ -1631,7 +1678,11 @@ const DriverDashboard = () => {
                       }}
                       data-testid="no-show-btn"
                     >
-                      <X className="w-4 h-4 mr-2" /> Client absent (après 3 min)
+                      <X className="w-4 h-4 mr-2" /> 
+                      {noShowCountdown !== null && noShowCountdown > 0 
+                        ? `Client absent (attendre ${Math.floor(noShowCountdown / 60)}:${String(noShowCountdown % 60).padStart(2, '0')})` 
+                        : 'Client absent'
+                      }
                     </Button>
                   </>
                 )}
