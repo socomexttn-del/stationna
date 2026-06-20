@@ -8,6 +8,7 @@ import { Label } from '../components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import SavedCardsManager from '../components/SavedCardsManager';
 import LanguageSelector from '../components/LanguageSelector';
+import DataPrivacySection from '../components/DataPrivacySection';
 import { ArrowLeft, User, Star, Car, Phone, Mail, Save, CreditCard, Globe } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -239,6 +240,9 @@ const ProfilePage = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* RGPD - Data Privacy Section */}
+        <DataPrivacySection />
       </div>
     </div>
   );

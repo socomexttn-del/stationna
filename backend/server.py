@@ -6499,6 +6499,195 @@ async def get_driver_payment_history(
     
     return {"payments": payments}
 
+# ============ RGPD - DATA PRIVACY ENDPOINTS ============
+
+@api_router.get("/users/my-data")
+async def export_my_data(current_user: dict = Depends(get_current_user)):
+    """
+    RGPD - Right to data portability
+    Export all personal data for the current user
+    """
+    user_id = current_user["id"]
+    
+    # Get user profile (excluding sensitive fields)
+    user = await db.users.find_one({"id": user_id}, {"_id": 0, "password_hash": 0})
+    
+    # Get ride history
+    rides = await db.rides.find(
+        {"$or": [{"passenger_id": user_id}, {"driver_id": user_id}]},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(1000)
+    
+    # Get payment transactions
+    transactions = await db.payment_transactions.find(
+        {"user_id": user_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(500)
+    
+    # Get wallet transactions
+    wallet_transactions = await db.wallet_transactions.find(
+        {"user_id": user_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(500)
+    
+    # Get chat messages
+    chat_messages = await db.messages.find(
+        {"$or": [{"sender_id": user_id}, {"receiver_id": user_id}]},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(1000)
+    
+    # For drivers, get payment history
+    driver_payments = []
+    if current_user.get("role") == "driver":
+        driver_payments = await db.driver_payments.find(
+            {"driver_id": user_id},
+            {"_id": 0}
+        ).to_list(500)
+    
+    export_data = {
+        "export_date": datetime.now(timezone.utc).isoformat(),
+        "user_id": user_id,
+        "profile": user,
+        "rides": rides,
+        "payment_transactions": transactions,
+        "wallet_transactions": wallet_transactions,
+        "chat_messages": chat_messages,
+        "driver_payments": driver_payments
+    }
+    
+    logger.info(f"Data export requested by user {user_id}")
+    
+    return export_data
+
+@api_router.delete("/users/my-account")
+async def delete_my_account(
+    password: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    RGPD - Right to erasure (right to be forgotten)
+    Delete user account and anonymize associated data
+    """
+    user_id = current_user["id"]
+    
+    # Verify password
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+    
+    if not bcrypt.checkpw(password.encode('utf-8'), user["password_hash"].encode('utf-8')):
+        raise HTTPException(status_code=401, detail="Mot de passe incorrect")
+    
+    # Check for active rides
+    active_ride = await db.rides.find_one({
+        "$or": [{"passenger_id": user_id}, {"driver_id": user_id}],
+        "status": {"$in": ["pending", "accepted", "arrived", "in_progress"]}
+    })
+    
+    if active_ride:
+        raise HTTPException(
+            status_code=400, 
+            detail="Vous avez une course en cours. Veuillez l'annuler ou la terminer avant de supprimer votre compte."
+        )
+    
+    # For drivers, check unpaid earnings
+    if current_user.get("role") == "driver":
+        # Check for completed rides not yet paid
+        last_monday = datetime.now(timezone.utc) - timedelta(days=datetime.now(timezone.utc).weekday())
+        unpaid_rides = await db.rides.count_documents({
+            "driver_id": user_id,
+            "status": "completed",
+            "completed_at": {"$gte": last_monday.isoformat()}
+        })
+        
+        if unpaid_rides > 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Vous avez {unpaid_rides} course(s) non encore réglée(s). Attendez le prochain lundi pour supprimer votre compte."
+            )
+    
+    # Anonymize user data in rides (keep rides for accounting)
+    anonymized_name = f"Utilisateur supprimé"
+    await db.rides.update_many(
+        {"passenger_id": user_id},
+        {"$set": {
+            "passenger_name": anonymized_name,
+            "passenger_phone": None
+        }}
+    )
+    await db.rides.update_many(
+        {"driver_id": user_id},
+        {"$set": {
+            "driver_name": anonymized_name,
+            "driver_phone": None
+        }}
+    )
+    
+    # Delete chat messages
+    await db.messages.delete_many({
+        "$or": [{"sender_id": user_id}, {"receiver_id": user_id}]
+    })
+    
+    # Delete push subscriptions
+    await db.push_subscriptions.delete_many({"user_id": user_id})
+    
+    # Delete user account
+    await db.users.delete_one({"id": user_id})
+    
+    logger.info(f"Account deleted for user {user_id} (RGPD erasure request)")
+    
+    return {
+        "success": True,
+        "message": "Votre compte a été supprimé. Vos données personnelles ont été effacées conformément au RGPD."
+    }
+
+@api_router.post("/users/request-deletion")
+async def request_account_deletion(current_user: dict = Depends(get_current_user)):
+    """
+    Request account deletion - sends confirmation email
+    """
+    user_id = current_user["id"]
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+    
+    # Send confirmation email
+    try:
+        html_content = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #f59e0b;">StationCab</h2>
+            <p>Bonjour {user.get('first_name', '')},</p>
+            <p>Vous avez demandé la suppression de votre compte StationCab.</p>
+            <p style="color: #ef4444;"><strong>Attention :</strong> Cette action est irréversible.</p>
+            <p>Pour confirmer la suppression :</p>
+            <ol>
+                <li>Connectez-vous à votre compte</li>
+                <li>Allez dans Mon Profil → Mes données personnelles</li>
+                <li>Cliquez sur "Supprimer mon compte"</li>
+                <li>Entrez votre mot de passe pour confirmer</li>
+            </ol>
+            <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+                Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
+            </p>
+        </div>
+        """
+        
+        sender_type = "driver" if user.get("role") == "driver" else "client"
+        await send_email_smtp(
+            to_email=user["email"],
+            subject="StationCab - Demande de suppression de compte",
+            html_content=html_content,
+            sender_type=sender_type
+        )
+    except Exception as e:
+        logger.error(f"Failed to send deletion confirmation email: {e}")
+    
+    return {
+        "success": True,
+        "message": "Un email de confirmation vous a été envoyé."
+    }
+
 # Include the router in the main app
 app.include_router(api_router)
 

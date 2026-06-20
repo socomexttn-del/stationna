@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Toaster } from './components/ui/sonner';
+import CookieConsent from './components/CookieConsent';
 import LandingPage from './pages/LandingPage';
 import AuthPage from './pages/AuthPage';
 import PassengerDashboard from './pages/PassengerDashboard';
@@ -26,6 +27,7 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import MentionsLegales from './pages/MentionsLegales';
 import CGV from './pages/CGV';
 import CGVDriver from './pages/CGVDriver';
+import PolitiqueConfidentialite from './pages/PolitiqueConfidentialite';
 import './App.css';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -102,6 +104,7 @@ function AppRoutes() {
       <Route path="/mentions-legales" element={<MentionsLegales />} />
       <Route path="/cgv" element={<CGV />} />
       <Route path="/cgv-chauffeur" element={<CGVDriver />} />
+      <Route path="/politique-confidentialite" element={<PolitiqueConfidentialite />} />
     </Routes>
   );
 }
@@ -111,6 +114,7 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <AppRoutes />
+        <CookieConsent />
         <Toaster position="top-center" richColors />
       </AuthProvider>
     </BrowserRouter>

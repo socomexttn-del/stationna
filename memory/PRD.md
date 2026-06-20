@@ -14,100 +14,60 @@ Application taxi complète "StationCab" avec support multi-rôles (Passager, Cha
 
 ## Fonctionnalités Implémentées
 
+### ✅ RGPD Complet - NOUVEAU 20/06/2025
+- **Bandeau cookies** avec personnalisation (essentiels, analytiques, marketing)
+- **Politique de confidentialité** complète (`/politique-confidentialite`)
+- **Export des données** (JSON) - Droit à la portabilité
+- **Suppression de compte** - Droit à l'effacement
+- **Consentement explicite** à l'inscription
+- **Section "Mes données personnelles"** dans le profil utilisateur
+
 ### ✅ Authentification
 - JWT-based login/register pour passagers, chauffeurs, admin
 - Réinitialisation mot de passe par email
 
-### ✅ Paiements Stripe (Autorisation/Capture) - MISE À JOUR 20/06/2025
-- **Nouveau flux de paiement**:
-  1. Commande → Autorisation (pas de débit)
-  2. Course complétée → Capture du paiement
-  3. Annulation → Annulation de l'autorisation ou capture des frais seulement
+### ✅ Paiements Stripe (Autorisation/Capture)
+- Nouveau flux de paiement (autorisation puis capture)
 - Carte enregistrée avec SetupIntent
-- Endpoints: `/payments/authorize`, `/payments/capture`, `/payments/cancel-authorization`
+- Frais d'annulation avec délai de grâce 2 min
 
-### ✅ Frais d'annulation - MISE À JOUR 20/06/2025
-- **Avant acceptation chauffeur**: Gratuit (0€)
-- **< 2 minutes après acceptation**: Gratuit (0€)
-- **≥ 2 minutes après acceptation**: 8€ (VTC/Taxi), 15€ (Van)
-- **Client absent (no-show)**: Si chauffeur attend ≥ 3 min → 8€/15€
+### ✅ Frais d'annulation
+- Avant acceptation chauffeur: Gratuit (0€)
+- < 2 minutes après acceptation: Gratuit (0€)
+- ≥ 2 minutes après acceptation: 8€ (VTC/Taxi), 15€ (Van)
+- Client absent (no-show ≥ 3 min): 8€/15€
 
-### ✅ Client Absent (No-show) - NOUVEAU 20/06/2025
-- Bouton "Client absent" pour le chauffeur
-- Désactivé pendant les 3 premières minutes (compte à rebours visible)
-- Activé après 3 min d'attente
-- Frais facturés automatiquement au client
-- Endpoint: `POST /rides/{id}/no-show`
+### ✅ Mode Chauffeur (Keep-Alive iOS)
+- Wake Lock API + Audio silencieux + AudioContext optimisé pour Safari
 
-### ✅ Mode Chauffeur (Keep-Alive iOS) 
-- Wake Lock API pour garder l'écran allumé
-- Audio silencieux en arrière-plan
-- AudioContext optimisé pour iOS Safari
-- Alarme sonore continue pour nouvelles courses
-
-### ✅ Emails SMTP (Zembra/OVH) - MISE À JOUR 20/06/2025
+### ✅ Emails SMTP (Zembra/OVH)
 - `contact@stationcab.fr` pour clients
 - `driver@stationcab.fr` pour chauffeurs
-- Emails automatiques: reset password, confirmation paiement
 
-### ✅ Paiements Chauffeurs Hebdomadaires - NOUVEAU 20/06/2025
-- Page Admin `/admin/driver-payments`
-- Récapitulatif hebdomadaire par chauffeur
-- Génération PDF des relevés de courses
-- Bouton "Marquer payé" avec email de confirmation
-- Historique des paiements
-- **Règlements chaque LUNDI**
+### ✅ Paiements Chauffeurs Hebdomadaires
+- Relevés hebdo + PDF + historique + email confirmation
+- Règlements chaque LUNDI
 
-### ✅ CGV Chauffeur - NOUVEAU 20/06/2025
-- Page `/cgv-chauffeur`
-- Commission 18% expliquée
-- Modalités de paiement (lundi)
-- Règles no-show et annulations
+### ✅ Arrêts Intermédiaires Drag-and-Drop
+- Réordonnancement par glisser-déposer (desktop + mobile)
 
-### ✅ IBAN Chauffeur - NOUVEAU 20/06/2025
-- Champ IBAN dans inscription chauffeur
-- Affiché dans les relevés PDF
-- Stocké dans profil utilisateur
-
-### ✅ Arrêts Intermédiaires Drag-and-Drop - NOUVEAU 20/06/2025
-- Réordonnancement par glisser-déposer
-- Support tactile pour mobile
-- Icône de poignée visible
-- Max 3 arrêts
-
-### ✅ Tests Automatisés - NOUVEAU 20/06/2025
-- pytest pour le backend
-- 11 tests couvrant: auth, rides, admin, payments
-- Fichier: `/app/backend/tests/test_api.py`
+### ✅ Tests Automatisés
+- 11 tests pytest (auth, rides, admin, payments)
 
 ### ✅ Courses (Rides)
 - Réservation immédiate et programmée
 - Types: VTC (Standard/Van) et Taxis réglementés
 - Calcul de tarifs avec forfaits aéroport
-- Arrêts intermédiaires réordonnables
-- Cycle complet: pending → accepted → arrived → in_progress → completed
 
 ### ✅ Chauffeurs
-- Dashboard avec gestion disponibilité
-- Système de documents avec expiration (13 documents)
-- Localisation GPS temps réel
-- Notification de nouvelles courses
-- Inscription avec IBAN
+- Dashboard + gestion documents (13 types) + IBAN
+- CGV Chauffeur (`/cgv-chauffeur`)
 
 ### ✅ Passagers
-- Dashboard de réservation
-- Suivi en temps réel du chauffeur
-- Historique des courses
-- Export PDF (Bon de commande conforme)
-- Portefeuille avec bonus
+- Dashboard + suivi temps réel + historique + export PDF
 
 ### ✅ Admin
-- Statistiques
-- Gestion des codes promo
-- Alertes documents expirés
-- Gestion chauffeurs (activation/désactivation)
-- Historique annulations avec totaux
-- **Paiements chauffeurs hebdomadaires**
+- Statistiques + codes promo + alertes documents + paiements chauffeurs
 
 ## Pages et Routes
 
@@ -116,26 +76,22 @@ Application taxi complète "StationCab" avec support multi-rôles (Passager, Cha
 - `/cgv` - CGV clients
 - `/cgv-chauffeur` - CGV chauffeurs
 - `/mentions-legales` - Mentions légales
+- `/politique-confidentialite` - Politique de confidentialité (RGPD)
 
 ### Auth
-- `/login` - Connexion
-- `/register` - Inscription passager
-- `/driver-register` - Inscription chauffeur (avec IBAN)
-- `/reset-password` - Réinitialisation mot de passe
+- `/login`, `/register`, `/driver-register`, `/reset-password`
 
 ### Passager
 - `/passenger` - Dashboard passager
+- `/profile` - Profil (avec section RGPD)
 
 ### Chauffeur
 - `/driver` - Dashboard chauffeur
 
 ### Admin
 - `/admin` - Dashboard admin
-- `/admin/drivers` - Gestion chauffeurs
-- `/admin/clients` - Liste clients
-- `/admin/promo-codes` - Codes promo
-- `/admin/cancellations` - Historique annulations
-- `/admin/driver-payments` - Paiements chauffeurs
+- `/admin/drivers`, `/admin/clients`, `/admin/promo-codes`
+- `/admin/cancellations`, `/admin/driver-payments`
 
 ## Credentials de Test
 - Admin: `admin@volttaxi.com` / `admin123`

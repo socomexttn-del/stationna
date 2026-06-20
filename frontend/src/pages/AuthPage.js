@@ -276,20 +276,15 @@ const AuthPage = () => {
                     htmlFor="accept-cgv"
                     className="text-sm text-muted-foreground leading-relaxed cursor-pointer"
                   >
-                    J&apos;ai lu et j&apos;accepte les{' '}
+                    J&apos;accepte les{' '}
                     <Link to="/cgv" target="_blank" className="text-primary hover:underline">
-                      Conditions Générales de Vente
+                      CGV
+                    </Link>,{' '}
+                    la{' '}
+                    <Link to="/politique-confidentialite" target="_blank" className="text-primary hover:underline">
+                      Politique de confidentialité
                     </Link>{' '}
-                    et les{' '}
-                    <Link to="/mentions-legales" target="_blank" className="text-primary hover:underline">
-                      Mentions Légales
-                    </Link>
-                    {role === 'driver' && (
-                      <span>
-                        , ainsi que les obligations du statut de chauffeur VTC/Taxi partenaire
-                      </span>
-                    )}
-                    .
+                    et le traitement de mes données personnelles conformément au RGPD.
                   </label>
                 </div>
               )}
