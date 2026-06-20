@@ -6146,6 +6146,313 @@ async def mark_messages_read(ride_id: str, current_user: dict = Depends(get_curr
 async def root():
     return {"message": "Volt Taxi API", "status": "running"}
 
+# ============ DRIVER WEEKLY EARNINGS & INVOICES ============
+
+@api_router.get("/admin/drivers/weekly-summary")
+async def get_drivers_weekly_summary(
+    week_offset: int = 0,  # 0 = current week, -1 = last week, etc.
+    admin_user: dict = Depends(get_admin_user)
+):
+    """
+    Get weekly earnings summary for all drivers.
+    week_offset: 0 for current week, -1 for last week, etc.
+    """
+    # Calculate week start (Monday) and end (Sunday)
+    today = datetime.now(timezone.utc)
+    # Find Monday of the target week
+    days_since_monday = today.weekday()
+    current_monday = today - timedelta(days=days_since_monday)
+    target_monday = current_monday + timedelta(weeks=week_offset)
+    target_sunday = target_monday + timedelta(days=6, hours=23, minutes=59, seconds=59)
+    
+    week_start = target_monday.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    week_end = target_sunday.isoformat()
+    
+    # Get all completed rides for this week
+    completed_rides = await db.rides.find({
+        "status": "completed",
+        "completed_at": {"$gte": week_start, "$lte": week_end},
+        "driver_id": {"$exists": True, "$ne": None}
+    }, {"_id": 0}).to_list(1000)
+    
+    # Group by driver
+    driver_earnings = {}
+    for ride in completed_rides:
+        driver_id = ride.get("driver_id")
+        if not driver_id:
+            continue
+        
+        if driver_id not in driver_earnings:
+            driver_earnings[driver_id] = {
+                "driver_id": driver_id,
+                "driver_name": ride.get("driver_name", "Inconnu"),
+                "total_rides": 0,
+                "total_fare": 0.0,
+                "total_commission": 0.0,
+                "total_earnings": 0.0,
+                "rides": []
+            }
+        
+        fare = ride.get("final_fare") or ride.get("estimated_fare", 0)
+        commission = ride.get("commission_amount", fare * 0.18)
+        earnings = ride.get("driver_earnings", fare - commission)
+        
+        driver_earnings[driver_id]["total_rides"] += 1
+        driver_earnings[driver_id]["total_fare"] += fare
+        driver_earnings[driver_id]["total_commission"] += commission
+        driver_earnings[driver_id]["total_earnings"] += earnings
+        driver_earnings[driver_id]["rides"].append({
+            "id": ride.get("id"),
+            "reservation_number": ride.get("reservation_number"),
+            "completed_at": ride.get("completed_at"),
+            "pickup": ride.get("pickup", {}).get("address", ""),
+            "destination": ride.get("destination", {}).get("address", ""),
+            "fare": fare,
+            "commission": commission,
+            "earnings": earnings,
+            "vehicle_type": ride.get("vehicle_type", "standard")
+        })
+    
+    # Get driver details (IBAN, email, etc.)
+    for driver_id in driver_earnings:
+        driver = await db.users.find_one({"id": driver_id}, {"_id": 0, "email": 1, "phone": 1, "iban": 1, "company_name": 1})
+        if driver:
+            driver_earnings[driver_id]["email"] = driver.get("email")
+            driver_earnings[driver_id]["phone"] = driver.get("phone")
+            driver_earnings[driver_id]["iban"] = driver.get("iban")
+            driver_earnings[driver_id]["company_name"] = driver.get("company_name")
+    
+    # Sort by earnings descending
+    sorted_drivers = sorted(driver_earnings.values(), key=lambda x: x["total_earnings"], reverse=True)
+    
+    # Calculate totals
+    total_all_fares = sum(d["total_fare"] for d in sorted_drivers)
+    total_all_commissions = sum(d["total_commission"] for d in sorted_drivers)
+    total_all_earnings = sum(d["total_earnings"] for d in sorted_drivers)
+    total_all_rides = sum(d["total_rides"] for d in sorted_drivers)
+    
+    return {
+        "week_start": week_start[:10],
+        "week_end": week_end[:10],
+        "week_offset": week_offset,
+        "drivers": sorted_drivers,
+        "totals": {
+            "total_rides": total_all_rides,
+            "total_fare": round(total_all_fares, 2),
+            "total_commission": round(total_all_commissions, 2),
+            "total_earnings": round(total_all_earnings, 2)
+        }
+    }
+
+@api_router.get("/admin/drivers/{driver_id}/weekly-invoice")
+async def get_driver_weekly_invoice_pdf(
+    driver_id: str,
+    week_start: str,  # Format: YYYY-MM-DD
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Generate a PDF invoice for a driver's weekly earnings"""
+    
+    # Parse week dates
+    try:
+        start_date = datetime.fromisoformat(week_start + "T00:00:00+00:00")
+        end_date = start_date + timedelta(days=6, hours=23, minutes=59, seconds=59)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Format de date invalide. Utilisez YYYY-MM-DD")
+    
+    # Get driver info
+    driver = await db.users.find_one({"id": driver_id, "role": "driver"}, {"_id": 0})
+    if not driver:
+        raise HTTPException(status_code=404, detail="Chauffeur non trouvé")
+    
+    # Get completed rides for this driver this week
+    rides = await db.rides.find({
+        "driver_id": driver_id,
+        "status": "completed",
+        "completed_at": {"$gte": start_date.isoformat(), "$lte": end_date.isoformat()}
+    }, {"_id": 0}).sort("completed_at", 1).to_list(500)
+    
+    if not rides:
+        raise HTTPException(status_code=404, detail="Aucune course pour cette semaine")
+    
+    # Calculate totals
+    total_fare = 0
+    total_commission = 0
+    total_earnings = 0
+    
+    ride_data = []
+    for ride in rides:
+        fare = ride.get("final_fare") or ride.get("estimated_fare", 0)
+        commission = ride.get("commission_amount", fare * 0.18)
+        earnings = ride.get("driver_earnings", fare - commission)
+        
+        total_fare += fare
+        total_commission += commission
+        total_earnings += earnings
+        
+        ride_data.append({
+            "date": ride.get("completed_at", "")[:10],
+            "ref": ride.get("reservation_number", ride.get("id", "")[:8]),
+            "pickup": (ride.get("pickup", {}).get("address", ""))[:30],
+            "destination": (ride.get("destination", {}).get("address", ""))[:30],
+            "fare": fare,
+            "commission": commission,
+            "earnings": earnings
+        })
+    
+    # Generate PDF
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=20*mm, bottomMargin=20*mm)
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # Header
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=18, textColor=colors.HexColor('#f59e0b'), alignment=TA_CENTER)
+    elements.append(Paragraph("RELEVÉ DE COURSES HEBDOMADAIRE", title_style))
+    elements.append(Spacer(1, 10*mm))
+    
+    # Company info
+    company_style = ParagraphStyle('Company', parent=styles['Normal'], fontSize=9, textColor=colors.gray)
+    elements.append(Paragraph("StationCab - A&S Prestige SASU", company_style))
+    elements.append(Paragraph("9 rue Victor Baltard, 77410 Claye-Souilly", company_style))
+    elements.append(Paragraph("SIRET: 827 808 866 00012", company_style))
+    elements.append(Spacer(1, 8*mm))
+    
+    # Driver info
+    driver_name = f"{driver.get('first_name', '')} {driver.get('last_name', '')}"
+    company_name = driver.get('company_name', '')
+    info_style = ParagraphStyle('Info', parent=styles['Normal'], fontSize=10)
+    elements.append(Paragraph(f"<b>Chauffeur:</b> {driver_name}", info_style))
+    if company_name:
+        elements.append(Paragraph(f"<b>Société:</b> {company_name}", info_style))
+    elements.append(Paragraph(f"<b>Email:</b> {driver.get('email', '')}", info_style))
+    elements.append(Paragraph(f"<b>Période:</b> {start_date.strftime('%d/%m/%Y')} au {end_date.strftime('%d/%m/%Y')}", info_style))
+    elements.append(Spacer(1, 8*mm))
+    
+    # Rides table
+    table_data = [["Date", "Réf.", "Départ", "Arrivée", "Prix", "Com. 18%", "Net"]]
+    for r in ride_data:
+        table_data.append([
+            r["date"],
+            r["ref"],
+            r["pickup"],
+            r["destination"],
+            f"{r['fare']:.2f}€",
+            f"-{r['commission']:.2f}€",
+            f"{r['earnings']:.2f}€"
+        ])
+    
+    # Add totals row
+    table_data.append(["", "", "", "TOTAL", f"{total_fare:.2f}€", f"-{total_commission:.2f}€", f"{total_earnings:.2f}€"])
+    
+    table = Table(table_data, colWidths=[55, 45, 85, 85, 50, 55, 50])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f59e0b')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 8),
+        ('FONTSIZE', (0, 1), (-1, -1), 7),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#fef3c7')),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.gray),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+    elements.append(table)
+    elements.append(Spacer(1, 10*mm))
+    
+    # Summary box
+    summary_style = ParagraphStyle('Summary', parent=styles['Normal'], fontSize=12, alignment=TA_RIGHT)
+    elements.append(Paragraph(f"<b>MONTANT À VERSER: {total_earnings:.2f} €</b>", summary_style))
+    elements.append(Spacer(1, 5*mm))
+    
+    # IBAN info
+    iban = driver.get('iban', 'Non renseigné')
+    elements.append(Paragraph(f"<b>IBAN:</b> {iban}", info_style))
+    elements.append(Spacer(1, 10*mm))
+    
+    # Footer note
+    footer_style = ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, textColor=colors.gray, alignment=TA_CENTER)
+    elements.append(Paragraph("Ce document est un relevé de courses. Les virements sont effectués chaque lundi.", footer_style))
+    elements.append(Paragraph(f"Document généré le {datetime.now().strftime('%d/%m/%Y à %H:%M')}", footer_style))
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    filename = f"releve_{driver_name.replace(' ', '_')}_{start_date.strftime('%Y%m%d')}.pdf"
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+@api_router.post("/admin/drivers/{driver_id}/mark-paid")
+async def mark_driver_paid(
+    driver_id: str,
+    week_start: str,  # Format: YYYY-MM-DD
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Mark a driver's weekly earnings as paid"""
+    
+    try:
+        start_date = datetime.fromisoformat(week_start + "T00:00:00+00:00")
+        end_date = start_date + timedelta(days=6, hours=23, minutes=59, seconds=59)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Format de date invalide")
+    
+    # Get rides to calculate amount
+    rides = await db.rides.find({
+        "driver_id": driver_id,
+        "status": "completed",
+        "completed_at": {"$gte": start_date.isoformat(), "$lte": end_date.isoformat()}
+    }, {"_id": 0}).to_list(500)
+    
+    total_earnings = sum(
+        r.get("driver_earnings", (r.get("final_fare") or r.get("estimated_fare", 0)) * 0.82)
+        for r in rides
+    )
+    
+    # Record the payment
+    payment_record = {
+        "id": str(uuid.uuid4()),
+        "driver_id": driver_id,
+        "week_start": week_start,
+        "week_end": end_date.strftime("%Y-%m-%d"),
+        "amount": round(total_earnings, 2),
+        "rides_count": len(rides),
+        "paid_at": datetime.now(timezone.utc).isoformat(),
+        "paid_by": admin_user["id"],
+        "status": "paid"
+    }
+    
+    await db.driver_payments.insert_one(payment_record)
+    del payment_record["_id"]
+    
+    logger.info(f"Driver {driver_id} marked as paid for week {week_start}: {total_earnings}€")
+    
+    return {"status": "ok", "payment": payment_record}
+
+@api_router.get("/admin/drivers/payment-history")
+async def get_driver_payment_history(
+    driver_id: Optional[str] = None,
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Get payment history for drivers"""
+    query = {}
+    if driver_id:
+        query["driver_id"] = driver_id
+    
+    payments = await db.driver_payments.find(query, {"_id": 0}).sort("paid_at", -1).to_list(100)
+    
+    # Enrich with driver names
+    for payment in payments:
+        driver = await db.users.find_one({"id": payment["driver_id"]}, {"_id": 0, "first_name": 1, "last_name": 1})
+        if driver:
+            payment["driver_name"] = f"{driver.get('first_name', '')} {driver.get('last_name', '')}"
+    
+    return {"payments": payments}
+
 # Include the router in the main app
 app.include_router(api_router)
 

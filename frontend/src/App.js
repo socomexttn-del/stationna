@@ -14,6 +14,7 @@ import AdminPromoCodesPage from './pages/AdminPromoCodesPage';
 import AdminDriversPage from './pages/AdminDriversPage';
 import AdminDriverValidationPage from './pages/AdminDriverValidationPage';
 import AdminCancellationsPage from './pages/AdminCancellationsPage';
+import AdminDriverPaymentsPage from './pages/AdminDriverPaymentsPage';
 import RideHistory from './pages/RideHistory';
 import ProfilePage from './pages/ProfilePage';
 import PaymentSuccess from './pages/PaymentSuccess';
@@ -24,6 +25,7 @@ import WalletPage from './pages/WalletPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import MentionsLegales from './pages/MentionsLegales';
 import CGV from './pages/CGV';
+import CGVDriver from './pages/CGVDriver';
 import './App.css';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -89,6 +91,7 @@ function AppRoutes() {
       <Route path="/admin/drivers" element={<ProtectedRoute allowedRoles={['admin']}><AdminDriversPage /></ProtectedRoute>} />
       <Route path="/admin/driver-validation" element={<ProtectedRoute allowedRoles={['admin']}><AdminDriverValidationPage /></ProtectedRoute>} />
       <Route path="/admin/cancellations" element={<ProtectedRoute allowedRoles={['admin']}><AdminCancellationsPage /></ProtectedRoute>} />
+      <Route path="/admin/driver-payments" element={<ProtectedRoute allowedRoles={['admin']}><AdminDriverPaymentsPage /></ProtectedRoute>} />
       <Route path="/history" element={<ProtectedRoute><RideHistory /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
       <Route path="/scheduled" element={<ProtectedRoute allowedRoles={['passenger']}><ScheduledRidesPage /></ProtectedRoute>} />
@@ -98,6 +101,7 @@ function AppRoutes() {
       <Route path="/payment/cancel" element={<ProtectedRoute><PaymentCancel /></ProtectedRoute>} />
       <Route path="/mentions-legales" element={<MentionsLegales />} />
       <Route path="/cgv" element={<CGV />} />
+      <Route path="/cgv-chauffeur" element={<CGVDriver />} />
     </Routes>
   );
 }
