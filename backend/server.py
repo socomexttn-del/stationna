@@ -1361,6 +1361,7 @@ class ProfileUpdate(BaseModel):
     siret: Optional[str] = None
     address: Optional[str] = None
     tva_number: Optional[str] = None
+    iban: Optional[str] = None
 
 @api_router.put("/users/profile", response_model=UserResponse)
 async def update_user_profile(data: ProfileUpdate, current_user: dict = Depends(get_current_user)):
@@ -1381,6 +1382,8 @@ async def update_user_profile(data: ProfileUpdate, current_user: dict = Depends(
         update_data["address"] = data.address
     if data.tva_number is not None:
         update_data["tva_number"] = data.tva_number
+    if data.iban is not None:
+        update_data["iban"] = data.iban
     
     if update_data:
         await db.users.update_one(
@@ -6401,6 +6404,11 @@ async def mark_driver_paid(
     except ValueError:
         raise HTTPException(status_code=400, detail="Format de date invalide")
     
+    # Get driver info
+    driver = await db.users.find_one({"id": driver_id, "role": "driver"}, {"_id": 0})
+    if not driver:
+        raise HTTPException(status_code=404, detail="Chauffeur non trouvé")
+    
     # Get rides to calculate amount
     rides = await db.rides.find({
         "driver_id": driver_id,
@@ -6430,6 +6438,44 @@ async def mark_driver_paid(
     del payment_record["_id"]
     
     logger.info(f"Driver {driver_id} marked as paid for week {week_start}: {total_earnings}€")
+    
+    # Send confirmation email to driver
+    driver_name = f"{driver.get('first_name', '')} {driver.get('last_name', '')}"
+    driver_email = driver.get('email')
+    
+    if driver_email:
+        try:
+            html_content = f"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #f59e0b;">StationCab</h2>
+                <p>Bonjour {driver.get('first_name', '')},</p>
+                <p>Votre règlement pour la semaine du <strong>{start_date.strftime('%d/%m/%Y')}</strong> au <strong>{end_date.strftime('%d/%m/%Y')}</strong> a été effectué.</p>
+                
+                <div style="background-color: #f3f4f6; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                    <p style="margin: 0; font-size: 14px; color: #6b7280;">Montant viré :</p>
+                    <p style="margin: 5px 0 0 0; font-size: 28px; font-weight: bold; color: #10b981;">{total_earnings:.2f} €</p>
+                    <p style="margin: 10px 0 0 0; font-size: 12px; color: #9ca3af;">({len(rides)} course(s))</p>
+                </div>
+                
+                <p style="color: #6b7280; font-size: 14px;">
+                    Le virement devrait apparaître sur votre compte sous 1-2 jours ouvrés.
+                </p>
+                
+                <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+                    Ceci est un email automatique. Pour toute question, contactez-nous à driver@stationcab.fr
+                </p>
+            </div>
+            """
+            
+            await send_email_smtp(
+                to_email=driver_email,
+                subject=f"StationCab - Virement effectué ({total_earnings:.2f}€)",
+                html_content=html_content,
+                sender_type="driver"
+            )
+            logger.info(f"Payment confirmation email sent to {driver_email}")
+        except Exception as e:
+            logger.error(f"Failed to send payment confirmation email: {e}")
     
     return {"status": "ok", "payment": payment_record}
 

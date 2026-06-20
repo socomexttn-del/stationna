@@ -5,268 +5,146 @@ Application taxi complète "StationCab" avec support multi-rôles (Passager, Cha
 
 ## Architecture Technique
 - **Backend**: FastAPI + MongoDB (motor) + JWT
-- **Frontend**: React 19 + Tailwind CSS + Shadcn UI + i18next
+- **Frontend**: React 19 + Tailwind CSS + Shadcn UI
 - **Mobile**: Capacitor (Android/iOS)
-- **Paiements**: Stripe
+- **Paiements**: Stripe (Mode LIVE - Autorisation/Capture)
 - **Cartes**: Mapbox
-- **Emails**: Resend
+- **Emails**: SMTP Zembra/OVH (contact@stationcab.fr, driver@stationcab.fr)
 - **Push Notifications**: Firebase Cloud Messaging (FCM)
 
 ## Fonctionnalités Implémentées
 
 ### ✅ Authentification
 - JWT-based login/register pour passagers, chauffeurs, admin
+- Réinitialisation mot de passe par email
+
+### ✅ Paiements Stripe (Autorisation/Capture) - MISE À JOUR 20/06/2025
+- **Nouveau flux de paiement**:
+  1. Commande → Autorisation (pas de débit)
+  2. Course complétée → Capture du paiement
+  3. Annulation → Annulation de l'autorisation ou capture des frais seulement
+- Carte enregistrée avec SetupIntent
+- Endpoints: `/payments/authorize`, `/payments/capture`, `/payments/cancel-authorization`
+
+### ✅ Frais d'annulation - MISE À JOUR 20/06/2025
+- **Avant acceptation chauffeur**: Gratuit (0€)
+- **< 2 minutes après acceptation**: Gratuit (0€)
+- **≥ 2 minutes après acceptation**: 8€ (VTC/Taxi), 15€ (Van)
+- **Client absent (no-show)**: Si chauffeur attend ≥ 3 min → 8€/15€
+
+### ✅ Client Absent (No-show) - NOUVEAU 20/06/2025
+- Bouton "Client absent" pour le chauffeur
+- Désactivé pendant les 3 premières minutes (compte à rebours visible)
+- Activé après 3 min d'attente
+- Frais facturés automatiquement au client
+- Endpoint: `POST /rides/{id}/no-show`
+
+### ✅ Mode Chauffeur (Keep-Alive iOS) 
+- Wake Lock API pour garder l'écran allumé
+- Audio silencieux en arrière-plan
+- AudioContext optimisé pour iOS Safari
+- Alarme sonore continue pour nouvelles courses
+
+### ✅ Emails SMTP (Zembra/OVH) - MISE À JOUR 20/06/2025
+- `contact@stationcab.fr` pour clients
+- `driver@stationcab.fr` pour chauffeurs
+- Emails automatiques: reset password, confirmation paiement
+
+### ✅ Paiements Chauffeurs Hebdomadaires - NOUVEAU 20/06/2025
+- Page Admin `/admin/driver-payments`
+- Récapitulatif hebdomadaire par chauffeur
+- Génération PDF des relevés de courses
+- Bouton "Marquer payé" avec email de confirmation
+- Historique des paiements
+- **Règlements chaque LUNDI**
+
+### ✅ CGV Chauffeur - NOUVEAU 20/06/2025
+- Page `/cgv-chauffeur`
+- Commission 18% expliquée
+- Modalités de paiement (lundi)
+- Règles no-show et annulations
+
+### ✅ IBAN Chauffeur - NOUVEAU 20/06/2025
+- Champ IBAN dans inscription chauffeur
+- Affiché dans les relevés PDF
+- Stocké dans profil utilisateur
+
+### ✅ Arrêts Intermédiaires Drag-and-Drop - NOUVEAU 20/06/2025
+- Réordonnancement par glisser-déposer
+- Support tactile pour mobile
+- Icône de poignée visible
+- Max 3 arrêts
+
+### ✅ Tests Automatisés - NOUVEAU 20/06/2025
+- pytest pour le backend
+- 11 tests couvrant: auth, rides, admin, payments
+- Fichier: `/app/backend/tests/test_api.py`
 
 ### ✅ Courses (Rides)
 - Réservation immédiate et programmée
 - Types: VTC (Standard/Van) et Taxis réglementés
-- Calcul de tarifs avec tarifs aéroport forfaitaires (direct uniquement)
-- Arrêts intermédiaires (sans supplément, prix sur itinéraire total)
-- **Forfait aéroport**: Seulement pour trajets DIRECTS (pas d'arrêts)
+- Calcul de tarifs avec forfaits aéroport
+- Arrêts intermédiaires réordonnables
 - Cycle complet: pending → accepted → arrived → in_progress → completed
-
-### ✅ Courses Planifiées (NEW 03/03/2026)
-- Création avec statut "scheduled"
-- Background task vérifie chaque minute
-- Proposition aux chauffeurs 15 min avant l'heure prévue
-- Badge orange "Course réservée à l'avance" dans le dashboard chauffeur
-- Notification spéciale `scheduled_ride_available`
 
 ### ✅ Chauffeurs
 - Dashboard avec gestion disponibilité
-- Système de documents avec expiration
+- Système de documents avec expiration (13 documents)
 - Localisation GPS temps réel
-- Notification de nouvelles courses (immédiates + planifiées)
-- Bouton rafraîchir
+- Notification de nouvelles courses
+- Inscription avec IBAN
 
 ### ✅ Passagers
 - Dashboard de réservation
 - Suivi en temps réel du chauffeur
 - Historique des courses
-- Export PDF
-- Favoris pour courses planifiées
-- Bouton rafraîchir
-- Tarifs affichés: A/B/C sans jour/nuit/dimanche
+- Export PDF (Bon de commande conforme)
+- Portefeuille avec bonus
 
 ### ✅ Admin
 - Statistiques
 - Gestion des codes promo
 - Alertes documents expirés
-- Base clients avec bouton retour
-- Gestion courses planifiées (`GET/POST /api/admin/scheduled-rides`)
-- **Gestion types véhicules chauffeurs** - Page `/admin/drivers` avec 3 toggles indépendants (VTC, Van, Taxi)
+- Gestion chauffeurs (activation/désactivation)
+- Historique annulations avec totaux
+- **Paiements chauffeurs hebdomadaires**
 
-### ✅ Paiements (Stripe)
-- Paiement one-time
-- Cartes sauvegardées
-- Portefeuille avec bonus
+## Pages et Routes
 
-### ✅ Push Notifications (Firebase)
-- Firebase Admin SDK intégré au backend
-- Endpoints FCM pour enregistrement tokens
-- Notifications automatiques lors des événements de course
+### Public
+- `/` - Landing page
+- `/cgv` - CGV clients
+- `/cgv-chauffeur` - CGV chauffeurs
+- `/mentions-legales` - Mentions légales
 
-## Modifications Récentes (18/06/2026)
+### Auth
+- `/login` - Connexion
+- `/register` - Inscription passager
+- `/driver-register` - Inscription chauffeur (avec IBAN)
+- `/reset-password` - Réinitialisation mot de passe
 
-### Session 2 - Corrections P0 Dashboard Chauffeur + Frais d'annulation
+### Passager
+- `/passenger` - Dashboard passager
 
-1. **UI Dashboard Chauffeur - Boutons en haut** :
-   - Réorganisation de la carte "Course active" pour mettre les boutons d'action EN PREMIER
-   - Ordre: Boutons d'action → Navigation (Waze/GMaps) → Prix → Passager → Adresses → Bon de réservation
-   - Le chauffeur n'a plus besoin de scroller pour accéder aux boutons "Je suis arrivé", "Démarrer", "Terminer"
-   - Tests validés: boutons visibles dans viewport 390x844 sans scroll
+### Chauffeur
+- `/driver` - Dashboard chauffeur
 
-2. **Bug Annulation Passager - Corrigé** :
-   - Ajout de `prevActiveRideRef` dans DriverDashboard pour détecter quand une course disparaît
-   - Si le passager annule une course acceptée/arrivée/en_progress, le chauffeur voit:
-     - Toast "⚠️ Course annulée par le client"
-     - Son de notification
-     - Remise en disponibilité automatique
-   - Backend: endpoint `/api/rides/{id}/cancel` amélioré avec notifications Firebase
-   - Le chauffeur ne crash/déconnecte plus lors d'une annulation passager
+### Admin
+- `/admin` - Dashboard admin
+- `/admin/drivers` - Gestion chauffeurs
+- `/admin/clients` - Liste clients
+- `/admin/promo-codes` - Codes promo
+- `/admin/cancellations` - Historique annulations
+- `/admin/driver-payments` - Paiements chauffeurs
 
-3. **Frais d'annulation implémentés** :
-   - **VTC Standard** : 8€
-   - **Van** : 15€
-   - **Taxi** : 8€
-   - Frais appliqués uniquement si le passager annule APRÈS acceptation chauffeur
-   - Paiement automatique via Stripe (carte enregistrée)
-   - Confirmation demandée au passager avant annulation avec affichage du montant
-   - Nouveaux champs dans RideResponse: `cancelled_by`, `cancelled_at`, `cancellation_fee`, `cancellation_fee_charged`
+## Credentials de Test
+- Admin: `admin@volttaxi.com` / `admin123`
+- Passager: `passenger@test.com` / `password`
+- Chauffeur: `driver@test.com` / `password`
 
-4. **Page Admin "Frais d'annulation" (Comptabilité)** :
-   - Nouvelle route `/admin/cancellations`
-   - Endpoint API `GET /api/admin/cancellation-fees` avec filtres date et pagination
-   - Cartes récapitulatives: Total encaissé, Non prélevé, Total frais, Nombre d'annulations
-   - Répartition par type de véhicule (VTC, Van, Taxi)
-   - Tableau détaillé avec: Date, Réservation, Client, Véhicule, Frais, Statut (Prélevé/Échec), Trajet
-   - Export CSV pour comptabilité
-   - Bouton "Annulations" ajouté dans le header du dashboard Admin
+## Domaine
+- Production: `stationcab.fr`
+- Emails: `contact@stationcab.fr`, `driver@stationcab.fr`
 
-5. **Correction Inscription Chauffeur** :
-   - Créé l'endpoint `PUT /api/users/profile` manquant pour la mise à jour des infos entreprise (company_name, siret, address, tva_number)
-   - Ajouté un message de succès personnalisé après inscription chauffeur (/auth?registered=true)
-   - Affiche "En attente de validation" avec délai estimé (24-48h)
-   - Page Admin `/admin/driver-validation` affiche bien tous les chauffeurs en attente avec progression documents
-
-6. **Bon de Commande complet (conforme réglementation)** :
-   - Refonte complète du composant `BookingReceipt.js`
-   - Sections conformes à la réglementation transport :
-     - En-tête avec adresse de l'exploitant
-     - **INFORMATION** : Montant Brut maximal (EUR, 10% TVA incl.)
-     - **SERVICE DE TAXI** : Justification de la réservation préalable (Article L3120-2 du Code des transports)
-     - **Exploitant de Taxi** : A&S PRESTIGE, adresse complète
-     - **Voyage** : Conducteur, Passager, Commande, Prise en charge, Lieu, Destination, Tarifs, Via (StationCab)
-     - **Chauffeur** : Nom, Société, Téléphone, N° Identification, Immatriculation, Type véhicule
-   - Fonction d'impression optimisée pour le format papier
-
-### Session 1 - Flux de course et paiements
-
-1. **Correction du flux de course complet** :
-   - Ajout du statut "arrived" (chauffeur arrivé)
-   - Flux : pending → accepted → arrived → in_progress → completed
-   - Chauffeur : Boutons séparés "Je suis arrivé", "Démarrer la course", "Terminer la course"
-   - Client : Affichage clair de chaque étape (en route → arrivé → course en cours → terminée)
-
-2. **Notification sonore limitée à 3 fois** :
-   - Son de notification joué maximum 3 fois pour éviter d'être trop insistant
-
-3. **Paiement automatique avec carte enregistrée** :
-   - Client enregistre sa carte une seule fois
-   - Paiement automatique à chaque réservation
-   - Pas de redirection vers Stripe à chaque course
-
-## Modifications (15/06/2026)
-
-1. **NOUVEAU - CGV et Mentions Légales** :
-   - Page Mentions Légales (`/mentions-legales`) avec infos complètes A&S Prestige
-   - Page CGV (`/cgv`) avec 11 articles détaillés (annulation, remboursement, tarifs)
-   - Case à cocher obligatoire pour inscription passagers
-   - Case à cocher obligatoire pour inscription chauffeurs (CGV + Mentions Légales)
-   - Liens dans le footer de la landing page
-   - Copyright "A&S Prestige SASU" dans le footer
-
-2. **NOUVEAU - Standards de Qualité Chauffeurs** :
-   - Texte complet des 6 articles des Standards de Qualité StationCab
-   - Affiché dans une zone scrollable à l'étape "Vérification"
-   - Case à cocher obligatoire séparée pour accepter les Standards
-   - Le chauffeur ne peut pas soumettre sans accepter les deux (CGV + Standards)
-
-3. **Calculateur de prix sur Landing Page** :
-   - Autocomplétion d'adresses avec Mapbox
-   - Affichage des prix pour VTC, Van, Taxi
-   - Distance et durée estimées
-
-## Modifications (13/06/2026)
-
-1. **NOUVEAU - Refus de course avec réassignation** :
-   - Endpoint POST `/api/rides/{ride_id}/refuse` pour refuser une course disponible
-   - Le chauffeur qui refuse est ajouté à la liste `refused_by` de la course
-   - La course disparaît de sa liste mais reste visible pour les autres chauffeurs
-   - Après 5 secondes, le backend propose la course au prochain chauffeur le plus proche
-   - Frontend: `dismissRide()` appelle maintenant l'API `/refuse`
-   - Filtrage `refused_by.$nin` dans `/rides/available` pour exclure les courses refusées
-
-## Modifications (06/03/2026)
-
-1. **BUG CORRIGÉ - Filtrage courses par type véhicule** :
-   - `find_nearest_driver()` reçoit maintenant le `vehicle_type`
-   - `/rides/available` filtre les courses selon les types du chauffeur
-   - Un chauffeur VAN ne voit plus les courses TAXI
-   - Un chauffeur TAXI ne voit plus les courses VAN
-
-2. **NOUVEAU - Réinitialisation mot de passe** :
-   - Page `/forgot-password` pour demande par email
-   - Email avec lien de réinitialisation (via Resend)
-   - Page `/reset-password?token=xxx` pour créer nouveau MDP
-   - Admin peut réinitialiser le MDP via `/admin/drivers`
-   - Endpoint `/api/admin/reset-user-password`
-
-## Modifications (05/03/2026)
-
-1. **Passager - ETA vers destination** : Affichage du temps restant et distance pendant la course (in_progress)
-2. **Chauffeur - Isolation des courses** : Un chauffeur avec une course active ne reçoit plus de nouvelles demandes
-3. **Backend - Double protection** : Vérification avant accept_ride + filtrage dans get_available_rides
-4. **Synchronisation état chauffeur** : L'état "en ligne" se met automatiquement à false quand course active
-
-## Modifications (04/03/2026)
-
-1. **Bug notation/commentaire CORRIGÉ** - Erreur ObjectId MongoDB résolue
-2. **Reset état RatingModal** - Ajout useEffect pour réinitialiser à chaque ouverture
-3. **Logs debugging ajoutés** - Console.log pour diagnostiquer les problèmes
-4. **Build React terminé** - Dossier `build/` prêt pour déploiement mobile
-5. **Configuration Android complète** - Capacitor, Firebase, google-services.json
-
-## Modifications (03/03/2026)
-
-1. **Suppression frais arrêts intermédiaires** - Plus de +3€ par arrêt
-2. **Tarif Taxi simplifié** - Affiche seulement "Tarif A, B ou C"
-3. **Boutons réservation simplifiés** - Retiré "+4€ immédiat"
-4. **Favoris courses planifiées** - Boutons cliquables ajoutés
-5. **Bouton rafraîchir** - Ajouté sur PassengerDashboard et DriverDashboard
-6. **Bouton retour Admin Clients** - Navigation vers /admin
-7. **Forfait aéroport** - Seulement pour trajets DIRECTS (sans arrêts)
-8. **Courses planifiées** - Proposition aux chauffeurs 15 min avant
-9. **Types véhicules chauffeurs (3 indépendants)** - VTC, Van, Taxi avec logique métier:
-   - Course Van → uniquement chauffeurs avec "van"
-   - Course Taxi → uniquement chauffeurs avec "taxi"
-   - Course VTC → chauffeurs avec "vtc" OU "taxi" (car un taxi peut faire du VTC)
-
-## Fichiers Clés
-- `/app/backend/server.py` - Backend principal
-- `/app/backend/services/firebase_service.py` - Service FCM
-- `/app/frontend/src/pages/PassengerDashboard.js` - Dashboard passager
-- `/app/frontend/src/pages/DriverDashboard.js` - Dashboard chauffeur
-- `/app/frontend/src/pages/AdminClientsPage.js` - Base clients admin
-- `/app/frontend/src/pages/AdminDriversPage.js` - Gestion types véhicules chauffeurs
-- `/app/frontend/src/pages/ScheduledRidesPage.js` - Courses planifiées
-- `/app/frontend/src/components/IntermediateStops.js` - Arrêts intermédiaires
-
-## Credentials Test
-- Admin: admin@volttaxi.com / admin123
-- Passager: passenger@test.com / password
-- Chauffeur: driver@test.com / password
-
-## Backlog Priorité
-
-### P0 - Critique
-- [x] CGV et Mentions Légales avec case à cocher obligatoire (15/06/2026)
-- [x] Calculateur de prix landing page avec autocomplétion et géolocalisation (15/06/2026)
-- [x] Refus de course avec réassignation au prochain chauffeur après 5s (13/06/2026)
-- [ ] Test notifications push Firebase sur appareil Android (APK via déploiement Emergent)
-
-### P1 - Important  
-- [ ] Finaliser refactoring backend (activer main.py) - 25 endpoints manquants dans routers modulaires
-- [x] Vérifier ordre des arrêts intermédiaires - Vérifié OK, affichage ajouté dans BookingReceipt et DriverDashboard
-
-### P2 - Normal
-- [ ] Stabilité build frontend
-- [ ] Tests automatisés Pytest
-- [ ] Drag-and-drop pour réordonner arrêts
-- [ ] Configuration Resend pour domaine stationcab.fr
-
-### ✅ TERMINÉ
-- [x] CGV et Mentions Légales complètes avec case obligatoire (15/06/2026)
-- [x] Calculateur de prix landing page avec autocomplétion, géolocalisation et prix VTC/Van/Taxi (15/06/2026)
-- [x] Refus de course avec réassignation (13/06/2026)
-
-## Informations Légales (A&S Prestige)
-- **Société**: A&S Prestige (SASU)
-- **Capital**: 1 500 €
-- **SIRET**: 827 808 866 00012
-- **RCS**: Meaux
-- **Adresse**: 9 rue Victor Baltard, 77410 Claye-Souilly
-- **Email**: contact@stationcab.fr
-- **TVA**: Non assujetti (Article 293B du CGI)
-- **Hébergeur**: OVH SAS
-- [x] Arrêts intermédiaires: ordre vérifié OK, affichage ajouté dans reçu et dashboard chauffeur (13/06/2026)
-- [x] Tarifs aéroport: vérifiés conformes aux tarifs officiels 2025 (13/06/2026)
-- [x] Bug notation/commentaire fin de course (04/03/2026)
-- [x] Types véhicules chauffeurs VTC/Van/Taxi (03/03/2026)
-- [x] Courses planifiées dispatch 15 min avant (03/03/2026)
-
-## Notes Techniques
-- AppId Capacitor: `com.stationcab.app`
-- Firebase Project: `stationcab-43fd4`
-- Scheduled rides checker: Runs every 60 seconds
-- Rides proposed 15 minutes before scheduled_time (13-17 min window)
+## Dernière mise à jour
+20 Juin 2025

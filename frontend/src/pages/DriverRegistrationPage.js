@@ -69,6 +69,8 @@ const DriverRegistrationPage = () => {
     siret: '',
     address: '',
     tva_number: '',
+    // Bank info
+    iban: '',
   });
   
   // Documents with expiry dates
@@ -264,7 +266,8 @@ En cas de signalements répétés d'utilisateurs, de réclamations graves ou de 
         company_name: formData.company_name,
         siret: formData.siret,
         address: formData.address,
-        tva_number: formData.tva_number
+        tva_number: formData.tva_number,
+        iban: formData.iban
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -525,6 +528,25 @@ En cas de signalements répétés d'utilisateurs, de réclamations graves ou de 
               />
               <p className="text-xs text-muted-foreground">
                 Laissez vide si vous êtes auto-entrepreneur (mention TVA non applicable - article 293B du CGI)
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="iban">IBAN (pour les virements) *</Label>
+              <Input
+                id="iban"
+                name="iban"
+                value={formData.iban}
+                onChange={handleChange}
+                className="h-12 bg-muted font-mono"
+                placeholder="FR76 1234 5678 9012 3456 7890 123"
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Vos gains seront virés sur ce compte chaque lundi. 
+                <Link to="/cgv-chauffeur" className="text-primary hover:underline ml-1" target="_blank">
+                  Voir les conditions de paiement
+                </Link>
               </p>
             </div>
           </div>
@@ -797,8 +819,12 @@ En cas de signalements répétés d'utilisateurs, de réclamations graves ou de 
                   className="text-sm text-muted-foreground leading-relaxed cursor-pointer"
                 >
                   J&apos;ai lu et j&apos;accepte les{' '}
+                  <Link to="/cgv-chauffeur" target="_blank" className="text-primary hover:underline">
+                    Conditions Générales Chauffeurs
+                  </Link>{' '}
+                  (notamment les modalités de paiement chaque lundi), les{' '}
                   <Link to="/cgv" target="_blank" className="text-primary hover:underline">
-                    Conditions Générales de Vente
+                    CGV
                   </Link>{' '}
                   et les{' '}
                   <Link to="/mentions-legales" target="_blank" className="text-primary hover:underline">

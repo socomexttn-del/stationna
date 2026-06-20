@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import AddressAutocomplete from './AddressAutocomplete';
 import { Button } from './ui/button';
-import { Plus, X, MapPin, ArrowDown } from 'lucide-react';
+import { Plus, X, MapPin, GripVertical } from 'lucide-react';
 
 const IntermediateStops = ({ stops, setStops, maxStops = 3 }) => {
+  const [draggedIndex, setDraggedIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+
   const addStop = () => {
     if (stops.length < maxStops) {
-      // Add unique ID and creation timestamp to preserve order
       const newStop = { 
         id: Date.now(),
         order: stops.length,
@@ -20,13 +22,11 @@ const IntermediateStops = ({ stops, setStops, maxStops = 3 }) => {
 
   const removeStop = (index) => {
     const newStops = stops.filter((_, i) => i !== index);
-    // Re-index the order after removal
     setStops(newStops.map((s, i) => ({ ...s, order: i })));
   };
 
   const updateStop = (index, location) => {
     const newStops = [...stops];
-    // Preserve the id and order when updating
     newStops[index] = { 
       ...location, 
       id: stops[index].id || Date.now(),
@@ -35,32 +35,143 @@ const IntermediateStops = ({ stops, setStops, maxStops = 3 }) => {
     setStops(newStops);
   };
 
+  // Drag and Drop handlers
+  const handleDragStart = (e, index) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    // Add some styling to the dragged element
+    e.target.style.opacity = '0.5';
+  };
+
+  const handleDragEnd = (e) => {
+    e.target.style.opacity = '1';
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (index !== draggedIndex) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = (e, dropIndex) => {
+    e.preventDefault();
+    
+    if (draggedIndex === null || draggedIndex === dropIndex) {
+      setDragOverIndex(null);
+      return;
+    }
+
+    // Reorder the stops
+    const newStops = [...stops];
+    const [draggedStop] = newStops.splice(draggedIndex, 1);
+    newStops.splice(dropIndex, 0, draggedStop);
+    
+    // Update order property
+    const reorderedStops = newStops.map((s, i) => ({ ...s, order: i }));
+    setStops(reorderedStops);
+    
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  // Touch handlers for mobile
+  const [touchStartY, setTouchStartY] = useState(null);
+  const [touchedIndex, setTouchedIndex] = useState(null);
+
+  const handleTouchStart = (e, index) => {
+    setTouchStartY(e.touches[0].clientY);
+    setTouchedIndex(index);
+  };
+
+  const handleTouchMove = (e) => {
+    if (touchedIndex === null) return;
+    
+    const currentY = e.touches[0].clientY;
+    const diff = currentY - touchStartY;
+    
+    // Determine if we should swap with neighbor
+    if (Math.abs(diff) > 50) {
+      const direction = diff > 0 ? 1 : -1;
+      const newIndex = touchedIndex + direction;
+      
+      if (newIndex >= 0 && newIndex < stops.length) {
+        // Swap stops
+        const newStops = [...stops];
+        [newStops[touchedIndex], newStops[newIndex]] = [newStops[newIndex], newStops[touchedIndex]];
+        const reorderedStops = newStops.map((s, i) => ({ ...s, order: i }));
+        setStops(reorderedStops);
+        
+        // Update touched index and reset start position
+        setTouchedIndex(newIndex);
+        setTouchStartY(currentY);
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setTouchStartY(null);
+    setTouchedIndex(null);
+  };
+
   return (
     <div className="space-y-3">
-      {/* Existing stops */}
+      {/* Existing stops with drag-and-drop */}
       {stops.map((stop, index) => (
-        <div key={index} className="relative animate-fade-in">
-          <div className="absolute left-3 top-0 bottom-0 flex flex-col items-center justify-center pointer-events-none">
-            <ArrowDown className="w-4 h-4 text-amber-500 mb-1" />
-            <div className="w-3 h-3 rounded-full bg-amber-500 border-2 border-amber-400 shadow-lg shadow-amber-500/30" />
-          </div>
-          
+        <div 
+          key={stop.id || index} 
+          className={`relative animate-fade-in transition-all duration-200 ${
+            dragOverIndex === index ? 'transform translate-y-1 border-t-2 border-primary pt-2' : ''
+          } ${draggedIndex === index ? 'opacity-50' : ''}`}
+          draggable
+          onDragStart={(e) => handleDragStart(e, index)}
+          onDragEnd={handleDragEnd}
+          onDragOver={(e) => handleDragOver(e, index)}
+          onDragLeave={handleDragLeave}
+          onDrop={(e) => handleDrop(e, index)}
+          onTouchStart={(e) => handleTouchStart(e, index)}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
           <div className="flex items-center gap-2">
+            {/* Drag handle */}
+            <div 
+              className="cursor-grab active:cursor-grabbing p-1 text-gray-400 hover:text-white touch-none"
+              title="Glisser pour réordonner"
+            >
+              <GripVertical className="w-5 h-5" />
+            </div>
+            
+            {/* Stop number badge */}
+            <div className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center text-xs font-bold text-white shrink-0">
+              {index + 1}
+            </div>
+            
+            {/* Address input */}
             <div className="flex-1">
               <AddressAutocomplete
-                label={`Arrêt ${index + 1}`}
-                placeholder="Adresse de l'arrêt..."
+                label=""
+                placeholder={`Arrêt ${index + 1}...`}
                 value={stop}
                 onChange={(loc) => updateStop(index, loc)}
-                inputClassName="pl-10"
+                inputClassName="h-11"
               />
             </div>
+            
+            {/* Remove button */}
             <Button
               type="button"
               variant="ghost"
               size="icon"
               onClick={() => removeStop(index)}
-              className="h-10 w-10 text-red-400 hover:text-red-500 hover:bg-red-500/10 shrink-0 mt-6"
+              className="h-10 w-10 text-red-400 hover:text-red-500 hover:bg-red-500/10 shrink-0"
               data-testid={`remove-stop-${index}`}
             >
               <X className="w-5 h-5" />
@@ -87,7 +198,8 @@ const IntermediateStops = ({ stops, setStops, maxStops = 3 }) => {
       {stops.length > 0 && (
         <p className="text-xs text-muted-foreground flex items-center gap-1">
           <MapPin className="w-3 h-3" />
-          Les arrêts seront effectués dans l'ordre indiqué
+          <GripVertical className="w-3 h-3" />
+          Glissez pour réordonner les arrêts
         </p>
       )}
     </div>

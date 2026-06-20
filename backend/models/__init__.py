@@ -1,7 +1,4 @@
 """
-Models package - Pydantic schemas
+Models package for StationCab
 """
-from .user import *
-from .ride import *
-from .payment import *
-from .chat import *
+from .schemas import *
