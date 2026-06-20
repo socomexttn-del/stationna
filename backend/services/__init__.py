@@ -1,6 +1,2 @@
-"""
-Services package - Business logic
-"""
-from .auth import *
-from .fare import *
-from .notifications import NotificationManager
+# Services module
+# Contains Celery tasks and background services

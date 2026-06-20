@@ -1,4 +1,2 @@
-"""
-Models package for StationCab
-"""
-from .schemas import *
+# Models module
+from models.schemas import *

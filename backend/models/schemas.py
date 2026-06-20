@@ -3,51 +3,23 @@ Pydantic models for StationCab API
 """
 from pydantic import BaseModel, Field, EmailStr, ConfigDict
 from typing import List, Optional, Dict
-from datetime import datetime
 
+# ======================== USER MODELS ========================
 
-# ==================== AUTH MODELS ====================
-
-class RegisterModel(BaseModel):
+class UserBase(BaseModel):
     email: EmailStr
-    password: str
     first_name: str
     last_name: str
-    phone: Optional[str] = None
-    role: str = "passenger"
+    phone: str
+    role: str = Field(..., pattern="^(passenger|driver|admin)$")
+    company_name: Optional[str] = None
 
-
-class LoginModel(BaseModel):
-    email: EmailStr
+class UserCreate(UserBase):
     password: str
 
-
-class TokenResponse(BaseModel):
-    token: str
-    user: dict
-
-
-class PasswordResetRequest(BaseModel):
+class UserLogin(BaseModel):
     email: EmailStr
-
-
-class PasswordResetConfirm(BaseModel):
-    token: str
-    new_password: str
-
-
-class ProfileUpdate(BaseModel):
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    phone: Optional[str] = None
-    company_name: Optional[str] = None
-    siret: Optional[str] = None
-    address: Optional[str] = None
-    tva_number: Optional[str] = None
-    iban: Optional[str] = None
-
-
-# ==================== USER MODELS ====================
+    password: str
 
 class UserResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -55,52 +27,29 @@ class UserResponse(BaseModel):
     email: str
     first_name: str
     last_name: str
-    phone: Optional[str] = None
+    phone: str
     role: str
-    rating: Optional[float] = None
-    total_rides: Optional[int] = 0
-    is_available: Optional[bool] = False
-    vehicle_info: Optional[Dict] = None
-    created_at: Optional[str] = None
     company_name: Optional[str] = None
-    siret: Optional[str] = None
-    address: Optional[str] = None
-    tva_number: Optional[str] = None
-    iban: Optional[str] = None
-    wallet_balance: Optional[float] = 0.0
-    # Driver specific
+    rating: float = 5.0
+    total_rides: int = 0
+    is_available: bool = False
+    vehicle_info: Optional[Dict] = None
+    location: Optional[Dict] = None
     driver_vehicle_types: Optional[List[str]] = None
-    documents: Optional[Dict] = None
-    is_active: Optional[bool] = True
-    deactivated_at: Optional[str] = None
+    created_at: str
 
+class TokenResponse(BaseModel):
+    token: str
+    user: UserResponse
 
-# ==================== RIDE MODELS ====================
+# ======================== LOCATION MODELS ========================
 
 class LocationModel(BaseModel):
-    address: str
     lat: float
     lng: float
+    address: str
 
-
-class RideRequest(BaseModel):
-    pickup: LocationModel
-    destination: LocationModel
-    stops: Optional[List[LocationModel]] = None
-    vehicle_type: str = "standard"
-    passenger_count: int = 1
-    payment_intent_id: Optional[str] = None
-    payment_status: Optional[str] = None
-
-
-class ScheduledRideRequest(BaseModel):
-    pickup: LocationModel
-    destination: LocationModel
-    scheduled_time: str
-    vehicle_type: str = "standard"
-    passenger_count: int = 1
-    promo_code: Optional[str] = None
-
+# ======================== RIDE MODELS ========================
 
 class RideResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -145,60 +94,182 @@ class RideResponse(BaseModel):
     cancellation_fee_charged: Optional[bool] = None
     authorization_cancelled: Optional[bool] = None
 
+class FareEstimateRequest(BaseModel):
+    pickup: LocationModel
+    destination: LocationModel
+    stops: Optional[List[LocationModel]] = None
+    vehicle_type: str = "standard"
+    passenger_count: int = 1
 
-class MeterPriceRequest(BaseModel):
-    meter_price: float
+class RideRequest(BaseModel):
+    pickup: LocationModel
+    destination: LocationModel
+    stops: Optional[List[LocationModel]] = None
+    vehicle_type: str = "standard"
+    passenger_count: int = 1
+    payment_intent_id: Optional[str] = None
+    payment_status: Optional[str] = None
 
+class ScheduledRideRequest(BaseModel):
+    pickup: LocationModel
+    destination: LocationModel
+    scheduled_time: str
+    vehicle_type: Optional[str] = "standard"
+    passenger_count: Optional[int] = 1
+    stops: Optional[List[Dict]] = None
 
-# ==================== PAYMENT MODELS ====================
+class RatingCreate(BaseModel):
+    ride_id: str
+    rating: int = Field(..., ge=1, le=5)
+    comment: Optional[str] = None
 
-class SavedCard(BaseModel):
-    brand: str
-    last4: str
-    exp_month: int
-    exp_year: int
+# ======================== DRIVER MODELS ========================
 
+class DriverAvailability(BaseModel):
+    is_available: bool
+    location: Optional[LocationModel] = None
 
-class ChargeCardRequest(BaseModel):
-    amount: int  # Amount in cents
+class VehicleUpdate(BaseModel):
+    make: str
+    model: str
+    year: int
+    color: str
+    license_plate: str
+    vehicle_type: str = "standard"
+
+class VehicleDocuments(BaseModel):
+    carte_grise: Optional[str] = None
+    assurance: Optional[str] = None
+    controle_technique: Optional[str] = None
+    permis_conduire: Optional[str] = None
+    carte_vtc: Optional[str] = None
+
+class DriverDocumentsUpdate(BaseModel):
+    document_type: str
+    document_url: str
+    expiry_date: Optional[str] = None
+
+# Extended driver document types
+DRIVER_DOCUMENT_TYPES = {
+    "permis_conduire": {"name": "Permis de Conduire", "category": "personal", "required": True, "has_expiry": True},
+    "cni": {"name": "Pièce d'Identité (CNI/Passeport)", "category": "personal", "required": True, "has_expiry": True},
+    "photo_visage": {"name": "Photo du Visage", "category": "personal", "required": True, "has_expiry": False},
+    "assurance_vehicule": {"name": "Assurance Véhicule", "category": "vehicle", "required": True, "has_expiry": True},
+    "controle_technique": {"name": "Contrôle Technique", "category": "vehicle", "required": True, "has_expiry": True},
+    "photo_voiture_avant": {"name": "Photo Voiture - Avant", "category": "vehicle", "required": True, "has_expiry": False},
+    "photo_voiture_arriere": {"name": "Photo Voiture - Arrière", "category": "vehicle", "required": True, "has_expiry": False},
+    "photo_voiture_profil": {"name": "Photo Voiture - Profil", "category": "vehicle", "required": True, "has_expiry": False},
+    "carte_professionnelle": {"name": "Carte Professionnelle VTC/Taxi", "category": "professional", "required": True, "has_expiry": True},
+    "assurance_transport": {"name": "Assurance Transport à Titre Onéreux", "category": "professional", "required": True, "has_expiry": True},
+    "licence_transport": {"name": "Licence de Transport", "category": "professional", "required": True, "has_expiry": True},
+    "kbis": {"name": "Extrait KBIS", "category": "professional", "required": True, "has_expiry": True},
+    "rib": {"name": "RIB (Relevé d'Identité Bancaire)", "category": "financial", "required": True, "has_expiry": False},
+}
+
+# ======================== PAYMENT MODELS ========================
+
+class PaymentCreateRequest(BaseModel):
+    ride_id: str
+    origin_url: str
+
+class PreBookingPaymentRequest(BaseModel):
+    amount: int
     description: str
+    success_url: str
+    cancel_url: str
     metadata: dict = {}
 
-
-class AuthorizePaymentRequest(BaseModel):
-    amount: int  # Amount in cents
-    description: str
-    metadata: dict = {}
-
-
-class WalletTopUpRequest(BaseModel):
+class PaymentHistoryResponse(BaseModel):
+    id: str
+    ride_id: str
     amount: float
+    currency: str
+    status: str
+    created_at: str
+    ride_pickup: str
+    ride_destination: str
 
+# ======================== CHAT MODELS ========================
 
-# ==================== PROMO MODELS ====================
+class ChatMessage(BaseModel):
+    ride_id: str
+    message: str
+
+class ChatMessageResponse(BaseModel):
+    id: str
+    ride_id: str
+    sender_id: str
+    sender_name: str
+    sender_role: str
+    message: str
+    created_at: str
+
+# ======================== FAVORITES MODELS ========================
+
+class FavoriteAddressCreate(BaseModel):
+    name: str
+    location: LocationModel
+
+class FavoriteAddressResponse(BaseModel):
+    id: str
+    user_id: str
+    name: str
+    location: Dict
+    created_at: str
+
+class FrequentTripCreate(BaseModel):
+    name: str
+    pickup: LocationModel
+    destination: LocationModel
+    vehicle_type: str = "standard"
+    passenger_count: int = 1
+
+class FrequentTripResponse(BaseModel):
+    id: str
+    user_id: str
+    name: str
+    pickup: Dict
+    destination: Dict
+    vehicle_type: str
+    passenger_count: int
+    use_count: int
+    created_at: str
+
+# ======================== PROMO MODELS ========================
 
 class PromoCodeCreate(BaseModel):
     code: str
-    discount_type: str  # "percentage" or "fixed"
-    discount_value: float
-    max_uses: Optional[int] = None
-    valid_from: Optional[str] = None
-    valid_until: Optional[str] = None
-    min_fare: Optional[float] = None
-    max_discount: Optional[float] = None
+    discount_percent: int = Field(..., ge=1, le=100)
+    max_uses: int = 100
+    valid_until: str
 
-
-class PromoCodeResponse(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-    id: str
+class PromoCodeApply(BaseModel):
     code: str
-    discount_type: str
-    discount_value: float
-    max_uses: Optional[int] = None
-    current_uses: int = 0
-    valid_from: Optional[str] = None
-    valid_until: Optional[str] = None
-    min_fare: Optional[float] = None
-    max_discount: Optional[float] = None
-    is_active: bool = True
-    created_at: str
+
+# ======================== PASSWORD RESET MODELS ========================
+
+class PasswordResetRequest(BaseModel):
+    email: str
+
+class PasswordResetConfirm(BaseModel):
+    token: str
+    new_password: str
+
+class AdminPasswordReset(BaseModel):
+    user_id: str
+    new_password: str
+
+# ======================== WEB PUSH MODELS ========================
+
+class WebPushSubscription(BaseModel):
+    endpoint: str
+    keys: Dict
+
+class WebPushUnsubscribe(BaseModel):
+    endpoint: str
+
+# ======================== FCM MODELS ========================
+
+class FCMTokenUpdate(BaseModel):
+    token: str
+    device_type: Optional[str] = "web"
