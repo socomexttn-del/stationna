@@ -14,7 +14,15 @@ Application taxi complète "StationCab" avec support multi-rôles (Passager, Cha
 
 ## Fonctionnalités Implémentées
 
-### ✅ RGPD Complet - NOUVEAU 20/06/2025
+### ✅ SEO Complet - 20/06/2025
+- **Balises Meta** optimisées dans `index.html` (title, description, keywords, robots, canonical)
+- **Open Graph** (Facebook, LinkedIn) : og:title, og:description, og:image, og:url, og:site_name
+- **Twitter Cards** : summary_large_image avec image, titre, description
+- **robots.txt** : Autorise indexation pages publiques, bloque pages protégées
+- **sitemap.xml** : Liste les 7 pages principales avec priorités et fréquences
+- **Favicon et Apple Touch Icon** configurés
+
+### ✅ RGPD Complet - 20/06/2025
 - **Bandeau cookies** avec personnalisation (essentiels, analytiques, marketing)
 - **Politique de confidentialité** complète (`/politique-confidentialite`)
 - **Export des données** (JSON) - Droit à la portabilité
@@ -101,6 +109,20 @@ Application taxi complète "StationCab" avec support multi-rôles (Passager, Cha
 ## Domaine
 - Production: `stationcab.fr`
 - Emails: `contact@stationcab.fr`, `driver@stationcab.fr`
+
+## Fichiers SEO
+- `/app/frontend/public/robots.txt`
+- `/app/frontend/public/sitemap.xml`
+
+## Tâches en attente
+
+### P1 - Prochaines étapes
+1. Vérifier les flux RGPD (bannière cookies, export/suppression compte) via tests E2E
+2. Refactoriser `server.py` (6600+ lignes) en modules FastAPI séparés
+
+### P2 - Backlog
+- Nettoyer le code mort (`resend`, `pywebpush`)
+- Implémenter une file d'attente persistante (Celery/Redis) pour les courses
 
 ## Dernière mise à jour
 20 Juin 2025

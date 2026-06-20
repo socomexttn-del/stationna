@@ -1,0 +1,32 @@
+# Robots.txt pour StationCab
+# https://stationcab.fr
+
+User-agent: *
+Allow: /
+
+# Pages publiques à indexer
+Allow: /
+Allow: /auth
+Allow: /devenir-chauffeur
+Allow: /mentions-legales
+Allow: /cgv
+Allow: /cgv-chauffeur
+Allow: /politique-confidentialite
+
+# Pages protégées - ne pas indexer
+Disallow: /passenger
+Disallow: /driver
+Disallow: /admin
+Disallow: /profile
+Disallow: /history
+Disallow: /scheduled
+Disallow: /payments
+Disallow: /wallet
+Disallow: /payment/
+
+# Fichiers statiques
+Allow: /logo-stationcab-full.jpeg
+Allow: /logo-stationcab.png
+
+# Sitemap
+Sitemap: https://stationcab.fr/sitemap.xml
