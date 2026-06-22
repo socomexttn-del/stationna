@@ -63,7 +63,7 @@ const CGV = () => {
                 StationCab propose un service de réservation de courses avec chauffeur privé, comprenant :
               </p>
               <ul className="list-disc list-inside space-y-2 ml-4">
-                <li><strong className="text-white">VTC Premium</strong> : Berlines confortables (1 à 4 passagers)</li>
+                <li><strong className="text-white">VTC</strong> : Véhicules confortables (1 à 4 passagers)</li>
                 <li><strong className="text-white">Van</strong> : Véhicules spacieux (1 à 7 passagers)</li>
                 <li><strong className="text-white">Taxi Officiel</strong> : Taxis parisiens réglementés avec tarifs officiels</li>
               </ul>

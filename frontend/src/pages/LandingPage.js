@@ -227,8 +227,8 @@ const LandingPage = () => {
                               <Car className="w-5 h-5" style={{ color: '#00a693' }} />
                             </div>
                             <div>
-                              <h3 className="font-bold text-white">VTC Premium</h3>
-                              <p className="text-xs text-gray-400">1-4 places - Berline confort</p>
+                              <h3 className="font-bold text-white">VTC</h3>
+                              <p className="text-xs text-gray-400">1-4 places - Véhicule confort</p>
                             </div>
                           </div>
                           <div className="text-right">
@@ -355,11 +355,11 @@ const LandingPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
             {[
               {
-                title: 'VTC Premium',
+                title: 'VTC',
                 description: 'Chauffeurs professionnels avec véhicules récents et confortables',
                 icon: Car,
                 price: 'À partir de 15€',
-                features: ['Berline confortable', 'Chauffeur professionnel', 'Prix fixe garanti']
+                features: ['Véhicule confortable', 'Chauffeur professionnel', 'Prix fixe garanti']
               },
               {
                 title: 'Taxi Officiel',
