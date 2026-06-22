@@ -6702,3 +6702,14 @@ app.add_middleware(
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+
+# Temporary endpoint to serve frontend backup
+from fastapi.responses import FileResponse
+import os
+
+@app.get("/download-frontend-backup")
+async def download_frontend_backup():
+    file_path = "/app/backend/static/frontend_backup.tar.gz"
+    if os.path.exists(file_path):
+        return FileResponse(file_path, filename="frontend_backup.tar.gz", media_type="application/gzip")
+    return {"error": "File not found"}
