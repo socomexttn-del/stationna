@@ -178,18 +178,20 @@ function AddressAutocomplete(props) {
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           onFocus={function() { if (suggestions.length > 0) setShowSuggestions(true); }}
-          className="h-14 pl-12 pr-12 bg-muted border-white/10 rounded-xl text-lg"
+          className="h-14 pl-12 pr-36 sm:pr-40 bg-muted border-white/10 rounded-xl text-lg"
         />
         {isLoading ? (
-          <Loader2 className="absolute right-4 w-5 h-5 text-muted-foreground animate-spin" />
+          <Loader2 className="absolute right-3 w-5 h-5 text-muted-foreground animate-spin" />
         ) : (
           <button
             type="button"
             onClick={handleGetCurrentLocation}
-            className="absolute right-4 p-1 text-muted-foreground hover:text-primary transition-colors"
-            title="Utiliser ma position"
+            className="absolute right-2 flex items-center gap-1.5 px-3 py-1.5 bg-primary/20 hover:bg-primary/30 text-primary rounded-lg transition-all duration-200 border border-primary/30"
+            title="Utiliser ma position actuelle"
+            data-testid="geolocation-button"
           >
-            <Navigation className="w-5 h-5" />
+            <Navigation className="w-4 h-4" />
+            <span className="text-xs font-medium hidden sm:inline">Ma position</span>
           </button>
         )}
       </div>
