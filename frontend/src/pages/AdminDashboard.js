@@ -7,7 +7,7 @@ import { Button } from '../components/ui/button';
 import { 
   Users, Car, DollarSign, TrendingUp, MapPin, Clock, Star,
   ArrowLeft, RefreshCw, Calendar, Route, FileText, Check, X, Eye,
-  Power, UserX, UserCheck, Database, Mail, AlertTriangle, Bell, Loader2, Tag, Euro
+  Power, UserX, UserCheck, Database, Mail, AlertTriangle, Bell, Loader2, Tag, Euro, Gift
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
@@ -244,6 +244,16 @@ const AdminDashboard = () => {
                 data-testid="admin-driver-payments-link"
               >
                 <Euro className="w-4 h-4" /> Paiements Chauffeurs
+              </Button>
+            </Link>
+            <Link to="/admin/referral-stats">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="gap-2 border-primary/50 text-primary hover:bg-primary/10"
+                data-testid="admin-referral-stats-link"
+              >
+                <Gift className="w-4 h-4" /> Parrainage
               </Button>
             </Link>
             <Button 

@@ -528,6 +528,33 @@ async def stop_scheduled_rides_checker():
 
 # ======================== MODELS ========================
 
+async def generate_driver_code() -> str:
+    """Generate unique driver code like SC-0001, SC-0002, etc."""
+    # Find the highest existing driver code
+    last_driver = await db.users.find_one(
+        {"role": "driver", "driver_code": {"$exists": True, "$ne": None}},
+        {"driver_code": 1},
+        sort=[("driver_code", -1)]
+    )
+    
+    if last_driver and last_driver.get("driver_code"):
+        # Extract number from code like "SC-0001"
+        try:
+            last_number = int(last_driver["driver_code"].split("-")[1])
+            new_number = last_number + 1
+        except:
+            new_number = 1
+    else:
+        new_number = 1
+    
+    return f"SC-{new_number:04d}"
+
+def get_driver_commission_rate(referral_points: int) -> float:
+    """Get commission rate based on referral points. 18% default, 10% at 3000+ points"""
+    if referral_points >= 3000:
+        return 0.10  # 10% commission
+    return 0.18  # 18% commission (default)
+
 class UserBase(BaseModel):
     email: EmailStr
     first_name: str
@@ -558,6 +585,9 @@ class UserResponse(BaseModel):
     vehicle_info: Optional[Dict] = None
     location: Optional[Dict] = None
     driver_vehicle_types: Optional[List[str]] = None  # ["taxi", "vtc", "van"] - Types de véhicules que le chauffeur peut accepter
+    driver_code: Optional[str] = None  # Code unique chauffeur (ex: SC-0001) - visible admin/chauffeur uniquement
+    referral_points: Optional[int] = 0  # Points de parrainage (1 point par client parrainé avec course terminée)
+    commission_rate: Optional[float] = 0.18  # Taux de commission (18% par défaut, 10% à 3000 points)
     created_at: str
 
 class TokenResponse(BaseModel):
@@ -681,6 +711,7 @@ class RideRequest(BaseModel):
     passenger_count: int = 1
     payment_intent_id: Optional[str] = None  # Stripe PaymentIntent ID from authorization
     payment_status: Optional[str] = None  # 'authorized' when using auth flow
+    referral_driver_code: Optional[str] = None  # Code chauffeur parrain (ex: SC-0001)
 
 class PaymentCreateRequest(BaseModel):
     ride_id: str
@@ -1309,6 +1340,11 @@ async def register(user: UserCreate):
     # For drivers, account is pending validation until admin approves all documents
     validation_status = "pending_validation" if user.role == "driver" else "active"
     
+    # Generate unique driver code for drivers
+    driver_code = None
+    if user.role == "driver":
+        driver_code = await generate_driver_code()
+    
     user_dict = {
         "id": user_id,
         "email": user.email,
@@ -1329,6 +1365,9 @@ async def register(user: UserCreate):
         "siret": None,
         "address": None,
         "tva_number": None,
+        "driver_code": driver_code,  # Code unique chauffeur (SC-0001, etc.)
+        "referral_points": 0,  # Points de parrainage
+        "referred_clients": [],  # Liste des IDs clients parrainés
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.users.insert_one(user_dict)
@@ -2229,6 +2268,48 @@ async def get_pending_validation_drivers(admin_user: dict = Depends(get_admin_us
         "drivers": drivers
     }
 
+@api_router.get("/admin/drivers/referral-stats")
+async def get_drivers_referral_stats(admin_user: dict = Depends(get_admin_user)):
+    """Get all drivers with their referral codes and points (admin only)"""
+    drivers = await db.users.find(
+        {"role": "driver"},
+        {
+            "_id": 0, 
+            "password_hash": 0,
+            "id": 1,
+            "email": 1,
+            "first_name": 1,
+            "last_name": 1,
+            "phone": 1,
+            "driver_code": 1,
+            "referral_points": 1,
+            "commission_rate": 1,
+            "referred_clients": 1,
+            "validation_status": 1,
+            "created_at": 1
+        }
+    ).sort("referral_points", -1).to_list(1000)
+    
+    # Calculate stats
+    total_drivers = len(drivers)
+    total_points = sum(d.get("referral_points", 0) for d in drivers)
+    drivers_with_reduced_commission = sum(1 for d in drivers if d.get("referral_points", 0) >= 3000)
+    
+    # Enrich with calculated commission rate
+    for driver in drivers:
+        points = driver.get("referral_points", 0)
+        driver["commission_rate"] = get_driver_commission_rate(points)
+        driver["referred_clients_count"] = len(driver.get("referred_clients", []))
+        driver["points_to_reduced_commission"] = max(0, 3000 - points)
+        del driver["referred_clients"]  # Don't expose client IDs
+    
+    return {
+        "total_drivers": total_drivers,
+        "total_referral_points": total_points,
+        "drivers_with_reduced_commission": drivers_with_reduced_commission,
+        "drivers": drivers
+    }
+
 @api_router.get("/drivers/available", response_model=List[UserResponse])
 async def get_available_drivers(current_user: dict = Depends(get_current_user)):
     # Only return drivers who are available AND active (not deactivated by admin)
@@ -2404,6 +2485,21 @@ async def create_ride(data: RideRequest, current_user: dict = Depends(get_curren
     ride_count_today = await db.rides.count_documents({"created_at": {"$regex": f"^{datetime.now(timezone.utc).strftime('%Y-%m-%d')}"}})
     reservation_number = f"VT-{today}-{str(ride_count_today + 1).zfill(3)}"
     
+    # Check referral driver code if provided
+    referral_driver_id = None
+    referral_driver_code = data.referral_driver_code
+    if referral_driver_code:
+        referral_driver = await db.users.find_one({
+            "role": "driver",
+            "driver_code": referral_driver_code.upper()
+        }, {"_id": 0, "id": 1, "first_name": 1, "last_name": 1})
+        if referral_driver:
+            referral_driver_id = referral_driver["id"]
+            logger.info(f"Referral code {referral_driver_code} validated for driver {referral_driver_id}")
+        else:
+            logger.warning(f"Invalid referral code: {referral_driver_code}")
+            referral_driver_code = None  # Reset if invalid
+    
     # Calculate commission (18%)
     commission_rate = 0.18
     commission_amount = round(fare * commission_rate, 2)
@@ -2444,7 +2540,10 @@ async def create_ride(data: RideRequest, current_user: dict = Depends(get_curren
         "completed_at": None,
         "vehicle_type": data.vehicle_type,
         "passenger_count": data.passenger_count,
-        "notified_drivers": []  # Track which drivers have been notified
+        "notified_drivers": [],  # Track which drivers have been notified
+        "referral_driver_code": referral_driver_code,  # Code du chauffeur parrain
+        "referral_driver_id": referral_driver_id,  # ID du chauffeur parrain
+        "referral_point_awarded": False  # True quand le point a été attribué (course terminée)
     }
     
     await db.rides.insert_one(ride)
@@ -3032,6 +3131,44 @@ async def complete_ride(ride_id: str, data: Optional[MeterPriceRequest] = None, 
         "meter_price": data.meter_price if data else None,
         "payment_captured": payment_captured
     })
+    
+    # Award referral point if this ride has a referral driver and point not yet awarded
+    if ride.get("referral_driver_id") and not ride.get("referral_point_awarded"):
+        referral_driver_id = ride["referral_driver_id"]
+        passenger_id = ride["passenger_id"]
+        
+        # Check if this passenger has already been counted for this driver
+        referral_driver = await db.users.find_one({"id": referral_driver_id}, {"_id": 0})
+        if referral_driver:
+            referred_clients = referral_driver.get("referred_clients", [])
+            
+            # Only award point if this is a NEW client (first completed ride with this referral code)
+            if passenger_id not in referred_clients:
+                # Add point and track client
+                new_points = referral_driver.get("referral_points", 0) + 1
+                new_commission_rate = get_driver_commission_rate(new_points)
+                
+                await db.users.update_one(
+                    {"id": referral_driver_id},
+                    {
+                        "$inc": {"referral_points": 1},
+                        "$push": {"referred_clients": passenger_id},
+                        "$set": {"commission_rate": new_commission_rate}
+                    }
+                )
+                
+                # Mark the ride as having awarded the point
+                await db.rides.update_one(
+                    {"id": ride_id},
+                    {"$set": {"referral_point_awarded": True}}
+                )
+                
+                logger.info(f"Referral point awarded to driver {referral_driver_id} (code: {ride.get('referral_driver_code')}). New total: {new_points}")
+                
+                # Check if driver just reached 3000 points milestone
+                if new_points == 3000:
+                    logger.info(f"Driver {referral_driver_id} reached 3000 points! Commission reduced to 10%")
+                    # Could send a notification here to congratulate the driver
     
     return RideResponse(**updated)
 

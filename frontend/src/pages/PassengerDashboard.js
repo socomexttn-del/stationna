@@ -56,6 +56,7 @@ const PassengerDashboard = () => {
   const [stops, setStops] = useState([]); // Intermediate stops
   const [passengers, setPassengers] = useState(1);
   const [vehicleType, setVehicleType] = useState('standard');
+  const [referralCode, setReferralCode] = useState(''); // Code parrain chauffeur
   
   // ETA to destination during ride
   const [etaToDestination, setEtaToDestination] = useState(null);
@@ -831,7 +832,8 @@ const PassengerDashboard = () => {
           vehicle_type: vehicleType,
           passenger_count: passengers,
           payment_status: 'authorized',  // Authorized, not paid yet
-          payment_intent_id: paymentResponse.data.payment_intent_id
+          payment_intent_id: paymentResponse.data.payment_intent_id,
+          referral_driver_code: referralCode.trim().toUpperCase() || null  // Code parrain
         });
         
         setActiveRide(response.data);
@@ -1473,6 +1475,25 @@ const PassengerDashboard = () => {
                 <span>Supplément de 4€ par passager au-delà de 4</span>
               </div>
             )}
+
+            {/* Referral Code Field */}
+            <div className="space-y-2">
+              <label className="text-sm text-muted-foreground flex items-center gap-2">
+                <Gift className="w-4 h-4" /> Code chauffeur (optionnel)
+              </label>
+              <Input
+                type="text"
+                value={referralCode}
+                onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                placeholder="Ex: SC-0001"
+                className="h-12 bg-muted/50 border-white/10 rounded-xl uppercase"
+                data-testid="referral-code-input"
+                maxLength={10}
+              />
+              <p className="text-[10px] text-muted-foreground">
+                Si un chauffeur vous a recommandé StationCab, entrez son code ici
+              </p>
+            </div>
 
             {/* Frequent Trips Section */}
             {frequentTrips.length > 0 && (

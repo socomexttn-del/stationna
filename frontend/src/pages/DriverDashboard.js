@@ -1936,6 +1936,55 @@ const DriverDashboard = () => {
           </div>
         )}
 
+        {/* Driver Referral Code & Points Section */}
+        {user?.driver_code && (
+          <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-sm">Code Parrainage</h3>
+                <span className="text-xs px-2 py-1 bg-primary/20 text-primary rounded-full">
+                  {(user.referral_points || 0) >= 3000 ? '10% Commission' : '18% Commission'}
+                </span>
+              </div>
+              
+              <div className="bg-background/50 rounded-lg p-3 mb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Votre code</p>
+                    <p className="text-2xl font-bold tracking-wider text-primary">{user.driver_code}</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(user.driver_code);
+                      toast.success('Code copié !');
+                    }}
+                    className="border-primary/30 hover:bg-primary/10"
+                  >
+                    Copier
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-background/30 rounded-lg p-2 text-center">
+                  <p className="text-xl font-bold text-primary">{user.referral_points || 0}</p>
+                  <p className="text-[10px] text-muted-foreground">Points</p>
+                </div>
+                <div className="bg-background/30 rounded-lg p-2 text-center">
+                  <p className="text-xl font-bold">{Math.max(0, 3000 - (user.referral_points || 0))}</p>
+                  <p className="text-[10px] text-muted-foreground">Points pour 10%</p>
+                </div>
+              </div>
+              
+              <p className="text-xs text-muted-foreground mt-3 text-center">
+                Partagez votre code avec vos clients. 1 point par nouveau client ayant terminé une course.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Offline Message */}
         {!isAvailable && !activeRide && (
           <Card className="bg-card border-border/50">
