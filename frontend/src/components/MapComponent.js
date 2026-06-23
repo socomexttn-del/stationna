@@ -200,10 +200,21 @@ const MapComponent = ({
           });
         }
 
-        // Fit bounds to show entire route
+        // Fit bounds to show entire route with responsive padding
         const bounds = new mapboxgl.LngLatBounds();
         coordinates.forEach(coord => bounds.extend(coord));
-        map.current.fitBounds(bounds, { padding: 80 });
+        
+        // More padding on mobile for better visibility
+        const isMobile = window.innerWidth < 768;
+        const padding = isMobile 
+          ? { top: 50, bottom: 30, left: 30, right: 30 }
+          : { top: 100, bottom: 100, left: 100, right: 100 };
+        
+        map.current.fitBounds(bounds, { 
+          padding: padding,
+          maxZoom: 15,
+          duration: 1000
+        });
       }
     } catch (error) {
       console.error('Error fetching route:', error);
