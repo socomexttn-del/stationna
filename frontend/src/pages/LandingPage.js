@@ -103,24 +103,23 @@ const LandingPage = () => {
                 </div>
                 
                 <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight mb-6" style={{ fontFamily: 'Space Grotesk' }}>
-                  <span className="text-white">Réservez un </span>
+                  <span className="text-white">{t('landing.bookA')} </span>
                   <span style={{ color: '#00a693' }}>VTC</span>
-                  <span className="text-white"> ou </span>
+                  <span className="text-white"> {t('landing.or')} </span>
                   <span style={{ color: '#00a693' }}>Taxi</span>
                   <br />
-                  <span className="text-white">en France 24h/24</span>
+                  <span className="text-white">{t('landing.inFrance')}</span>
                 </h1>
                 
                 <p className="text-lg text-gray-400 mb-8 leading-relaxed">
-                  Chauffeurs VTC professionnels vérifiés et Taxis officiels. 
-                  Prix connu à l&apos;avance. Paiement sécurisé.
+                  {t('landing.subtitle')}
                 </p>
                 
                 <div className="flex flex-wrap gap-4 justify-center lg:justify-start mb-8">
                   {[
-                    { icon: Shield, text: 'Chauffeurs vérifiés' },
-                    { icon: Euro, text: 'Prix fixe garanti' },
-                    { icon: Clock, text: 'Disponible 24h/24' }
+                    { icon: Shield, text: t('landing.verifiedDrivers') },
+                    { icon: Euro, text: t('landing.fixedPrice') },
+                    { icon: Clock, text: t('landing.available247') }
                   ].map((badge, i) => (
                     <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-full" style={{ backgroundColor: 'rgba(0, 166, 147, 0.1)' }}>
                       <badge.icon className="w-4 h-4" style={{ color: '#00a693' }} />
@@ -139,7 +138,7 @@ const LandingPage = () => {
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-2">
                       <Calculator className="w-5 h-5" style={{ color: '#00a693' }} />
-                      <h2 className="text-xl font-bold text-white">Estimez votre course</h2>
+                      <h2 className="text-xl font-bold text-white">{t('landing.estimateRide')}</h2>
                     </div>
                     {showEstimates && (
                       <button 
@@ -154,11 +153,11 @@ const LandingPage = () => {
                   {!showEstimates ? (
                     <div className="space-y-4">
                       <div>
-                        <label className="text-sm text-gray-400 mb-2 block">Départ</label>
+                        <label className="text-sm text-gray-400 mb-2 block">{t('landing.departure')}</label>
                         <AddressAutocomplete
                           value={pickup}
                           onChange={setPickup}
-                          placeholder="Adresse de départ"
+                          placeholder={t('landing.departureAddress')}
                           icon={MapPin}
                           iconColor="text-green-500"
                           dataTestId="landing-pickup"
@@ -166,11 +165,11 @@ const LandingPage = () => {
                       </div>
                       
                       <div>
-                        <label className="text-sm text-gray-400 mb-2 block">Destination</label>
+                        <label className="text-sm text-gray-400 mb-2 block">{t('landing.destination')}</label>
                         <AddressAutocomplete
                           value={destination}
                           onChange={setDestination}
-                          placeholder="Adresse d&apos;arrivée"
+                          placeholder={t('landing.destinationAddress')}
                           icon={Navigation}
                           iconColor="text-primary"
                           dataTestId="landing-destination"
@@ -187,18 +186,18 @@ const LandingPage = () => {
                         {isLoadingEstimate ? (
                           <span className="flex items-center">
                             <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                            Calcul en cours...
+                            {t('common.loading')}
                           </span>
                         ) : (
                           <span className="flex items-center">
-                            Voir le prix estimé
+                            {t('landing.seeEstimate')}
                             <ArrowRight className="ml-2 w-5 h-5" />
                           </span>
                         )}
                       </Button>
                       
                       <p className="text-xs text-gray-500 text-center">
-                        Gratuit et sans engagement
+                        {t('landing.freeNoCommitment')}
                       </p>
                     </div>
                   ) : (
@@ -345,28 +344,28 @@ const LandingPage = () => {
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <span className="inline-block px-4 py-2 rounded-full text-sm font-medium mb-4" style={{ backgroundColor: 'rgba(0, 166, 147, 0.1)', color: '#00a693' }}>
-              Nos services
+              {t('landing.services')}
             </span>
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 text-white" style={{ fontFamily: 'Space Grotesk' }}>
-              VTC professionnels et Taxis officiels
+              {t('landing.servicesTitle')}
             </h2>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
             {[
               {
-                title: 'VTC',
-                description: 'Chauffeurs professionnels avec véhicules récents et confortables',
+                title: t('landing.vtcTitle'),
+                description: t('landing.vtcDesc'),
                 icon: Car,
-                price: 'À partir de 15€',
-                features: ['Véhicule confortable', 'Chauffeur professionnel', 'Prix fixe garanti']
+                price: t('landing.fromPrice') + ' 15€',
+                features: [t('landing.vtcFeature1'), t('landing.vtcFeature2'), t('landing.vtcFeature3')]
               },
               {
-                title: 'Taxi Officiel',
-                description: 'Taxis conventionnés avec tarifs réglementés pour les aéroports',
+                title: t('landing.taxiTitle'),
+                description: t('landing.taxiDesc'),
                 icon: CreditCard,
-                price: 'Forfait aéroport',
-                features: ['Tarif réglementé', 'CDG et Orly', 'Compteur officiel']
+                price: t('landing.airportRates'),
+                features: [t('landing.taxiFeature1'), 'CDG & Orly', t('landing.taxiFeature3')]
               }
             ].map((service, index) => (
               <div 
@@ -397,7 +396,7 @@ const LandingPage = () => {
                     className="w-full rounded-full"
                     style={{ borderColor: 'rgba(0, 166, 147, 0.5)', color: '#ffffff' }}
                   >
-                    Réserver
+                    {t('ride.book')}
                     <ChevronRight className="w-4 h-4 ml-1" />
                   </Button>
                 </Link>
