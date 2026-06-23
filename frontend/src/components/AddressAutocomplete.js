@@ -111,6 +111,17 @@ function AddressAutocomplete(props) {
     }, 300);
   }
 
+  // Scroll input into view on mobile when focused
+  function handleFocus() {
+    if (suggestions.length > 0) setShowSuggestions(true);
+    // On mobile, scroll the input to the top of the visible area
+    setTimeout(function() {
+      if (containerRef.current && window.innerWidth < 768) {
+        containerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 300);
+  }
+
   function handleKeyDown(e) {
     if (e.key === 'Enter' && suggestions.length > 0) {
       e.preventDefault();
@@ -177,7 +188,7 @@ function AddressAutocomplete(props) {
           value={inputValue}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          onFocus={function() { if (suggestions.length > 0) setShowSuggestions(true); }}
+          onFocus={handleFocus}
           className="h-14 pl-12 pr-36 sm:pr-40 bg-muted border-white/10 rounded-xl text-lg"
         />
         {isLoading ? (
@@ -197,25 +208,25 @@ function AddressAutocomplete(props) {
       </div>
       
       {showSuggestions && suggestions.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden max-h-80 overflow-y-auto">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden max-h-60 sm:max-h-80 overflow-y-auto">
           {suggestions.map(function(suggestion) {
             return (
               <button
                 key={suggestion.id}
                 onClick={function() { handleSelectSuggestion(suggestion); }}
-                className="w-full px-4 py-3 text-left hover:bg-muted transition-colors flex items-start gap-3 border-b border-border last:border-0"
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 text-left hover:bg-muted active:bg-muted/80 transition-colors flex items-start gap-2 sm:gap-3 border-b border-border last:border-0"
               >
-                <MapPin className={'w-5 h-5 mt-0.5 flex-shrink-0 ' + (suggestion.isLocal ? 'text-yellow-500' : 'text-primary')} />
+                <MapPin className={'w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 ' + (suggestion.isLocal ? 'text-yellow-500' : 'text-primary')} />
                 <div className="flex flex-col min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium truncate">{suggestion.shortAddress}</span>
                     {suggestion.isLocal && (
-                      <span className="text-xs bg-yellow-500/20 text-yellow-500 px-1.5 py-0.5 rounded-full">
+                      <span className="text-[10px] sm:text-xs bg-yellow-500/20 text-yellow-500 px-1.5 py-0.5 rounded-full">
                         Populaire
                       </span>
                     )}
                   </div>
-                  <span className="text-xs text-muted-foreground truncate">{suggestion.address}</span>
+                  <span className="text-[11px] sm:text-xs text-muted-foreground truncate">{suggestion.address}</span>
                 </div>
               </button>
             );

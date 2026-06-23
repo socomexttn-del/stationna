@@ -48,6 +48,21 @@ const webpackConfig = {
     },
     configure: (webpackConfig) => {
 
+      // Fix for Mapbox GL JS worker transpilation issue
+      // Exclude mapbox-gl from being processed by Babel
+      webpackConfig.module.rules.push({
+        test: /\.js$/,
+        include: /node_modules\/mapbox-gl/,
+        use: {
+          loader: 'babel-loader',
+          options: {
+            presets: ['@babel/preset-env'],
+            plugins: ['@babel/plugin-transform-runtime'],
+            cacheDirectory: true,
+          },
+        },
+      });
+
       // Add ignored patterns to reduce watched directories
         webpackConfig.watchOptions = {
           ...webpackConfig.watchOptions,
