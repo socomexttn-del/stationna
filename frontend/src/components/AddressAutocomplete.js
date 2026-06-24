@@ -8,11 +8,16 @@ const POPULAR_LOCATIONS = [
   { id: 'gare-nord', text: 'Gare du Nord', address: 'Gare du Nord, 75010 Paris', lat: 48.8809, lng: 2.3553 },
   { id: 'gare-est', text: 'Gare de lEst', address: 'Gare de lEst, 75010 Paris', lat: 48.8763, lng: 2.3594 },
   { id: 'gare-lyon', text: 'Gare de Lyon', address: 'Gare de Lyon, 75012 Paris', lat: 48.8443, lng: 2.3738 },
+  { id: 'gare-austerlitz', text: 'Gare dAusterlitz', address: 'Gare dAusterlitz, 75013 Paris', lat: 48.8425, lng: 2.3659 },
+  { id: 'gare-montparnasse', text: 'Gare Montparnasse', address: 'Gare Montparnasse, 75015 Paris', lat: 48.8408, lng: 2.3188 },
+  { id: 'gare-saint-lazare', text: 'Gare Saint-Lazare', address: 'Gare Saint-Lazare, 75008 Paris', lat: 48.8760, lng: 2.3250 },
   { id: 'cdg', text: 'Aeroport CDG', address: 'Aeroport Paris-Charles de Gaulle, Roissy', lat: 49.0097, lng: 2.5479 },
   { id: 'orly', text: 'Aeroport Orly', address: 'Aeroport de Paris-Orly', lat: 48.7262, lng: 2.3652 },
+  { id: 'beauvais', text: 'Aeroport Beauvais', address: 'Aeroport de Beauvais-Tille', lat: 49.4544, lng: 2.1128 },
   { id: 'aeroville', text: 'Aeroville', address: 'Centre Commercial Aeroville, Tremblay-en-France', lat: 49.0048, lng: 2.5656 },
   { id: 'porte-maillot', text: 'Porte Maillot', address: 'Porte Maillot, 75017 Paris', lat: 48.8779, lng: 2.2826 },
   { id: 'la-defense', text: 'La Defense', address: 'La Defense, 92400 Courbevoie', lat: 48.8918, lng: 2.2362 },
+  { id: 'disneyland', text: 'Disneyland Paris', address: 'Disneyland Paris, Marne-la-Vallee', lat: 48.8673, lng: 2.7838 },
 ];
 
 function AddressAutocomplete(props) {
