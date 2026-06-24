@@ -202,18 +202,20 @@ const MapComponent = ({
 
         // Fit bounds to show entire route with responsive padding
         const bounds = new mapboxgl.LngLatBounds();
+        bounds.extend([start.lng, start.lat]);
+        bounds.extend([end.lng, end.lat]);
         coordinates.forEach(coord => bounds.extend(coord));
         
-        // More padding on mobile for better visibility
+        // More padding on mobile for better visibility (bottom: 500 pour compenser le panneau Estimation)
         const isMobile = window.innerWidth < 768;
         const padding = isMobile 
-          ? { top: 50, bottom: 30, left: 30, right: 30 }
+          ? { top: 100, bottom: 500, left: 30, right: 30 }
           : { top: 100, bottom: 100, left: 100, right: 100 };
         
         map.current.fitBounds(bounds, { 
           padding: padding,
-          maxZoom: 15,
-          duration: 1000
+          maxZoom: 13,
+          duration: 500
         });
       }
     } catch (error) {
