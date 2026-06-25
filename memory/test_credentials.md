@@ -1,25 +1,20 @@
-# StationCab Test Credentials
+# Test Credentials for StationCab
 
-## Admin
-- **Email**: admin@volttaxi.com
-- **Password**: admin123
+## Production (VPS - stationcab.fr)
 
-## Passenger
-- **Email**: passenger@test.com
-- **Password**: password
+### Admin Account
+- Email: `admin@stationcab.fr`
+- Password: `Admin2024!`
 
-## Drivers
-### Driver 1 (VTC only)
-- **Email**: driver@test.com
-- **Password**: password
-- **Vehicle Types**: ["vtc"]
+### Client/Passenger Account
+- Email: `client@stationcab.fr`
+- Password: `Test2024!`
 
-### Driver 2 (VTC + Van)
-- **Email**: driver3@test.com
-- **Password**: password
-- **Vehicle Types**: ["vtc", "van"]
+### Driver Account
+- Email: `chauffeur@stationcab.fr`
+- Password: `Test2024!`
 
 ## Notes
-- Token is stored in localStorage as `volt_token`
-- Driver availability endpoint: PUT `/api/users/availability`
-- Vehicle types: "vtc", "van", "taxi"
+- Email verification is now required for new registrations
+- Verification codes are sent via SMTP (contact@stationcab.fr)
+- Codes expire after 10 minutes

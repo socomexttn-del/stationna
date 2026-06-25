@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
@@ -9,7 +9,7 @@ import { Checkbox } from '../components/ui/checkbox';
 import { 
   Car, ArrowLeft, ArrowRight, Upload, Check, X, User, FileText, 
   CreditCard, Camera, Building, Calendar, Phone, Mail, Lock, Eye, EyeOff,
-  AlertCircle, CheckCircle2, Loader2
+  AlertCircle, CheckCircle2, Loader2, Shield
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -47,7 +47,7 @@ const STEPS = [
 
 const DriverRegistrationPage = () => {
   const navigate = useNavigate();
-  const { api } = useAuth();
+  const { api, sendVerificationCode, verifyCode } = useAuth();
   const fileInputRefs = useRef({});
   
   const [currentStep, setCurrentStep] = useState(0);
@@ -56,6 +56,13 @@ const DriverRegistrationPage = () => {
   const [acceptedCGV, setAcceptedCGV] = useState(false);
   const [acceptedStandards, setAcceptedStandards] = useState(false);
   const [showStandardsModal, setShowStandardsModal] = useState(false);
+  
+  // Email verification states
+  const [verificationStep, setVerificationStep] = useState('form'); // 'form', 'verify'
+  const [verificationCodeInput, setVerificationCodeInput] = useState('');
+  const [codeVerified, setCodeVerified] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
+  const [countdown, setCountdown] = useState(0);
   
   // Personal info
   const [formData, setFormData] = useState({
@@ -77,6 +84,57 @@ const DriverRegistrationPage = () => {
   const [documents, setDocuments] = useState({});
   const [expiryDates, setExpiryDates] = useState({});
   const [uploadingDoc, setUploadingDoc] = useState(null);
+
+  // Countdown timer for resend code
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown]);
+
+  const handleSendVerificationCode = async () => {
+    if (!formData.email) {
+      toast.error('Veuillez entrer votre adresse email');
+      return;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error('Veuillez entrer une adresse email valide');
+      return;
+    }
+    
+    setSendingCode(true);
+    try {
+      await sendVerificationCode(formData.email);
+      toast.success(`Code de vérification envoyé à ${formData.email}`);
+      setVerificationStep('verify');
+      setCountdown(60);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erreur lors de l\'envoi du code');
+    } finally {
+      setSendingCode(false);
+    }
+  };
+
+  const handleVerifyCode = async () => {
+    if (verificationCodeInput.length !== 6) {
+      toast.error('Le code doit contenir 6 chiffres');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      await verifyCode(formData.email, verificationCodeInput);
+      setCodeVerified(true);
+      toast.success('Email vérifié avec succès !');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Code invalide');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Standards de qualité text
   const STANDARDS_TEXT = `STANDARDS DE QUALITÉ ET CONDITIONS D'ACCÈS AUX SERVICES STATIONCAB
@@ -238,13 +296,21 @@ En cas de signalements répétés d'utilisateurs, de réclamations graves ou de 
       return;
     }
     
+    // Vérification email obligatoire
+    if (!codeVerified) {
+      toast.error('Veuillez d\'abord vérifier votre email');
+      return;
+    }
+    
     setLoading(true);
     
     try {
-      // Register driver account
+      // Register driver account with verification code
       const registerResponse = await api.post('/auth/register', {
         ...formData,
         role: 'driver'
+      }, {
+        params: { verification_code: verificationCodeInput }
       });
       
       // Get token from registration
@@ -411,10 +477,97 @@ En cas de signalements répétés d'utilisateurs, de réclamations graves ou de 
                   value={formData.email}
                   onChange={handleChange}
                   required
+                  disabled={codeVerified}
                   className="h-12 bg-muted pl-10"
                   placeholder="jean.dupont@email.com"
                 />
+                {codeVerified && (
+                  <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" />
+                )}
               </div>
+              
+              {/* Email Verification Section */}
+              {!codeVerified && (
+                <div className="mt-3 p-4 bg-muted/50 rounded-lg border border-border">
+                  {verificationStep === 'form' ? (
+                    <div className="space-y-3">
+                      <p className="text-sm text-muted-foreground flex items-center gap-2">
+                        <Shield className="w-4 h-4 text-primary" />
+                        Vérifiez votre email pour continuer
+                      </p>
+                      <Button
+                        type="button"
+                        onClick={handleSendVerificationCode}
+                        disabled={sendingCode || !formData.email}
+                        className="w-full h-10 bg-primary/20 text-primary hover:bg-primary/30 border border-primary/30"
+                      >
+                        {sendingCode ? (
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        ) : (
+                          <Mail className="w-4 h-4 mr-2" />
+                        )}
+                        Envoyer le code de vérification
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <p className="text-sm text-muted-foreground">
+                        Entrez le code à 6 chiffres envoyé à <span className="text-primary font-medium">{formData.email}</span>
+                      </p>
+                      <div className="flex gap-2">
+                        <Input
+                          type="text"
+                          value={verificationCodeInput}
+                          onChange={(e) => setVerificationCodeInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                          placeholder="000000"
+                          maxLength={6}
+                          className="h-12 text-center text-2xl tracking-widest font-mono bg-background"
+                        />
+                        <Button
+                          type="button"
+                          onClick={handleVerifyCode}
+                          disabled={loading || verificationCodeInput.length !== 6}
+                          className="h-12 px-6"
+                        >
+                          {loading ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            'Vérifier'
+                          )}
+                        </Button>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <button
+                          type="button"
+                          onClick={handleSendVerificationCode}
+                          disabled={countdown > 0 || sendingCode}
+                          className="text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
+                        >
+                          {countdown > 0 ? `Renvoyer dans ${countdown}s` : 'Renvoyer le code'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setVerificationStep('form');
+                            setVerificationCodeInput('');
+                          }}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          Changer d'email
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Email verified badge */}
+              {codeVerified && (
+                <div className="mt-2 flex items-center gap-2 text-sm text-green-500">
+                  <CheckCircle2 className="w-4 h-4" />
+                  Email vérifié
+                </div>
+              )}
             </div>
             
             <div className="space-y-2">
