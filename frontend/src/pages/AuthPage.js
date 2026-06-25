@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Checkbox } from '../components/ui/checkbox';
 import StationCabLogo from '../components/StationCabLogo';
-import { Car, User, ArrowLeft, Eye, EyeOff, CheckCircle2, Clock } from 'lucide-react';
+import { Car, User, ArrowLeft, Eye, EyeOff, CheckCircle2, Clock, Mail, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 
 const AuthPage = () => {
@@ -17,7 +17,7 @@ const AuthPage = () => {
   const [searchParams] = useSearchParams();
   const defaultRole = searchParams.get('role') || 'passenger';
   const isRegistered = searchParams.get('registered') === 'true';
-  const { login, register } = useAuth();
+  const { login, register, sendVerificationCode, verifyCode } = useAuth();
   
   const [isLogin, setIsLogin] = useState(true);
   const [role, setRole] = useState(defaultRole);
@@ -25,6 +25,13 @@ const AuthPage = () => {
   const [loading, setLoading] = useState(false);
   const [acceptedCGV, setAcceptedCGV] = useState(false);
   const [showRegistrationSuccess, setShowRegistrationSuccess] = useState(isRegistered);
+  
+  // Email verification states
+  const [verificationStep, setVerificationStep] = useState('form'); // 'form', 'verify', 'complete'
+  const [verificationCode, setVerificationCode] = useState('');
+  const [codeVerified, setCodeVerified] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
+  const [countdown, setCountdown] = useState(0);
   
   const [formData, setFormData] = useState({
     email: '',
@@ -40,8 +47,60 @@ const AuthPage = () => {
     }
   }, [isRegistered]);
 
+  // Countdown timer for resend code
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown]);
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSendVerificationCode = async () => {
+    if (!formData.email) {
+      toast.error('Veuillez entrer votre adresse email');
+      return;
+    }
+    
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error('Veuillez entrer une adresse email valide');
+      return;
+    }
+    
+    setSendingCode(true);
+    try {
+      await sendVerificationCode(formData.email);
+      toast.success(`Code de vérification envoyé à ${formData.email}`);
+      setVerificationStep('verify');
+      setCountdown(60); // 60 seconds before resend
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erreur lors de l\'envoi du code');
+    } finally {
+      setSendingCode(false);
+    }
+  };
+
+  const handleVerifyCode = async () => {
+    if (verificationCode.length !== 6) {
+      toast.error('Le code doit contenir 6 chiffres');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      await verifyCode(formData.email, verificationCode);
+      setCodeVerified(true);
+      toast.success('Email vérifié avec succès !');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Code invalide');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -53,6 +112,12 @@ const AuthPage = () => {
       return;
     }
     
+    // For registration, require email verification
+    if (!isLogin && !codeVerified) {
+      toast.error('Veuillez d\'abord vérifier votre email');
+      return;
+    }
+    
     setLoading(true);
     
     try {
@@ -60,7 +125,7 @@ const AuthPage = () => {
         await login(formData.email, formData.password);
         toast.success(t('common.success'));
       } else {
-        await register({ ...formData, role });
+        await register({ ...formData, role }, verificationCode);
         toast.success(t('common.success'));
       }
     } catch (error) {
@@ -198,17 +263,107 @@ const AuthPage = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="email">{t('auth.email')}</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  data-testid="input-email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  className="h-12 bg-muted border-white/10 focus:border-primary/50"
-                  placeholder="jean.dupont@email.com"
-                />
+                <div className="relative">
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    data-testid="input-email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    required
+                    disabled={codeVerified}
+                    className="h-12 bg-muted border-white/10 focus:border-primary/50"
+                    placeholder="jean.dupont@email.com"
+                  />
+                  {codeVerified && (
+                    <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" />
+                  )}
+                </div>
+                
+                {/* Email Verification Section for Registration */}
+                {!isLogin && !codeVerified && (
+                  <div className="mt-3 p-4 bg-muted/50 rounded-lg border border-border">
+                    {verificationStep === 'form' ? (
+                      <div className="space-y-3">
+                        <p className="text-sm text-muted-foreground flex items-center gap-2">
+                          <Shield className="w-4 h-4 text-primary" />
+                          Vérifiez votre email pour continuer
+                        </p>
+                        <Button
+                          type="button"
+                          onClick={handleSendVerificationCode}
+                          disabled={sendingCode || !formData.email}
+                          className="w-full h-10 bg-primary/20 text-primary hover:bg-primary/30 border border-primary/30"
+                        >
+                          {sendingCode ? (
+                            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2" />
+                          ) : (
+                            <Mail className="w-4 h-4 mr-2" />
+                          )}
+                          Envoyer le code de vérification
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <p className="text-sm text-muted-foreground">
+                          Entrez le code à 6 chiffres envoyé à <span className="text-primary font-medium">{formData.email}</span>
+                        </p>
+                        <div className="flex gap-2">
+                          <Input
+                            type="text"
+                            value={verificationCode}
+                            onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                            placeholder="000000"
+                            maxLength={6}
+                            className="h-12 text-center text-2xl tracking-widest font-mono bg-background"
+                            data-testid="verification-code-input"
+                          />
+                          <Button
+                            type="button"
+                            onClick={handleVerifyCode}
+                            disabled={loading || verificationCode.length !== 6}
+                            className="h-12 px-6"
+                          >
+                            {loading ? (
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              'Vérifier'
+                            )}
+                          </Button>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <button
+                            type="button"
+                            onClick={handleSendVerificationCode}
+                            disabled={countdown > 0 || sendingCode}
+                            className="text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
+                          >
+                            {countdown > 0 ? `Renvoyer dans ${countdown}s` : 'Renvoyer le code'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setVerificationStep('form');
+                              setVerificationCode('');
+                            }}
+                            className="text-muted-foreground hover:text-foreground"
+                          >
+                            Changer d'email
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* Email verified badge */}
+                {!isLogin && codeVerified && (
+                  <div className="mt-2 flex items-center gap-2 text-sm text-green-500">
+                    <CheckCircle2 className="w-4 h-4" />
+                    Email vérifié
+                  </div>
+                )}
               </div>
 
               {!isLogin && (

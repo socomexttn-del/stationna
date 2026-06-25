@@ -2,7 +2,10 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
-mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_TOKEN;
+// Set Mapbox access token
+if (process.env.REACT_APP_MAPBOX_TOKEN) {
+  mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_TOKEN;
+}
 
 const MapComponent = ({ 
   pickupLocation, 

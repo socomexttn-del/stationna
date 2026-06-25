@@ -124,8 +124,14 @@ export const AuthProvider = ({ children }) => {
     return userData;
   }, [api]);
 
-  const register = useCallback(async (data) => {
-    const response = await api.post('/auth/register', data);
+  const register = useCallback(async (data, verificationCode = null) => {
+    const requestData = { ...data };
+    if (verificationCode) {
+      requestData.verification_code = verificationCode;
+    }
+    const response = await api.post('/auth/register', requestData, {
+      params: verificationCode ? { verification_code: verificationCode } : {}
+    });
     const { token: newToken, user: userData } = response.data;
     
     // Save to localStorage first
@@ -136,6 +142,16 @@ export const AuthProvider = ({ children }) => {
     setUser(userData);
     
     return userData;
+  }, [api]);
+
+  const sendVerificationCode = useCallback(async (email) => {
+    const response = await api.post('/auth/send-verification-code', { email });
+    return response.data;
+  }, [api]);
+
+  const verifyCode = useCallback(async (email, code) => {
+    const response = await api.post('/auth/verify-code', { email, code });
+    return response.data;
   }, [api]);
 
   const logout = useCallback(() => {
@@ -155,10 +171,12 @@ export const AuthProvider = ({ children }) => {
     loading,
     login,
     register,
+    sendVerificationCode,
+    verifyCode,
     logout,
     updateUser,
     api
-  }), [user, token, loading, login, register, logout, updateUser, api]);
+  }), [user, token, loading, login, register, sendVerificationCode, verifyCode, logout, updateUser, api]);
 
   return (
     <AuthContext.Provider value={value}>

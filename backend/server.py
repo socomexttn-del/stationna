@@ -1329,11 +1329,141 @@ def calculate_fare(distance_km: float, duration_minutes: int = 0, is_scheduled: 
 
 # ======================== AUTH ROUTES ========================
 
+# ======================== EMAIL VERIFICATION OTP ========================
+
+import random
+import string
+
+class EmailVerificationRequest(BaseModel):
+    email: EmailStr
+
+class VerifyCodeRequest(BaseModel):
+    email: EmailStr
+    code: str
+
+class UserCreateWithVerification(UserBase):
+    password: str
+    verification_code: str  # Code OTP reçu par email
+
+def generate_otp_code() -> str:
+    """Generate a 6-digit OTP code"""
+    return ''.join(random.choices(string.digits, k=6))
+
+async def send_verification_email(email: str, code: str, first_name: str = ""):
+    """Send verification code via email"""
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            body {{ font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }}
+            .container {{ max-width: 500px; margin: 0 auto; background: #ffffff; border-radius: 10px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+            .logo {{ text-align: center; margin-bottom: 20px; }}
+            .logo h1 {{ color: #00a693; margin: 0; font-size: 28px; }}
+            .code {{ background: linear-gradient(135deg, #00a693, #1f3f6b); color: white; font-size: 32px; letter-spacing: 8px; text-align: center; padding: 20px; border-radius: 8px; margin: 20px 0; font-weight: bold; }}
+            .message {{ color: #333; font-size: 16px; line-height: 1.6; text-align: center; }}
+            .footer {{ text-align: center; margin-top: 30px; color: #888; font-size: 12px; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="logo">
+                <h1>🚖 StationCab</h1>
+            </div>
+            <p class="message">Bonjour{' ' + first_name if first_name else ''} !</p>
+            <p class="message">Voici votre code de vérification pour créer votre compte StationCab :</p>
+            <div class="code">{code}</div>
+            <p class="message">Ce code expire dans <strong>10 minutes</strong>.</p>
+            <p class="message">Si vous n'avez pas demandé ce code, ignorez cet email.</p>
+            <div class="footer">
+                <p>© 2024 StationCab - Service de taxi à Paris</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    return await send_email_smtp(
+        to_email=email,
+        subject="🔐 Code de vérification StationCab",
+        html_content=html_content,
+        sender_type="client"
+    )
+
+@api_router.post("/auth/send-verification-code")
+async def send_verification_code(request: EmailVerificationRequest):
+    """Send a verification code to the email address"""
+    # Check if email already registered
+    existing = await db.users.find_one({"email": request.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="Cet email est déjà enregistré")
+    
+    # Generate OTP code
+    code = generate_otp_code()
+    
+    # Store the code with expiration (10 minutes)
+    await db.verification_codes.delete_many({"email": request.email})  # Remove old codes
+    await db.verification_codes.insert_one({
+        "email": request.email,
+        "code": code,
+        "created_at": datetime.now(timezone.utc),
+        "expires_at": datetime.now(timezone.utc) + timedelta(minutes=10)
+    })
+    
+    # Send email
+    email_sent = await send_verification_email(request.email, code)
+    
+    if not email_sent:
+        raise HTTPException(status_code=500, detail="Erreur lors de l'envoi de l'email")
+    
+    return {"status": "success", "message": f"Code de vérification envoyé à {request.email}"}
+
+@api_router.post("/auth/verify-code")
+async def verify_code(request: VerifyCodeRequest):
+    """Verify the OTP code"""
+    # Find the verification code
+    verification = await db.verification_codes.find_one({
+        "email": request.email,
+        "code": request.code
+    })
+    
+    if not verification:
+        raise HTTPException(status_code=400, detail="Code invalide")
+    
+    # Check expiration
+    if datetime.now(timezone.utc) > verification["expires_at"].replace(tzinfo=timezone.utc):
+        await db.verification_codes.delete_one({"email": request.email})
+        raise HTTPException(status_code=400, detail="Code expiré. Demandez un nouveau code.")
+    
+    return {"status": "success", "message": "Code vérifié avec succès", "verified": True}
+
 @api_router.post("/auth/register", response_model=TokenResponse)
-async def register(user: UserCreate):
+async def register(user: UserCreate, verification_code: Optional[str] = None):
     existing = await db.users.find_one({"email": user.email})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Verify the OTP code before registration
+    if verification_code:
+        verification = await db.verification_codes.find_one({
+            "email": user.email,
+            "code": verification_code
+        })
+        
+        if not verification:
+            raise HTTPException(status_code=400, detail="Code de vérification invalide")
+        
+        # Check expiration
+        expires_at = verification["expires_at"]
+        if hasattr(expires_at, 'replace'):
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) > expires_at:
+            await db.verification_codes.delete_one({"email": user.email})
+            raise HTTPException(status_code=400, detail="Code expiré. Demandez un nouveau code.")
+        
+        # Delete the used code
+        await db.verification_codes.delete_one({"email": user.email})
     
     user_id = str(uuid.uuid4())
     
